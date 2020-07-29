@@ -406,13 +406,13 @@ Section NCID.
             (* "Extended" directory *)
             (edirLgWay: nat)
             (* Victim lines *)
-            (predNumVictim: nat).
+            (predNumVictims: nat).
 
   Local Notation "s '+o'" := (s ++ "__" ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "__" ++ s2)%string (at level 60).
 
-  Let numVictim := S predNumVictim.
-  Let victimIdxSz := Nat.log2 predNumVictim.
+  Let numVictims := S predNumVictims.
+  Let victimIdxSz := Nat.log2 predNumVictims.
 
   (*! Private cache interfaces *)
 
@@ -710,18 +710,18 @@ Section NCID.
              "victim_value" :: valueK }.
   Let VictimK := Struct Victim.
 
-  Definition VictimWrite :=
-    STRUCT { "vw_index" :: Bit victimIdxSz;
-             "vw_victim" :: VictimK }.
-  Let VictimWriteK := Struct VictimWrite.
+  (* Definition VictimWrite := *)
+  (*   STRUCT { "vw_index" :: Bit victimIdxSz; *)
+  (*            "vw_victim" :: VictimK }. *)
+  (* Let VictimWriteK := Struct VictimWrite. *)
 
-  Definition victimWriteN: string := cacheN _++ "victimWrite".
-  Definition victimWrite := MethodSig victimWriteN (VictimWriteK): Void.
+  (* Definition victimWriteN: string := cacheN _++ "victimWrite". *)
+  (* Definition victimWrite := MethodSig victimWriteN (VictimWriteK): Void. *)
 
   (* Definition getVictimN: string := cacheN _++ "getVictim". *)
   (* Definition getVictim := MethodSig getVictimN (): VictimK. *)
-  (* Definition removeVictimN: string := cacheN _++ "removeVictim". *)
-  (* Definition removeVictim := MethodSig removeVictimN (Bit addrSz): Void. *)
+  Definition removeVictimN: string := cacheN _++ "removeVictim".
+  Definition removeVictim := MethodSig removeVictimN (Bit victimIdxSz): Void.
 
   (*! -- public interface ends here *)
 
@@ -780,29 +780,29 @@ Section NCID.
     (Const _ (natToWord victimIdxSz n)) (at level 5): kami_expr_scope.
 
   Fixpoint victimIterAFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
            (addr: Expr var (SyntaxKind (Bit addrSz)))
            (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var Void)
            (cont: ActionT var Void) (n: nat): ActionT var Void :=
     match n with
     | O => cont
     | S n' =>
-      (LET victim: VictimK <- victims#[$v$(numVictim - n)];
+      (LET victim: VictimK <- victims#[$v$(numVictims - n)];
       If ((#victim!Victim@."victim_valid")
           && #victim!Victim@."victim_addr" == addr)
-       then (readF (numVictim - n) (#victim)%kami_expr)
+       then (readF (numVictims - n) (#victim)%kami_expr)
        else (victimIterAFix victims addr readF cont n'); Retv)%kami_action
     end.
 
   Definition victimIterA (var: Kind -> Type)
-             (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
              (addr: Expr var (SyntaxKind (Bit addrSz)))
              (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var Void)
              (cont: ActionT var Void): ActionT var Void :=
-    victimIterAFix victims addr readF cont numVictim.
+    victimIterAFix victims addr readF cont numVictims.
 
   Fixpoint hasVictimSlotFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
            (n: nat): Expr var (SyntaxKind Bool) :=
     (match n with
      | O => !(victims#[$v$0]!Victim@."victim_valid")
@@ -810,12 +810,12 @@ Section NCID.
        ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n')
      end)%kami_expr.
   Definition hasVictimSlot (var: Kind -> Type)
-             (victims: Expr var (SyntaxKind (Array VictimK numVictim)))
+             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
     : Expr var (SyntaxKind Bool) :=
-    hasVictimSlotFix victims (numVictim - 1).
+    hasVictimSlotFix victims (numVictims - 1).
 
   (* Fixpoint hasVictimFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*          (n: nat): Expr var (SyntaxKind Bool) := *)
   (*   (match n with *)
   (*    | O => (victims#[$v$0]!Victim@."victim_valid") *)
@@ -824,12 +824,12 @@ Section NCID.
   (*    end)%kami_expr. *)
 
   (* Fixpoint hasVictimF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*   : Expr var (SyntaxKind Bool) := *)
-  (*   hasVictimFix victims (numVictim - 1). *)
+  (*   hasVictimFix victims (numVictims - 1). *)
 
   (* Fixpoint getVictimSlotFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*          (n: nat): Expr var (SyntaxKind (Bit victimIdxSz)) := *)
   (*   (match n with *)
   (*    | O => $0 *)
@@ -840,12 +840,12 @@ Section NCID.
   (*    end)%kami_expr. *)
 
   (* Fixpoint getVictimSlotF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*   : Expr var (SyntaxKind (Bit victimIdxSz)) := *)
-  (*   getVictimSlotFix victims (numVictim - 1). *)
+  (*   getVictimSlotFix victims (numVictims - 1). *)
 
   (* Fixpoint getVictimFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*          (n: nat): Expr var (SyntaxKind LineWriteK) := *)
   (*   (match n with *)
   (*    | O => (victims#[$v$0]!Victim@."victim_line") *)
@@ -856,16 +856,16 @@ Section NCID.
   (*    end)%kami_expr. *)
 
   (* Fixpoint getVictimF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictim))) *)
+  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
   (*   : Expr var (SyntaxKind LineWriteK) := *)
-  (*   getVictimFix victims (numVictim - 1). *)
+  (*   getVictimFix victims (numVictims - 1). *)
 
   (** Registers *)
   Definition victimsN: string := "victims"+o.
 
   Definition cacheIfc :=
     MODULE {
-      Register victimsN: Array VictimK numVictim <- Default
+      Register victimsN: Array VictimK numVictims <- Default
 
       with Method infoRqN (addr: Bit addrSz): Void :=
         Read victims <- victimsN;
@@ -959,7 +959,7 @@ Section NCID.
       with Method valueRsLineRqN (lw: LineWriteK): valueK :=
         Call cpipe <- cpDeq2();
         If (#cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."valid")
-        then (Read victims: Array VictimK numVictim <- victimsN;
+        then (Read victims: Array VictimK numVictims <- victimsN;
              LET vi <- #cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."data";
              LET pv <- #victims#[#vi];
              LET nv: VictimK <- STRUCT { "victim_valid" ::= $$true;
@@ -974,59 +974,64 @@ Section NCID.
                                             else (#pv!Victim@."victim_value")) };
              Write victimsN <- #victims#[#vi <- #nv];
              Ret (#pv!Victim@."victim_value"))
-      else (Call value <- dataRdResp();
-           LET mv <- #cpipe!cp2@."may_victim";
-           LET addr <- #lw!LineWrite@."addr";
-           LET info_way <- #lw!LineWrite@."info_way";
-           LET ninfo <- #lw!LineWrite@."info";
-           LET justDir <- isJustDir ninfo;
+        else (Call value <- dataRdResp();
+             LET mv <- #cpipe!cp2@."may_victim";
+             LET addr <- #lw!LineWrite@."addr";
+             LET info_way <- #lw!LineWrite@."info_way";
+             LET ninfo <- #lw!LineWrite@."info";
+             LET justDir <- isJustDir ninfo;
 
-           (** * TODO: register [MayVictim] to the victim lines accordingly. *)
+             (** * TODO: register [MayVictim] to the victim lines accordingly. *)
 
-           (** traditional cache-line write *)
-           If ((#lw!LineWrite@."info_hit") ||
-               (!#justDir) ||
-               ((!(#lw!LineWrite@."edir_hit")) && #justDir))
-           then (If (#lw!LineWrite@."info_write")
-                 then (LET irq <- STRUCT { "addr" ::= getIndex addr;
-                                           "datain" ::=
-                                             STRUCT { "tag" ::= getTag addr;
-                                                      "value" ::= #ninfo } };
-                      NCall makeInfoWrReqs info_way irq; Retv);
-                 If (#lw!LineWrite@."value_write")
-                 then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
-                                           "datain" ::= #lw!LineWrite@."value" };
-                      Call dataWrReq(#drq); Retv);
-                 Retv);
+             (** traditional cache-line write *)
+             If ((#lw!LineWrite@."info_hit") ||
+                 (!#justDir) ||
+                 ((!(#lw!LineWrite@."edir_hit")) && #justDir))
+             then (If (#lw!LineWrite@."info_write")
+                   then (LET irq <- STRUCT { "addr" ::= getIndex addr;
+                                             "datain" ::=
+                                               STRUCT { "tag" ::= getTag addr;
+                                                        "value" ::= #ninfo } };
+                        NCall makeInfoWrReqs info_way irq; Retv);
+                   If (#lw!LineWrite@."value_write")
+                   then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
+                                             "datain" ::= #lw!LineWrite@."value" };
+                        Call dataWrReq(#drq); Retv);
+                   Retv);
 
-           If (#lw!LineWrite@."info_write" && #lw!LineWrite@."edir_hit")
-           then (LET edir_way <- #lw!LineWrite@."edir_way";
-                (** When writing new information and extended-directory hit:
-                 * 1) update the line if the new information is just about directory, or
-                 * 2) invalidate the line if the new information is updating something more;
-                 *    the new information is updated in the traditional cache (i.e., migration). *)
-                LET erq <- STRUCT { "addr" ::= getIndex addr;
-                                    "datain" ::=
-                                      STRUCT { "tag" ::= getTag addr;
-                                               "value" ::= (IF #justDir
-                                                            then (edirFromInfo ninfo)
-                                                            else $$Default) } };
-                NCall makeEDirWrReqs edir_way erq; Retv)
-           else (** If the information is just about directory and an empty slot exists,
-                 * register the line to the extended directory. *)
-             (LET mes <- #lw!LineWrite@."edir_slot";
-             If ((!(#lw!LineWrite@."edir_hit")) &&
-                 (#mes!(MaybeStr (Bit edirLgWay))@."valid") &&
-                 #justDir)
-              then (LET edir_way <- #mes!(MaybeStr (Bit edirLgWay))@."data";
-                   LET erq <- STRUCT { "addr" ::= getIndex addr;
-                                       "datain" ::=
-                                         STRUCT { "tag" ::= getTag addr;
-                                                  "value" ::= edirFromInfo ninfo } };
-                   NCall makeEDirWrReqs edir_way erq; Retv); Retv);
-           Ret #value)
-      as pval;
-      Ret #pval
+             If (#lw!LineWrite@."info_write" && #lw!LineWrite@."edir_hit")
+             then (LET edir_way <- #lw!LineWrite@."edir_way";
+                  (** When writing new information and extended-directory hit:
+                   * 1) update the line if the new information is just about directory, or
+                   * 2) invalidate the line if the new information is updating something more;
+                   *    the new information is updated in the traditional cache (i.e., migration). *)
+                  LET erq <- STRUCT { "addr" ::= getIndex addr;
+                                      "datain" ::=
+                                        STRUCT { "tag" ::= getTag addr;
+                                                 "value" ::= (IF #justDir
+                                                              then (edirFromInfo ninfo)
+                                                              else $$Default) } };
+                  NCall makeEDirWrReqs edir_way erq; Retv)
+             else (** If the information is just about directory and an empty slot exists,
+                   * register the line to the extended directory. *)
+               (LET mes <- #lw!LineWrite@."edir_slot";
+               If ((!(#lw!LineWrite@."edir_hit")) &&
+                   (#mes!(MaybeStr (Bit edirLgWay))@."valid") &&
+                   #justDir)
+               then (LET edir_way <- #mes!(MaybeStr (Bit edirLgWay))@."data";
+                    LET erq <- STRUCT { "addr" ::= getIndex addr;
+                                        "datain" ::=
+                                          STRUCT { "tag" ::= getTag addr;
+                                                   "value" ::= edirFromInfo ninfo } };
+                    NCall makeEDirWrReqs edir_way erq; Retv); Retv);
+             Ret #value)
+        as pval;
+        Ret #pval
+
+      with Method removeVictimN (vi: Bit victimIdxSz): Void :=
+        Read victims: Array VictimK numVictims <- victimsN;
+        Write victimsN <- #victims#[#vi <- $$Default];
+        Retv
   }.
 
   Fixpoint infoRams (w: nat) :=

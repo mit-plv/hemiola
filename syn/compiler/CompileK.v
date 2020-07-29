@@ -204,7 +204,7 @@ Section Compile.
       Definition enqIR2LR := MethodSig enqIR2LRN(IRPipeK): Void.
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation infoReadRq := (infoReadRq oidx hcfg_addr_sz).
+      Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
       Local Notation addRs := (addRs oidx).
 
       Definition infoReadStageRulePRq: ActionT var Void :=
@@ -214,7 +214,7 @@ Section Compile.
         Call mmid <- getPRqSlot();
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
-        Call infoReadRq(#msg!KMsg@."addr");
+        Call infoRq(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
                              "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
                              "ir_msg" ::= #pelt!IRPipe@."ir_msg";
@@ -222,11 +222,12 @@ Section Compile.
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
+      (** * FIXME: distinguish [invRs] and call [removeVictim] immediately. *)
       Definition infoReadStageRulePRs: ActionT var Void :=
         (Call pelt <- deqP2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
-        Call infoReadRq(#msg!KMsg@."addr");
+        Call infoRq(#msg!KMsg@."addr");
         Call enqIR2LR(#pelt);
         Retv)%kami_action.
 
@@ -237,7 +238,7 @@ Section Compile.
         Call mmid <- getCRqSlot();
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
-        Call infoReadRq(#msg!KMsg@."addr");
+        Call infoRq(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
                              "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
                              "ir_msg" ::= #pelt!IRPipe@."ir_msg";
@@ -269,19 +270,11 @@ Section Compile.
 
       Definition deqIR2LR := MethodSig deqIR2LRN(): IRPipeK.
       Definition enqLR2EX := MethodSig enqLR2EXN(LRPipeK): Void.
-      Local Notation infoReadRs := (infoReadRs oidx infoK indexSz lgWay edirLgWay).
-      Local Notation valueReadRq := (valueReadRq oidx indexSz lgWay).
-      Local Notation victimValueRq := (victimValueRq oidx).
+      Local Notation infoRsValueRq := (infoRsValueRq oidx infoK indexSz lgWay edirLgWay).
 
       Definition lineReadStageRule: ActionT var Void :=
         (Call ir <- deqIR2LR();
-        Call rinfo <- infoReadRs();
-        If (#rinfo!InfoRead@."info_hit")
-         then (LET iw <- STRUCT { "index" ::= #rinfo!InfoRead@."info_index";
-                                  "way" ::= #rinfo!InfoRead@."info_way" };
-              Call valueReadRq(#iw);
-              Retv)
-         else (Call victimValueRq(); Retv);
+        Call rinfo <- infoRsValueRq();
         LET lr <- STRUCT { "lr_ir_pp" ::= #ir; "lr_ir" ::= #rinfo };
         Call enqLR2EX(#lr);
         Retv)%kami_action.
@@ -452,17 +445,19 @@ Section Compile.
            compile_OState_write_fix host' ninfo cont)
          end)%kami_action.
 
-      Local Notation writeRq := (writeRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
+      Local Notation valueRsLineRq :=
+        (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
 
       Definition compile_OState_request_write
                  (host: HOState (hvar_of var)) (pline: var (LineWriteK infoK))
-                 (cont: Expr var (SyntaxKind Bool) -> ActionT var Void): ActionT var Void :=
-        (* if invRs then cont ($$false)%kami_expr else *)
+                 (cont: var KValue -> ActionT var Void): ActionT var Void :=
         match host with
-        | HOStateI _ => cont ($$false)%kami_expr
+        | HOStateI _ =>
+          (** * FIXME: extend the interface to the value but not to write anything *)
+          (Call pvalue <- valueRsLineRq($$Default); cont pvalue)
         | _ => compile_OState_write_fix
                  host pline
-                 (fun nline => Call writeRq(#nline); cont ($$true)%kami_expr)
+                 (fun nline => Call pvalue <- valueRsLineRq(#nline); cont pvalue)
         end%kami_action.
 
       Local Notation registerUL := (registerUL oidx mshrNumPRqs mshrNumCRqs).
@@ -536,7 +531,7 @@ Section Compile.
          end)%kami_action.
 
       Fixpoint compile_MonadT_trs (hm: HMonadT (hvar_of var))
-               (cont: Expr var (SyntaxKind Bool) -> ActionT var Void):
+               (cont: var KValue -> ActionT var Void):
         ActionT var Void :=
         (match hm with
          | HBind hv mcont =>
@@ -547,10 +542,10 @@ Section Compile.
                                                       "info_write" ::= $$false;
                                                       "info_hit" ::= #pir!InfoRead@."info_hit";
                                                       "info_way" ::= #pir!InfoRead@."info_way";
-                                                      "info" ::= #pir!InfoRead@."info";
-                                                      "edir_write" ::= $$false;
                                                       "edir_hit" ::= #pir!InfoRead@."edir_hit";
                                                       "edir_way" ::= #pir!InfoRead@."edir_way";
+                                                      "edir_slot" ::= #pir!InfoRead@."edir_slot";
+                                                      "info" ::= #pir!InfoRead@."info";
                                                       "value_write" ::= $$false;
                                                       "value" ::= #pvalue };
            compile_OState_request_write
@@ -558,8 +553,9 @@ Section Compile.
              (fun we => compile_ORq_trs horq (compile_MsgsOut_trs hmsgs (cont we))))
          end)%kami_action.
 
+      (** * FIXME: feed [var KValue] from continuation to [MsgsOut] *)
       Definition compile_rule_trs (trs: HOTrs)
-                 (cont: Expr var (SyntaxKind Bool) -> ActionT var Void)
+                 (cont: var KValue -> ActionT var Void)
         : ActionT var Void :=
         match trs with
         | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) cont
@@ -572,7 +568,6 @@ Section Compile.
     Section ExecStage.
 
       Definition deqLR2EX := MethodSig deqLR2EXN(): LRPipeK.
-      Local Notation valueReadRs := (valueReadRs oidx KValue).
 
       (** Message-execution cases:
        * - [execStageRuleHit]: the precondition holds and the MSHR slot is properly lockable
@@ -591,14 +586,11 @@ Section Compile.
 
   End Pipeline.
 
-  (*! OLD STUFF (DEPRECATED) *)
-
   Context `{ee: @ExtExp dv oifc het} `{cet: CompExtType}
-          `{@CompExtExp ee cet} `{@CompLineRW cet}.
+          `{CompExtExp} `{CompLineRW}.
 
   Section WithObj.
-    Variables (oidx: IdxT)
-              (rrn prln crqrln crsrln rlcn wln: string).
+    Variables (oidx: IdxT).
 
     Definition ruleNameBase: string := "rule".
     Definition ruleNameI (ridx: IdxT) :=
@@ -611,135 +603,18 @@ Section Compile.
     Local Notation "f ;; cont" :=
       (f cont) (at level 60, right associativity, only parsing).
 
-    Definition compile_rule_0 (ridx: IdxT) (imt: InputMsgType):
-      Attribute (Action Void) :=
-      {| attrName := ruleNameI ridx;
-         attrType :=
-           fun var =>
-             (prl <- compile_rule_readlock_parent prln;
-             crqrl <- compile_rule_readlock_child_rq crqrln;
-             crsrl <- compile_rule_readlock_child_rs crsrln;
-             compile_rule_readlock_available prl crqrl crsrl imt;;
-             compile_rule_accept_message_and_request_read
-               oidx prln crqrln crsrln rlcn imt;;
-             Retv)%kami_action |}.
-
-    Definition readlockIdx: IdxT := 1~>2~>3.
-    Definition infoIdx: IdxT := 4~>5~>6.
-    Definition writelockIdx: IdxT := 7~>8~>9.
-
-    Definition compile_rule_rr :=
-      {| attrName := "rr_" ++ idx_to_string oidx;
-         attrType := fun var => @compile_rule_rr_step var rrn |}.
-
-    Definition compile_rule_0_parent :=
-      compile_rule_0 (readlockIdx~>0) {| imt_rqrs := false; (* don't care *)
-                                         imt_from := Some None |}.
-
-    Definition compile_rule_0_child_rq (cmidx: IdxT) :=
-      compile_rule_0 (readlockIdx~>1~~cmidx)
-                     {| imt_rqrs := false; imt_from := Some (Some cmidx) |}.
-    Definition compile_rule_0_children_rq (dtr: Topology.DTree) :=
-      map (fun cidx => compile_rule_0_child_rq (rqUpFrom cidx))
-          (Topology.subtreeChildrenIndsOf dtr oidx).
-
-    Definition compile_rule_0_release_rs :=
-      compile_rule_0 (readlockIdx~>2) {| imt_rqrs := true; imt_from := None |}.
-
-    Definition compile_rule_1: Attribute (Action Void) :=
-      {| attrName := ruleNameI infoIdx;
-         attrType :=
-           fun var =>
-             (prl <- compile_rule_readlock_parent prln;
-             crqrl <- compile_rule_readlock_child_rq crqrln;
-             crsrl <- compile_rule_readlock_child_rs crsrln;
-             compile_rule_take_info_resp
-               oidx prln prl crqrln crqrl crsrln crsrl rlcn Retv)%kami_action |}.
-
-    Definition compile_rule_2 (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
-      Attribute (Action Void) :=
-      let hr := projT2 rule in
-      {| attrName := ruleNameI (rule_idx (projT1 rule));
-         attrType :=
-           fun var =>
-             let imt := {| imt_rqrs := detect_input_msg_rqrs (hrule_precond hr (hvar_of var));
-                           imt_from := detect_input_msg_from (hrule_msg_from hr) |} in
-             let invRs := check_inv_response_trs (hrule_trs hr) in
-             (compile_rule_rr_check rrn imt;;
-              (* Check the readlock and see if the information is read *)
-              prl <- compile_rule_readlock_parent prln;
-             crqrl <- compile_rule_readlock_child_rq crqrln;
-             crsrl <- compile_rule_readlock_child_rs crsrln;
-             pline <- compile_rule_readlocked_and_info_ready oidx prl crqrl crsrl imt;
-             (* NOTE: [compile_line_to_ostVars] only covers info slots;
-              *       we know the value will not be read in this rule. *)
-             ostVars <- compile_line_to_ostVars pline;
-             msgIn <- compile_rule_get_readlock_msg prl crqrl crsrl pline imt;
-             (* Check the precondition *)
-             ul <- compile_rule_get_uplock oidx msgIn imt;
-             dl <- compile_rule_get_downlock oidx msgIn imt;
-             compile_rule_prec
-               oidx ostVars msgIn ul dl (hrule_precond hr (hvar_of var));;
-             (* Release the readlock *)
-             compile_rule_readlock_release prln crqrln crsrln imt;;
-             (* Request to read/write a value/status appropriately *)
-             wrq <- compile_rule_trs
-                      oidx pline ostVars msgIn ul dl (hrule_trs hr) imt invRs;
-             (** OPT: no need to acquire a writelock if [wrq == $$false] *)
-             (* Check if a writelock is available *)
-             wl <- compile_rule_writelock wln;
-             compile_rule_writelock_available wl;;
-             (* Acquire the writelock; save the log about what are requested *)
-             compile_rule_writelock_acquire oidx crqrln crsrln wln msgIn wrq invRs;;
-             Retv)%kami_action |}.
-
-    Definition compile_rule_3_silent: Attribute (Action Void) :=
-      {| attrName := ruleNameI (writelockIdx~>0);
-         attrType :=
-           fun var =>
-             (wl <- compile_rule_writelock wln;
-             compile_rule_writelocked_silent wl;;
-             compile_rule_writelock_release wln;;
-             Retv)%kami_action |}.
-
-    Definition compile_rule_3_rs: Attribute (Action Void) :=
-      {| attrName := ruleNameI (writelockIdx~>1);
-         attrType :=
-           fun var =>
-             (wl <- compile_rule_writelock wln;
-             compile_rule_writelocked_rs wl;;
-             compile_rule_take_write_response_and_bypass oidx prln crqrln crsrln;;
-             compile_rule_writelock_release wln;;
-             Retv)%kami_action |}.
-
     Definition compile_rules (dtr: Topology.DTree)
                (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      compile_rule_rr
-        :: compile_rule_0_parent
-        :: compile_rule_0_release_rs
-        :: (compile_rule_0_children_rq dtr)
-        ++ [compile_rule_1]
-        ++ (map compile_rule_2 rules)
-        ++ [compile_rule_3_silent; compile_rule_3_rs].
+      (** * TODO: add compiled rules. *)
+      nil.
 
   End WithObj.
 
-  Definition rrReg (oidx: IdxT): string := "rr" ++ idx_to_string oidx.
-  Definition prlReg (oidx: IdxT): string := "prl" ++ idx_to_string oidx.
-  Definition crqrlReg (oidx: IdxT): string := "crqrl" ++ idx_to_string oidx.
-  Definition crsrlReg (oidx: IdxT): string := "crsrl" ++ idx_to_string oidx.
-  Definition rlcReg (oidx: IdxT): string := "rlc" ++ idx_to_string oidx.
-  Definition wlReg (oidx: IdxT): string := "wl" ++ idx_to_string oidx.
-
   Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 1)) |}
-      :: {| attrName := prlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
-      :: {| attrName := crqrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
-      :: {| attrName := crsrlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct RL)) |}
-      :: {| attrName := rlcReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 2)) |}
-      :: {| attrName := wlReg oidx; attrType := RegInitDefault (SyntaxKind (Struct WL)) |}
-      :: nil.
+    (** * TODO: add necessary registers. *)
+    (* {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 1)) |} *)
+    nil.
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
     ((fifo primNormalFifoName
@@ -910,10 +785,7 @@ Section Compile.
     : Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    let crules := compile_rules oidx
-                                (rrReg oidx) (prlReg oidx) (crqrlReg oidx) (crsrlReg oidx)
-                                (rlcReg oidx) (wlReg oidx)
-                                dtr (hobj_rules (projT2 obj)) in
+    let crules := compile_rules dtr (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
   Fixpoint compile_Objects (dtr: Topology.DTree)
