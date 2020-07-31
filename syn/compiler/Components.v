@@ -219,6 +219,9 @@ Section MSHR.
   Definition transferUpDown: Attribute SignatureT :=
     MethodSig ("transferUpDown"+o)(Struct TrsfUpDown): Void.
 
+  Definition findUL: Attribute SignatureT := MethodSig ("findUL"+o)(KAddr): MshrId.
+  Definition findDL: Attribute SignatureT := MethodSig ("findDL"+o)(KAddr): MshrId.
+
   Definition release: Attribute SignatureT := MethodSig ("release"+o)(MshrId): Void.
 
   Definition AddRs :=
@@ -309,8 +312,7 @@ Section MSHR.
           (* PRq cannot make any uplocks *)
           LET ret <- (crqIter $$true
                               (fun _ _ => $$false)
-                              (fun m =>
-                                 m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                              (fun m => m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                               #rqs);
           Ret #ret
         with Method ("canRegDL"+o)(addr: KAddr): Bool :=
@@ -363,6 +365,23 @@ Section MSHR.
                                              "m_dl_rss" ::= $$Default };
           Write "rqs"+o <- #rqs#[#mid <- #nmshr];
           Retv
+
+        with Method ("findUL"+o)(addr: KAddr): MshrId :=
+          Read rqs <- "rqs"+o;
+          (* PRq cannot make any uplocks *)
+          LET ret <- (crqIter $$Default
+                              (fun i _ => $i)
+                              (fun m => m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                              #rqs);
+          Ret #ret
+        with Method ("findDL"+o)(addr: KAddr): MshrId :=
+          Read rqs <- "rqs"+o;
+          LET ret <- (rqIter $$Default
+                             (fun i _ => $i)
+                             (fun m =>
+                                (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                             #rqs);
+          Ret #ret
 
         with Method ("release"+o)(mid: MshrId): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;

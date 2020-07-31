@@ -161,9 +161,9 @@ Section Compile.
         (* compile_info_read: *)
         (*   forall (var: Kind -> Type), *)
         (*     var infoK -> Expr var (SyntaxKind infoK); *)
-        compile_line_to_ostVars:
+        compile_info_to_ostVars:
           forall (var: Kind -> Type),
-            var infoK -> var KValue ->
+            var infoK ->
             (HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
              ActionT var Void) ->
             ActionT var Void;
@@ -185,7 +185,12 @@ Section Compile.
     Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
     Let MshrId := Bit mshrSlotSz.
 
+    (*! Pipeline Stages *)
+    (** * TODO: entry (or execution) rules for
+     * 1) [InvRq], 2) [InvRs], 3) [RsRelease], and 4) [MSHRRetry]. *)
+
     Variables deqP2LRN deqC2LRN enqIR2LRN: string.
+
     Section InfoReadStage.
 
       Definition PPFrom := Bit 2.
@@ -204,6 +209,8 @@ Section Compile.
       Definition enqIR2LR := MethodSig enqIR2LRN(IRPipeK): Void.
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
       Local Notation addRs := (addRs oidx).
 
@@ -222,13 +229,17 @@ Section Compile.
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
-      (** * FIXME: distinguish [invRs] and call [removeVictim] immediately. *)
       Definition infoReadStageRulePRs: ActionT var Void :=
         (Call pelt <- deqP2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
+        Call mid <- findUL(#msg!KMsg@."addr");
         Call infoRq(#msg!KMsg@."addr");
-        Call enqIR2LR(#pelt);
+        LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
+                             "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
+                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_mshr_id" ::= #mid };
+        Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
       Definition infoReadStageRuleCRq: ActionT var Void :=
@@ -281,262 +292,278 @@ Section Compile.
 
     End LineReadStage.
 
+    Class CompExtExp :=
+      { compile_eexp:
+          forall (var: Kind -> Type) {het},
+            var (Struct KMsg) -> var (Struct MSHR) ->
+            HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+            heexp (hvar_of var) het ->
+            Expr var (SyntaxKind (kind_of het));
+        compile_eoprec:
+          forall (var: Kind -> Type),
+            var (Struct KMsg) -> var (Struct MSHR) ->
+            HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+            heoprec (hvar_of var) ->
+            Expr var (SyntaxKind Bool);
+      }.
+    Context `{CompExtExp}.
+
+    Class ValueInOst :=
+      { valueOstIdx: Fin.t ost_sz;
+        value_ost_idx_ok: kind_of hostf_ty[@valueOstIdx] = KValue
+      }.
+    Context `{ValueInOst}.
+
     Section CompileExec.
+      Variables (msgIn: var (Struct KMsg))
+                (mshrId: var MshrId) (mshr: var (Struct MSHR)).
 
-      Variables
-        (msgIn: var (Struct KMsg))
-        (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
-        (mshrId: var MshrId) (mshr: var (Struct MSHR))
-        (pir: var (Struct InfoRead)) (pvalue: var KValue).
+      Section OstVarsNoValue.
+        Variable ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty).
 
-      Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
-        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
-        (match he with
-         | HBConst _ c => compile_const c
-         | HVar _ _ v => Var _ (SyntaxKind _) v
-         | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
-         | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
-         | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
-         | HAddrB _ =>
-           (** * FIXME: no use of this hacking *)
-           (* NOTE: [HAddrB] is used only when making an eviction request
-            * with a nondeterministic address. Here we always make the request
-            * with a victim line, and its address is forwarded to [msgIn]. *)
-           #msgIn!KMsg@."addr"
-                      | HValueB _ => $$Default
-                      | HMsgB mid mty maddr mval =>
-                        (STRUCT { "id" ::= compile_bexp mid;
-                                  "type" ::= compile_bexp mty;
-                                  "addr" ::= compile_bexp maddr;
-                                  "value" ::= compile_bexp mval })
-                      | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
-                      | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
-                      | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
-                      | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
-                      | @HOstVal _ _ _ _ i hbt0 Heq =>
-                        Var _ (SyntaxKind _)
-                            (eq_rect
-                               hostf_ty[@i]
-                               (fun h => var (kind_of h))
-                               (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
-                                        (fun T => T)
-                                        (HVector.hvec_ith ostVars i)
-                                        (var (kind_of hostf_ty[@i]))
-                                        (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
-                               (HBType hbt0)
-                               (hostf_ty_compat i Heq))
-                      (* The expressions below are used only when dealing with responses. *)
-                      | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")})
-                      | HDownLockIdxBackI _ => (#mshr!MSHR@."m_rsbTo")
-         end)%kami_expr.
+        Fixpoint compile_bexp {hbt} (he: hbexp (hbvar_of var) hbt)
+          : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
+          (match he with
+           | HBConst _ c => compile_const c
+           | HVar _ _ v => Var _ (SyntaxKind _) v
+           | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
+           | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
+           | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
+           | HAddrB _ =>
+             (** * FIXME: no use of this hacking *)
+             (* NOTE: [HAddrB] is used only when making an eviction request
+              * with a nondeterministic address. Here we always make the request
+              * with a victim line, and its address is forwarded to [msgIn]. *)
+             #msgIn!KMsg@."addr"
+                        | HValueB _ => $$Default
+                        | HMsgB mid mty maddr mval =>
+                          (STRUCT { "id" ::= compile_bexp mid;
+                                    "type" ::= compile_bexp mty;
+                                    "addr" ::= compile_bexp maddr;
+                                    "value" ::= compile_bexp mval })
+                        | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
+                        | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
+                        | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
+                        | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
+                        | @HOstVal _ _ _ _ i hbt0 Heq =>
+                          Var _ (SyntaxKind _)
+                              (eq_rect
+                                 hostf_ty[@i]
+                                 (fun h => var (kind_of h))
+                                 (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
+                                          (fun T => T)
+                                          (HVector.hvec_ith ostVars i)
+                                          (var (kind_of hostf_ty[@i]))
+                                          (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
+                                 (HBType hbt0)
+                                 (hostf_ty_compat i Heq))
+                        (* The expressions below are used only when dealing with responses. *)
+                        | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")})
+                        | HDownLockIdxBackI _ => (#mshr!MSHR@."m_rsbTo")
+           end)%kami_expr.
 
-      Class CompExtExp :=
-        { compile_eexp:
-            forall (var: Kind -> Type) {het},
-              var (Struct KMsg) -> var (Struct MSHR) ->
-              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
-              heexp (hvar_of var) het ->
-              Expr var (SyntaxKind (kind_of het));
-          compile_eoprec:
-            forall (var: Kind -> Type),
-              var (Struct KMsg) -> var (Struct MSHR) ->
-              HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
-              heoprec (hvar_of var) ->
-              Expr var (SyntaxKind Bool);
-        }.
-      Context `{CompExtExp}.
+        Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
+          : Expr var (SyntaxKind (kind_of ht)) :=
+          match he with
+          | HBExp hbe => compile_bexp hbe
+          | HEExp _ hee => compile_eexp var msgIn mshr ostVars hee
+          end.
 
-      Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
-        : Expr var (SyntaxKind (kind_of ht)) :=
-        match he with
-        | HBExp hbe => compile_bexp hbe
-        | HEExp _ hee => compile_eexp var msgIn mshr ostVars hee
-        end.
+        Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
+          : Expr var (SyntaxKind Bool) :=
+          (match pp with
+           | HTrue _ => $$true
+           | HAnd pp1 pp2 =>
+             (compile_rule_prop_prec pp1) && (compile_rule_prop_prec pp2)
+           | HOr pp1 pp2 =>
+             (compile_rule_prop_prec pp1) || (compile_rule_prop_prec pp2)
+           | HBoolT b => compile_exp b == $$true
+           | HBoolF b => compile_exp b == $$false
+           | HEq v1 v2 => compile_exp v1 == compile_exp v2
+           | HNe v1 v2 => compile_exp v1 != compile_exp v2
+           | HNatLt v1 v2 => compile_exp v1 < compile_exp v2
+           | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
+           | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
+           | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
+           | HExtP _ ep => compile_eoprec _ msgIn mshr ostVars ep
+           | HNativeP _ _ => $$true
+           end)%kami_expr.
 
-      Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
-        : Expr var (SyntaxKind Bool) :=
-        (match pp with
-         | HTrue _ => $$true
-         | HAnd pp1 pp2 =>
-           (compile_rule_prop_prec pp1) && (compile_rule_prop_prec pp2)
-         | HOr pp1 pp2 =>
-           (compile_rule_prop_prec pp1) || (compile_rule_prop_prec pp2)
-         | HBoolT b => compile_exp b == $$true
-         | HBoolF b => compile_exp b == $$false
-         | HEq v1 v2 => compile_exp v1 == compile_exp v2
-         | HNe v1 v2 => compile_exp v1 != compile_exp v2
-         | HNatLt v1 v2 => compile_exp v1 < compile_exp v2
-         | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
-         | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
-         | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
-         | HExtP _ ep => compile_eoprec _ msgIn mshr ostVars ep
-         | HNativeP _ _ => $$true
-         end)%kami_expr.
+        Definition compile_rule_rqrs_prec (rrp: HOPrecR)
+                   (cont: ActionT var Void): ActionT var Void :=
+          (match rrp with
+           | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
+           | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
+           (** * TODO: check [canReg..] for [H..LockFree] makes sense. *)
+           | HUpLockFree =>
+             (Call canUl <- (canRegUL oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
+           | HDownLockFree =>
+             (Call canDl <- (canRegDL oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
+           | HUpLockMsgId mty mid =>
+             (Assert (#mshr!MSHR@."m_valid");
+             Assert (#mshr!MSHR@."m_rsb");
+             Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
+             Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+             cont)
+           | HUpLockMsg =>
+             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HUpLockIdxBack =>
+             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HUpLockBackNone =>
+             (Assert (#mshr!MSHR@."m_valid"); Assert (!(#mshr!MSHR@."m_rsb")); cont)
+           | HDownLockMsgId mty mid =>
+             (Assert (#mshr!MSHR@."m_valid");
+             Assert (#mshr!MSHR@."m_rsb");
+             Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
+             Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+             cont)
+           | HDownLockMsg =>
+             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HDownLockIdxBack =>
+             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
+           | HRssFull => (Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from"); cont)
+           end)%kami_action.
 
-      Definition compile_rule_rqrs_prec (rrp: HOPrecR)
+        Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
-        (match rrp with
-         | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
-         | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
-         (** * TODO: check [canReg..] for [H..LockFree] makes sense. *)
-         | HUpLockFree =>
-           (Call canUl <- (canRegUL oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
-         | HDownLockFree =>
-           (Call canDl <- (canRegDL oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
-         | HUpLockMsgId mty mid =>
-           (Assert (#mshr!MSHR@."m_valid");
-           Assert (#mshr!MSHR@."m_rsb");
-           Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
-           cont)
-         | HUpLockMsg =>
-           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
-         | HUpLockIdxBack =>
-           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
-         | HUpLockBackNone =>
-           (Assert (#mshr!MSHR@."m_valid"); Assert (!(#mshr!MSHR@."m_rsb")); cont)
-         | HDownLockMsgId mty mid =>
-           (Assert (#mshr!MSHR@."m_valid");
-           Assert (#mshr!MSHR@."m_rsb");
-           Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
-           Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
-           cont)
-         | HDownLockMsg =>
-           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
-         | HDownLockIdxBack =>
-           (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
-         | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-         | HRssFull => (Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from"); cont)
-         end)%kami_action.
+          match rp with
+          | HOPrecAnd prec1 prec2 =>
+            let crule2 := compile_rule_prec prec2 cont in
+            compile_rule_prec prec1 crule2
+          | HOPrecRqRs _ rrprec => compile_rule_rqrs_prec rrprec cont
+          | HOPrecProp pprec =>
+            (Assert (compile_rule_prop_prec pprec); cont)%kami_action
+          end.
 
-      Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
-               (cont: ActionT var Void): ActionT var Void :=
-        match rp with
-        | HOPrecAnd prec1 prec2 =>
-          let crule2 := compile_rule_prec prec2 cont in
-          compile_rule_prec prec1 crule2
-        | HOPrecRqRs _ rrprec => compile_rule_rqrs_prec rrprec cont
-        | HOPrecProp pprec =>
-          (Assert (compile_rule_prop_prec pprec); cont)%kami_action
-        end.
+        Definition compile_bval {hbt} (hv: hbval hbt)
+          : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
+          (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
+           | HGetFirstMsg => #msgIn
+           | HGetUpLockMsg => (#mshr!MSHR@."m_msg")
+           | HGetDownLockMsg => (#mshr!MSHR@."m_msg")
+           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")}
+           | HGetDownLockIdxBack => (#mshr!MSHR@."m_rsbTo")
+           | HGetDownLockFirstRs =>
+             (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
+              STRUCT { "cidx" ::= {$rsUpIdx, fs};
+                       "msg" ::= (#mshr!MSHR@."m_rss")#[fs] })
+           end)%kami_expr.
 
-      Definition compile_bval {hbt} (hv: hbval hbt)
-        : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
-        (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
-         | HGetFirstMsg => #msgIn
-         | HGetUpLockMsg => (#mshr!MSHR@."m_msg")
-         | HGetDownLockMsg => (#mshr!MSHR@."m_msg")
-         | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")}
-         | HGetDownLockIdxBack => (#mshr!MSHR@."m_rsbTo")
-         | HGetDownLockFirstRs =>
-           (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
-            STRUCT { "cidx" ::= {$rsUpIdx, fs};
-                     "msg" ::= (#mshr!MSHR@."m_rss")#[fs] })
-         end)%kami_expr.
+        Fixpoint compile_OState_write_fix
+                 (host: HOState (hvar_of var))
+                 (rlw: var (LineWriteK infoK))
+                 {retK} (cont: var (LineWriteK infoK) -> ActionT var retK): ActionT var retK :=
+          (match host with
+           | HOStateI _ => cont rlw
+           | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
+             (LET ninfo <- compile_line_update rlw _ Heq (compile_exp he);
+             compile_OState_write_fix host' ninfo cont)
+           end)%kami_action.
 
-      Fixpoint compile_OState_write_fix
-               (host: HOState (hvar_of var))
-               (rlw: var (LineWriteK infoK))
-               {retK} (cont: var (LineWriteK infoK) -> ActionT var retK): ActionT var retK :=
-        (match host with
-         | HOStateI _ => cont rlw
-         | @HOstUpdate _ _ _ _ _ _ _ i ht Heq he host' =>
-           (LET ninfo <- compile_line_update rlw _ Heq (compile_exp he);
-           compile_OState_write_fix host' ninfo cont)
-         end)%kami_action.
+        Local Notation valueRsLineRq :=
+          (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
 
-      Local Notation valueRsLineRq :=
-        (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
+        Definition compile_OState_request_write
+                   (host: HOState (hvar_of var)) (pline: var (LineWriteK infoK))
+                   (cont: var KValue -> ActionT var Void): ActionT var Void :=
+          match host with
+          | HOStateI _ =>
+            (** * FIXME: extend the interface to the value but not to write anything *)
+            (Call rvalue <- valueRsLineRq($$Default); cont rvalue)
+          | _ => compile_OState_write_fix
+                   host pline
+                   (fun nline => Call rvalue <- valueRsLineRq(#nline); cont rvalue)
+          end%kami_action.
 
-      Definition compile_OState_request_write
-                 (host: HOState (hvar_of var)) (pline: var (LineWriteK infoK))
-                 (cont: var KValue -> ActionT var Void): ActionT var Void :=
-        match host with
-        | HOStateI _ =>
-          (** * FIXME: extend the interface to the value but not to write anything *)
-          (Call pvalue <- valueRsLineRq($$Default); cont pvalue)
-        | _ => compile_OState_write_fix
-                 host pline
-                 (fun nline => Call pvalue <- valueRsLineRq(#nline); cont pvalue)
-        end%kami_action.
+      End OstVarsNoValue.
 
-      Local Notation registerUL := (registerUL oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation registerDL := (registerDL oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation release := (release oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation addRs := (addRs oidx).
+      Section OstVarsWithValue.
+        Variable ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty).
+        Local Notation compile_exp := (compile_exp ostVars).
 
-      Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
-               (cont: ActionT var Void): ActionT var Void :=
-        (match horq with
-         | HORqI _ => cont
-         | HUpdUpLock rq _ rsb =>
-           (* Call hasV <- (hasVictim oidx)(); Assert (!#hasV); *)
-           (Call registerUL(STRUCT { "r_id" ::= #mshrId;
-                                     "r_ul_msg" ::= compile_exp rq;
-                                     "r_ul_rsb" ::= $$true;
-                                     "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
-         | HUpdUpLockS _ =>
-           (Call registerUL(STRUCT { "r_id" ::= #mshrId;
-                                     (* already properly set for eviction;
-                                      * see [compile_rule_get_readlock_msg]. *)
-                                     "r_ul_msg" ::= #msgIn;
-                                     "r_ul_rsb" ::= $$false;
-                                     "r_ul_rsbTo" ::= $$Default }); cont)
-         | HRelUpLock _ => (Call release(#mshrId); cont)
-         | HUpdDownLock rq rssf rsb =>
-           (Call registerDL(STRUCT { "r_id" ::= #mshrId;
-                                     "r_dl_msg" ::= compile_exp rq;
-                                     "r_dl_rss_from" ::= compile_exp rssf;
-                                     "r_dl_rsb" ::= $$true;
-                                     "r_dl_rsbTo" ::= compile_exp rsb }); cont)
-         | HUpdDownLockS rssf =>
-           (** NOTE: silent down-requests;
-            * not used in non-inclusive cache-coherence protocols *)
-           (Call registerDL (STRUCT { "r_id" ::= #mshrId;
-                                      "r_dl_msg" ::= $$Default;
-                                      "r_dl_rss_from" ::= compile_exp rssf;
-                                      "r_dl_rsb" ::= $$false;
-                                      "r_dl_rsbTo" ::= $$Default });
-           cont)
-         | HRelDownLock _ => (Call release(#mshrId); cont)
-         | HTrsfUpDown rq rssf rsb =>
-           (Call transferUpDown (STRUCT { "r_id" ::= #mshrId;
-                                          "r_dl_rss_from" ::= compile_exp rssf });
-           cont)
-         | HAddRs midx msg =>
-           (Call addRs (STRUCT { "r_dl_midx" ::= _truncate_ (compile_exp midx);
-                                 "r_dl_msg" ::= compile_exp msg });
-           cont)
-         end)%kami_action.
+        Local Notation registerUL := (registerUL oidx mshrNumPRqs mshrNumCRqs).
+        Local Notation registerDL := (registerDL oidx mshrNumPRqs mshrNumCRqs).
+        Local Notation release := (release oidx mshrNumPRqs mshrNumCRqs).
+        Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
+        Local Notation addRs := (addRs oidx).
 
-      Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
+        Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
-        (match hmsgs with
-         | HMsgOutNil _ => cont
-         | HMsgOutOne midx msg =>
-           (let kqidx := compile_exp midx in
-            LET menqv <- STRUCT { "enq_type" ::=
-                                    (IF (_truncLsb_ kqidx == $downIdx) then $2
-                                     else IF (_truncLsb_ kqidx == $rqUpIdx)
-                                     then $0 else $1);
-                                  "enq_ch_idx" ::= _truncate_ kqidx;
-                                  "enq_msg" ::= compile_exp msg };
-           Call (makeEnq oidx)(#menqv);
-           cont)
-         | HMsgsOutDown minds msg =>
-           (Call (broadcastToCs oidx)(STRUCT { "cs_inds" ::= compile_exp minds;
-                                               "cs_msg" ::= compile_exp msg });
-           cont)
-         end)%kami_action.
+          (match horq with
+           | HORqI _ => cont
+           | HUpdUpLock rq _ rsb =>
+             (* Call hasV <- (hasVictim oidx)(); Assert (!#hasV); *)
+             (Call registerUL(STRUCT { "r_id" ::= #mshrId;
+                                       "r_ul_msg" ::= compile_exp rq;
+                                       "r_ul_rsb" ::= $$true;
+                                       "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
+           | HUpdUpLockS _ =>
+             (Call registerUL(STRUCT { "r_id" ::= #mshrId;
+                                       (* already properly set for eviction;
+                                        * see [compile_rule_get_readlock_msg]. *)
+                                       "r_ul_msg" ::= #msgIn;
+                                       "r_ul_rsb" ::= $$false;
+                                       "r_ul_rsbTo" ::= $$Default }); cont)
+           | HRelUpLock _ => (Call release(#mshrId); cont)
+           | HUpdDownLock rq rssf rsb =>
+             (Call registerDL(STRUCT { "r_id" ::= #mshrId;
+                                       "r_dl_msg" ::= compile_exp rq;
+                                       "r_dl_rss_from" ::= compile_exp rssf;
+                                       "r_dl_rsb" ::= $$true;
+                                       "r_dl_rsbTo" ::= compile_exp rsb }); cont)
+           | HUpdDownLockS rssf =>
+             (** NOTE: silent down-requests;
+              * not used in non-inclusive cache-coherence protocols *)
+             (Call registerDL (STRUCT { "r_id" ::= #mshrId;
+                                        "r_dl_msg" ::= $$Default;
+                                        "r_dl_rss_from" ::= compile_exp rssf;
+                                        "r_dl_rsb" ::= $$false;
+                                        "r_dl_rsbTo" ::= $$Default });
+             cont)
+           | HRelDownLock _ => (Call release(#mshrId); cont)
+           | HTrsfUpDown rq rssf rsb =>
+             (Call transferUpDown (STRUCT { "r_id" ::= #mshrId;
+                                            "r_dl_rss_from" ::= compile_exp rssf });
+             cont)
+           | HAddRs midx msg =>
+             (Call addRs (STRUCT { "r_dl_midx" ::= _truncate_ (compile_exp midx);
+                                   "r_dl_msg" ::= compile_exp msg });
+             cont)
+           end)%kami_action.
 
-      Fixpoint compile_MonadT_trs (hm: HMonadT (hvar_of var))
-               (cont: var KValue -> ActionT var Void):
-        ActionT var Void :=
+        Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
+                   (cont: ActionT var Void): ActionT var Void :=
+          (match hmsgs with
+           | HMsgOutNil _ => cont
+           | HMsgOutOne midx msg =>
+             (let kqidx := compile_exp midx in
+              LET menqv <- STRUCT { "enq_type" ::=
+                                      (IF (_truncLsb_ kqidx == $downIdx) then $2
+                                       else IF (_truncLsb_ kqidx == $rqUpIdx)
+                                       then $0 else $1);
+                                    "enq_ch_idx" ::= _truncate_ kqidx;
+                                    "enq_msg" ::= compile_exp msg };
+             Call (makeEnq oidx)(#menqv);
+             cont)
+           | HMsgsOutDown minds msg =>
+             (Call (broadcastToCs oidx)(STRUCT { "cs_inds" ::= compile_exp minds;
+                                                 "cs_msg" ::= compile_exp msg });
+             cont)
+           end)%kami_action.
+
+      End OstVarsWithValue.
+
+      Variables (pir: var (Struct InfoRead)).
+
+      Fixpoint compile_MonadT_trs
+               (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+               (hm: HMonadT (hvar_of var))
+               (cont: ActionT var Void): ActionT var Void :=
         (match hm with
          | HBind hv mcont =>
            Let_ (compile_bval hv)
-                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs (mcont x) cont)
+                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs ostVars (mcont x) cont)
          | HRet host horq hmsgs =>
            (LET pline: (LineWriteK infoK) <- STRUCT { "addr" ::= #msgIn!KMsg@."addr";
                                                       "info_write" ::= $$false;
@@ -547,18 +574,27 @@ Section Compile.
                                                       "edir_slot" ::= #pir!InfoRead@."edir_slot";
                                                       "info" ::= #pir!InfoRead@."info";
                                                       "value_write" ::= $$false;
-                                                      "value" ::= #pvalue };
+                                                      (* The previous value is not used for
+                                                       * local state updates; it may be used for
+                                                       * [OTrs] updates or output messages. *)
+                                                      "value" ::= $$Default };
            compile_OState_request_write
-             host pline
-             (fun we => compile_ORq_trs horq (compile_MsgsOut_trs hmsgs (cont we))))
+             ostVars host pline
+             (fun rvalue: var KValue =>
+                let nostVars := HVector.hvec_upd
+                                  ostVars valueOstIdx
+                                  (eq_rect_r
+                                     id (eq_rect_r var rvalue value_ost_idx_ok)
+                                     (Vector_nth_map_comp
+                                        (fun hty => var (kind_of hty)) hostf_ty valueOstIdx)) in
+                compile_ORq_trs nostVars horq (compile_MsgsOut_trs nostVars hmsgs cont)))
          end)%kami_action.
 
-      (** * FIXME: feed [var KValue] from continuation to [MsgsOut] *)
-      Definition compile_rule_trs (trs: HOTrs)
-                 (cont: var KValue -> ActionT var Void)
-        : ActionT var Void :=
+      Definition compile_rule_trs
+                 (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
         match trs with
-        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs (mn (hvar_of var)) cont
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs ostVars (mn (hvar_of var)) cont
         end.
 
     End CompileExec.
@@ -577,10 +613,29 @@ Section Compile.
        * + maybe something more?
        *)
 
-      (* Definition execStageRuleHit: ActionT var Void := *)
-      (*   (Call lr <- deqLR2EX(); *)
-      (*   LET hit <- #lr!LRPipe@."lr_ir"!InfoRead@."info_hit"; *)
-      (*   Call pval <- valueReadRs(); *)
+      Local Notation valueRsLineRq :=
+        (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
+
+      Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
+      Let hr := projT2 rule.
+
+      Local Notation "v <- f ; cont" :=
+        (f (fun v => cont)) (at level 12, right associativity, only parsing): kami_action_scope.
+      Local Notation ": f ; cont" :=
+        (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
+
+      Definition execStageRuleHit: ActionT var Void :=
+        (Call lr <- deqLR2EX();
+        LET pir <- #lr!LRPipe@."lr_ir";
+        LET pinfo <- #pir!InfoRead@."info";
+        LET msgIn <- #lr!LRPipe@."lr_ir_pp"!IRPipe@."ir_msg";
+        LET mshrId <- #lr!LRPipe@."lr_ir_pp"!IRPipe@."ir_mshr_id";
+        LET mshr <- $$Default; (** FIXME *)
+        ostVars <- compile_info_to_ostVars pinfo;
+        :compile_rule_prec
+           msgIn mshr ostVars (hrule_precond hr (hvar_of var));
+        :compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr);
+        Retv)%kami_action.
 
     End ExecStage.
 
@@ -597,11 +652,6 @@ Section Compile.
       (ruleNameBase
          ++ "_" ++ idx_to_string oidx
          ++ "_" ++ idx_to_string ridx)%string.
-
-    Local Notation "v <- f ; cont" :=
-      (f (fun v => cont)) (at level 60, right associativity, only parsing).
-    Local Notation "f ;; cont" :=
-      (f cont) (at level 60, right associativity, only parsing).
 
     Definition compile_rules (dtr: Topology.DTree)
                (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
