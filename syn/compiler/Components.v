@@ -192,6 +192,8 @@ Section MSHR.
   Let slotSz := S (Nat.log2 predNumSlots).
   Let MshrId := Bit slotSz.
 
+  Definition getMSHR: Attribute SignatureT := MethodSig ("getMSHR"+o)(MshrId): Struct MSHR.
+
   Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(): Maybe MshrId.
   Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(): Maybe MshrId.
   Definition canRegUL: Attribute SignatureT := MethodSig ("canRegUL"+o)(KAddr): Bool.
@@ -291,6 +293,10 @@ Section MSHR.
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
         Register ("rqs"+o): Array (Struct MSHR) numSlots <- Default
+
+        with Method ("getMSHR"+o)(mid: MshrId): Struct MSHR :=
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          Ret #rqs#[#mid]
 
         with Method ("getPRqSlot"+o)(): Maybe MshrId :=
           Read rqs <- "rqs"+o;

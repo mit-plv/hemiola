@@ -83,7 +83,7 @@ Section Reify.
     | HIdmId: hbexp HIdm -> hbexp HIdxQ
     | HIdmMsg: hbexp HIdm -> hbexp HMsg
     | HObjIdxOf: hbexp HIdxQ -> hbexp HIdxO
-    | HAddrB: hbexp HAddr
+    | HAddrRep: hbexp HAddr
     | HValueB: hbexp HValue
     | HMsgB: hbexp HIdxM -> hbexp HBool -> hbexp HAddr -> hbexp HValue -> hbexp HMsg
     | HMsgId: hbexp HMsg -> hbexp HIdxM
@@ -257,7 +257,7 @@ Section Reify.
   Arguments HIdmId {var}.
   Arguments HIdmMsg {var}.
   Arguments HObjIdxOf {var}.
-  Arguments HAddrB {var}.
+  Arguments HAddrRep {var}.
   Arguments HValueB {var}.
   Arguments HMsgB {var}.
   Arguments HMsgId {var}.
@@ -318,7 +318,7 @@ Section Reify.
         | HIdmId idm => idOf (interpBExp idm)
         | HIdmMsg idm => valOf (interpBExp idm)
         | HObjIdxOf midx => objIdxOf (interpBExp midx)
-        | HAddrB => tt
+        | HAddrRep => tt
         | HValueB => 0
         | HMsgB mid mty maddr mval =>
           {| msg_id := interpBExp mid;
@@ -611,7 +611,7 @@ Ltac renote_bexp :=
            | idOf _ => instantiate (1:= HIdmId _); simpl; f_equal
            | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
            | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal
-           | tt => instantiate (1:= HAddrB _); reflexivity
+           | tt => instantiate (1:= HAddrRep _); reflexivity
            | 0 => instantiate (1:= HValueB _); reflexivity
            | {| msg_id := _ |} => instantiate (1:= HMsgB _ _ _ _); simpl; f_equal
            | msg_id _ => instantiate (1:= HMsgId _); simpl; f_equal

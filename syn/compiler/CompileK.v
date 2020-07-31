@@ -329,37 +329,36 @@ Section Compile.
            | HIdmId pe => ((compile_bexp pe)!KCIdm@."cidx")
            | HIdmMsg pe => ((compile_bexp pe)!KCIdm@."msg")
            | HObjIdxOf midx => (_truncate_ (compile_bexp midx))
-           | HAddrB _ =>
-             (** * FIXME: no use of this hacking *)
-             (* NOTE: [HAddrB] is used only when making an eviction request
-              * with a nondeterministic address. Here we always make the request
-              * with a victim line, and its address is forwarded to [msgIn]. *)
-             #msgIn!KMsg@."addr"
-                        | HValueB _ => $$Default
-                        | HMsgB mid mty maddr mval =>
-                          (STRUCT { "id" ::= compile_bexp mid;
-                                    "type" ::= compile_bexp mty;
-                                    "addr" ::= compile_bexp maddr;
-                                    "value" ::= compile_bexp mval })
-                        | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
-                        | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
-                        | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
-                        | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
-                        | @HOstVal _ _ _ _ i hbt0 Heq =>
-                          Var _ (SyntaxKind _)
-                              (eq_rect
-                                 hostf_ty[@i]
-                                 (fun h => var (kind_of h))
-                                 (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
-                                          (fun T => T)
-                                          (HVector.hvec_ith ostVars i)
-                                          (var (kind_of hostf_ty[@i]))
-                                          (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
-                                 (HBType hbt0)
-                                 (hostf_ty_compat i Heq))
-                        (* The expressions below are used only when dealing with responses. *)
-                        | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")})
-                        | HDownLockIdxBackI _ => (#mshr!MSHR@."m_rsbTo")
+           | HAddrRep _ =>
+             (* NOTE: [HAddrRep] is the representative address that is currently being
+              * handled by the cache controller. Thus it is reasonable to take the address
+              * from the input message. *)
+             (#msgIn!KMsg@."addr")
+           | HValueB _ => $$Default
+           | HMsgB mid mty maddr mval =>
+             (STRUCT { "id" ::= compile_bexp mid;
+                       "type" ::= compile_bexp mty;
+                       "addr" ::= compile_bexp maddr;
+                       "value" ::= compile_bexp mval })
+           | HMsgId msg => ((compile_bexp msg)!KMsg@."id")
+           | HMsgType msg => ((compile_bexp msg)!KMsg@."type")
+           | HMsgAddr msg => ((compile_bexp msg)!KMsg@."addr")
+           | HMsgValue msg => ((compile_bexp msg)!KMsg@."value")
+           | @HOstVal _ _ _ _ i hbt0 Heq =>
+             Var _ (SyntaxKind _)
+                 (eq_rect
+                    hostf_ty[@i]
+                    (fun h => var (kind_of h))
+                    (eq_rect (Vector.map (fun h => var (kind_of h)) hostf_ty)[@i]
+                             (fun T => T)
+                             (HVector.hvec_ith ostVars i)
+                             (var (kind_of hostf_ty[@i]))
+                             (Vector_nth_map_comp (fun h => var (kind_of h)) hostf_ty i))
+                    (HBType hbt0)
+                    (hostf_ty_compat i Heq))
+           (* The expressions below are used only when dealing with responses. *)
+           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")})
+           | HDownLockIdxBackI _ => (#mshr!MSHR@."m_rsbTo")
            end)%kami_expr.
 
         Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
@@ -394,7 +393,6 @@ Section Compile.
           (match rrp with
            | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
            | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
-           (** * TODO: check [canReg..] for [H..LockFree] makes sense. *)
            | HUpLockFree =>
              (Call canUl <- (canRegUL oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
            | HDownLockFree =>
@@ -469,7 +467,7 @@ Section Compile.
                    (cont: var KValue -> ActionT var Void): ActionT var Void :=
           match host with
           | HOStateI _ =>
-            (** * FIXME: extend the interface to the value but not to write anything *)
+            (** Feeding [$$Default] for [LineWrite] means "no writes." *)
             (Call rvalue <- valueRsLineRq($$Default); cont rvalue)
           | _ => compile_OState_write_fix
                    host pline
@@ -615,6 +613,7 @@ Section Compile.
 
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
+      Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -630,12 +629,14 @@ Section Compile.
         LET pinfo <- #pir!InfoRead@."info";
         LET msgIn <- #lr!LRPipe@."lr_ir_pp"!IRPipe@."ir_msg";
         LET mshrId <- #lr!LRPipe@."lr_ir_pp"!IRPipe@."ir_mshr_id";
-        LET mshr <- $$Default; (** FIXME *)
+        Call mshr <- getMSHR(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr);
         Retv)%kami_action.
+
+      (** * TODO: how to define [execStageRuleWait]?? *)
 
     End ExecStage.
 
