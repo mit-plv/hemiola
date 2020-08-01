@@ -173,8 +173,14 @@ Section MSHR.
   Context `{ReifyConfig} `{TopoConfig}.
   Variable oidx: IdxT.
 
+  Definition MSHRStatus := Bit 2.
+  Definition mshrInvalid {var}: Expr var (SyntaxKind MSHRStatus) := ($0)%kami_expr.
+  Definition mshrTaken {var}: Expr var (SyntaxKind MSHRStatus) := ($1)%kami_expr.
+  Definition mshrWaiting {var}: Expr var (SyntaxKind MSHRStatus) := ($2)%kami_expr.
+  Definition mshrValid {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr.
+
   Definition MSHR :=
-    STRUCT { "m_valid" :: Bool;
+    STRUCT { "m_status" :: MSHRStatus;
              "m_is_ul" :: Bool;
              "m_msg" :: Struct KMsg;
              "m_rsb" :: Bool;
@@ -193,11 +199,11 @@ Section MSHR.
   Let MshrId := Bit slotSz.
 
   Definition getMSHR: Attribute SignatureT := MethodSig ("getMSHR"+o)(MshrId): Struct MSHR.
-
   Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(): Maybe MshrId.
   Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(): Maybe MshrId.
   Definition canRegUL: Attribute SignatureT := MethodSig ("canRegUL"+o)(KAddr): Bool.
   Definition canRegDL: Attribute SignatureT := MethodSig ("canRegDL"+o)(KAddr): Bool.
+  Definition setWait: Attribute SignatureT := MethodSig ("setWait"+o)(MshrId): Void.
 
   Definition RegUL :=
     STRUCT { "r_id" :: MshrId;
@@ -302,15 +308,37 @@ Section MSHR.
           Read rqs <- "rqs"+o;
           LET ret <- (prqIter MaybeNone
                               (fun n _ => MaybeSome $n)
-                              (fun m => !(m!MSHR@."m_valid"))
+                              (fun m => m!MSHR@."m_status" == mshrInvalid)
                               #rqs);
+          If (#ret!(MaybeStr MshrId)@."valid")
+          then (LET mid <- #ret!(MaybeStr MshrId)@."data";
+               Write "rqs"+o <- #rqs#[#mid <- STRUCT { "m_status" ::= mshrTaken;
+                                                       "m_is_ul" ::= $$Default;
+                                                       "m_msg" ::= $$Default;
+                                                       "m_rsb" ::= $$Default;
+                                                       "m_rsbTo" ::= $$Default;
+                                                       "m_dl_rss_from" ::= $$Default;
+                                                       "m_dl_rss_recv" ::= $$Default;
+                                                       "m_dl_rss" ::= $$Default }];
+               Retv);
           Ret #ret
         with Method ("getCRqSlot"+o)(): Maybe MshrId :=
           Read rqs <- "rqs"+o;
           LET ret <- (crqIter MaybeNone
                               (fun n _ => MaybeSome $(n + numPRqs))
-                              (fun m => !(m!MSHR@."m_valid"))
+                              (fun m => m!MSHR@."m_status" == mshrInvalid)
                               #rqs);
+          If (#ret!(MaybeStr MshrId)@."valid")
+          then (LET mid <- #ret!(MaybeStr MshrId)@."data";
+               Write "rqs"+o <- #rqs#[#mid <- STRUCT { "m_status" ::= mshrTaken;
+                                                       "m_is_ul" ::= $$Default;
+                                                       "m_msg" ::= $$Default;
+                                                       "m_rsb" ::= $$Default;
+                                                       "m_rsbTo" ::= $$Default;
+                                                       "m_dl_rss_from" ::= $$Default;
+                                                       "m_dl_rss_recv" ::= $$Default;
+                                                       "m_dl_rss" ::= $$Default }];
+               Retv);
           Ret #ret
 
         with Method ("canRegUL"+o)(addr: KAddr): Bool :=
@@ -318,7 +346,9 @@ Section MSHR.
           (* PRq cannot make any uplocks *)
           LET ret <- (crqIter $$true
                               (fun _ _ => $$false)
-                              (fun m => m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                              (fun m =>
+                                 m!MSHR@."m_status" != mshrInvalid &&
+                                 m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                               #rqs);
           Ret #ret
         with Method ("canRegDL"+o)(addr: KAddr): Bool :=
@@ -326,13 +356,27 @@ Section MSHR.
           LET ret <- (rqIter $$true
                              (fun _ _ => $$false)
                              (fun m =>
+                                m!MSHR@."m_status" != mshrInvalid &&
                                 (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                              #rqs);
           Ret #ret
 
+        with Method ("setWait"+o)(mid: MshrId): Void :=
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          LET mshr <- #rqs#[#mid];
+          Write "rqs"+o <- #rqs#[#mid <- STRUCT { "m_status" ::= mshrWaiting;
+                                                  "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
+                                                  "m_msg" ::= #mshr!MSHR@."m_msg";
+                                                  "m_rsb" ::= #mshr!MSHR@."m_rsb";
+                                                  "m_rsbTo" ::= #mshr!MSHR@."m_rsbTo";
+                                                  "m_dl_rss_from" ::= #mshr!MSHR@."m_dl_rss_from";
+                                                  "m_dl_rss_recv" ::= #mshr!MSHR@."m_dl_rss_recv";
+                                                  "m_dl_rss" ::= #mshr!MSHR@."m_dl_rss" }];
+          Retv
+
         with Method ("registerUL"+o)(ul: Struct RegUL): Void :=
           LET mid <- #ul!RegUL@."r_id";
-          LET mshr: Struct MSHR <- STRUCT { "m_valid" ::= $$true;
+          LET mshr: Struct MSHR <- STRUCT { "m_status" ::= mshrValid;
                                             "m_is_ul" ::= $$true;
                                             "m_msg" ::= #ul!RegUL@."r_ul_msg";
                                             "m_rsb" ::= #ul!RegUL@."r_ul_rsb";
@@ -345,7 +389,7 @@ Section MSHR.
           Retv
         with Method ("registerDL"+o)(dl: Struct RegDL): Void :=
           LET mid <- #dl!RegDL@."r_id";
-          LET mshr: Struct MSHR <- STRUCT { "m_valid" ::= $$true;
+          LET mshr: Struct MSHR <- STRUCT { "m_status" ::= mshrValid;
                                             "m_is_ul" ::= $$false;
                                             "m_msg" ::= #dl!RegDL@."r_dl_msg";
                                             "m_rsb" ::= #dl!RegDL@."r_dl_rsb";
@@ -361,7 +405,7 @@ Section MSHR.
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
           LET mid <- #trsf!TrsfUpDown@."r_id";
           LET pmshr <- #rqs#[#mid];
-          LET nmshr: Struct MSHR <- STRUCT { "m_valid" ::= $$true;
+          LET nmshr: Struct MSHR <- STRUCT { "m_status" ::= mshrValid;
                                              "m_is_ul" ::= $$false;
                                              "m_msg" ::= #pmshr!MSHR@."m_msg";
                                              "m_rsb" ::= #pmshr!MSHR@."m_rsb";
@@ -377,7 +421,9 @@ Section MSHR.
           (* PRq cannot make any uplocks *)
           LET ret <- (crqIter $$Default
                               (fun i _ => $i)
-                              (fun m => m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                              (fun m =>
+                                 m!MSHR@."m_status" == mshrValid &&
+                                 m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                               #rqs);
           Ret #ret
         with Method ("findDL"+o)(addr: KAddr): MshrId :=
@@ -385,6 +431,7 @@ Section MSHR.
           LET ret <- (rqIter $$Default
                              (fun i _ => $i)
                              (fun m =>
+                                m!MSHR@."m_status" == mshrValid &&
                                 (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                              #rqs);
           Ret #ret
@@ -400,11 +447,12 @@ Section MSHR.
           LET mid: MshrId <- (rqIter $$Default
                                      (fun n _ => $n)
                                      (fun m =>
+                                        m!MSHR@."m_status" == mshrValid &&
                                         (!(m!MSHR@."m_is_ul")) &&
                                         m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                                      #rqs);
           LET pmshr <- #rqs#[#mid];
-          LET nmshr: Struct MSHR <- STRUCT { "m_valid" ::= #pmshr!MSHR@."m_valid";
+          LET nmshr: Struct MSHR <- STRUCT { "m_status" ::= #pmshr!MSHR@."m_status";
                                              "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
                                              "m_msg" ::= #pmshr!MSHR@."m_msg";
                                              "m_rsb" ::= #pmshr!MSHR@."m_rsb";

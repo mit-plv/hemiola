@@ -388,40 +388,65 @@ Section Compile.
            | HNativeP _ _ => $$true
            end)%kami_expr.
 
+        Definition check_rule_rqrs_prec_LockFree (rrp: HOPrecR): bool * bool :=
+          (match rrp with
+           | HRqAccepting => (false, false)
+           | HRsAccepting => (false, false)
+           | HUpLockFree => (true, false)
+           | HDownLockFree => (false, true)
+           | HUpLockMsgId mty mid => (false, false)
+           | HUpLockMsg => (false, false)
+           | HUpLockIdxBack => (false, false)
+           | HUpLockBackNone => (false, false)
+           | HDownLockMsgId mty mid => (false, false)
+           | HDownLockMsg => (false, false)
+           | HDownLockIdxBack => (false, false)
+           | HMsgIdFrom msgId => (false, false)
+           | HRssFull => (false, false)
+           end)%kami_action.
+
         Definition compile_rule_rqrs_prec (rrp: HOPrecR)
                    (cont: ActionT var Void): ActionT var Void :=
           (match rrp with
            | HRqAccepting => (Assert (!(#msgIn!KMsg@."type")); cont)
            | HRsAccepting => (Assert (#msgIn!KMsg@."type"); cont)
-           | HUpLockFree =>
-             (Call canUl <- (canRegUL oidx) (#msgIn!KMsg@."addr"); Assert #canUl; cont)
-           | HDownLockFree =>
-             (Call canDl <- (canRegDL oidx) (#msgIn!KMsg@."addr"); Assert #canDl; cont)
+           | HUpLockFree => cont
+           | HDownLockFree => cont
            | HUpLockMsgId mty mid =>
-             (Assert (#mshr!MSHR@."m_valid");
+             (Assert (#mshr!MSHR@."m_status" == mshrValid);
              Assert (#mshr!MSHR@."m_rsb");
              Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
              Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
            | HUpLockMsg =>
-             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
            | HUpLockIdxBack =>
-             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
            | HUpLockBackNone =>
-             (Assert (#mshr!MSHR@."m_valid"); Assert (!(#mshr!MSHR@."m_rsb")); cont)
+             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (!(#mshr!MSHR@."m_rsb")); cont)
            | HDownLockMsgId mty mid =>
-             (Assert (#mshr!MSHR@."m_valid");
+             (Assert (#mshr!MSHR@."m_status" == mshrValid);
              Assert (#mshr!MSHR@."m_rsb");
              Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
              Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
            | HDownLockMsg =>
-             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
            | HDownLockIdxBack =>
-             (Assert (#mshr!MSHR@."m_valid"); Assert (#mshr!MSHR@."m_rsb"); cont)
+             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
            | HRssFull => (Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from"); cont)
            end)%kami_action.
+
+        Fixpoint check_rule_prec_LockFree (rp: HOPrecT (hvar_of var)): bool * bool :=
+          match rp with
+          | HOPrecAnd prec1 prec2 =>
+            let (cul1, cdl1) := check_rule_prec_LockFree prec1 in
+            let (cul2, cdl2) := check_rule_prec_LockFree prec2 in
+            (cul1 || cul2, cdl1 || cdl2)
+          | HOPrecRqRs _ rrprec => check_rule_rqrs_prec_LockFree rrprec
+          | HOPrecProp pprec => (false, false)
+          end.
 
         Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
@@ -603,17 +628,10 @@ Section Compile.
 
       Definition deqLR2EX := MethodSig deqLR2EXN(): LRPipeK.
 
-      (** Message-execution cases:
-       * - [execStageRuleHit]: the precondition holds and the MSHR slot is properly lockable
-       * - [execStageRuleWait]: the precondition holds but need to wait another
-       *   lock to be released. Push the message to the waiting queue in the MSHR module.
-       * - [execStageRuleRetry]: pull the message from the waiting queue and retry handling it.
-       * + maybe something more?
-       *)
-
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation setWait := (setWait oidx mshrNumPRqs mshrNumCRqs).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -623,7 +641,8 @@ Section Compile.
       Local Notation ": f ; cont" :=
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
 
-      Definition execStageRuleHit: ActionT var Void :=
+      Definition execStageRulePP: ActionT var Void :=
+        let (checkUL, checkDL) := check_rule_prec_LockFree (hrule_precond hr (hvar_of var)) in
         (Call lr <- deqLR2EX();
         LET pir <- #lr!LRPipe@."lr_ir";
         LET pinfo <- #pir!InfoRead@."info";
@@ -633,10 +652,28 @@ Section Compile.
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr);
-        Retv)%kami_action.
+        (match checkUL, checkDL with
+         | false, false =>
+           (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+         | true, false =>
+           (Call canUL <- (canRegUL oidx) (#msgIn!KMsg@."addr");
+           If #canUL
+            then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+            else (Call setWait(#mshrId); Retv); Retv)
+         | false, true =>
+           (Call canDL <- (canRegDL oidx) (#msgIn!KMsg@."addr");
+           If #canDL
+            then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+            else (Call setWait(#mshrId); Retv); Retv)
+         | true, true =>
+           (Call canUL <- (canRegUL oidx) (#msgIn!KMsg@."addr");
+           Call canDL <- (canRegDL oidx) (#msgIn!KMsg@."addr");
+           If (#canUL && #canDL)
+            then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+            else (Call setWait(#mshrId); Retv); Retv)
+         end))%kami_action.
 
-      (** * TODO: how to define [execStageRuleWait]?? *)
+      (** TODO: Definition execStageRuleRetry: ActionT var Void := *)
 
     End ExecStage.
 
