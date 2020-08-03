@@ -151,6 +151,7 @@ Section Compile.
     (** Information/value read and write *)
     Class CompLineRW :=
       { infoK: Kind;
+        invRsId: word ∘hcfg_msg_id_sz;
         (* get_info_addr: *)
         (*   forall (var: Kind -> Type), *)
         (*     var infoK -> Expr var (SyntaxKind KAddr); *)
@@ -173,8 +174,7 @@ Section Compile.
             forall (i: Fin.t ost_sz) ht,
               hostf_ty[@i] = ht ->
               Expr var (SyntaxKind (kind_of ht)) ->
-              Expr var (SyntaxKind (LineWriteK infoK));
-        (* check_inv_response: Fin.t ost_sz -> nat -> bool *)
+              Expr var (SyntaxKind (LineWriteK infoK))
       }.
     Context `{CompLineRW}.
 
@@ -186,12 +186,15 @@ Section Compile.
     Let MshrId := Bit mshrSlotSz.
     Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
 
+    (** Victims *)
+    Variable predNumVictims: nat.
+
     (*! Pipeline Stages *)
     (** * TODO: entry rules for
-     * 1) [InvRq] (triggered by [getVictim]) (!!! AVOID possible deadlocks among [RqUp] messages),
-     * 2) [InvRs] (when [msg.id == invRs]) (!!! must NOT enqueue to the next stage),
-     * 3) [RsRelease] (triggered by [getRsFull]), and
-     * 4) [MSHRRetry] (triggered by [getWait]) (!!! the message already in the MSHR slot) *)
+     * [ ] 1) [InvRq] (triggered by [getVictim]) (!!! AVOID possible deadlocks among [RqUp] messages),
+     * [v] 2) [InvRs] (when [msg.id == invRs]) (!!! must NOT enqueue to the next stage),
+     * [ ] 3) [RsRelease] (triggered by [getRsFull]), and
+     * [ ] 4) [MSHRRetry] (triggered by [getWait]) (!!! the message already in the MSHR slot) *)
 
     Variables deqP2LRN deqC2LRN enqIR2LRN: string.
 
@@ -217,8 +220,10 @@ Section Compile.
       Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
       Local Notation addRs := (addRs oidx).
+      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
+      Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
 
-      Definition infoReadStageRulePRq: ActionT var Void :=
+      Definition irPRq: ActionT var Void :=
         (Call pelt <- deqP2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
@@ -233,7 +238,7 @@ Section Compile.
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
-      Definition infoReadStageRulePRs: ActionT var Void :=
+      Definition irPRs: ActionT var Void :=
         (Call pelt <- deqP2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
@@ -246,7 +251,7 @@ Section Compile.
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
-      Definition infoReadStageRuleCRq: ActionT var Void :=
+      Definition irCRq: ActionT var Void :=
         (Call pelt <- deqC2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
@@ -261,13 +266,21 @@ Section Compile.
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
-      Definition infoReadStageRuleCRs: ActionT var Void :=
+      Definition irCRs: ActionT var Void :=
         (Call pelt <- deqC2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
         Call addRs(STRUCT { "r_dl_midx" ::= #pelt!IRPipe@."ir_cidx";
                             "r_dl_msg" ::= #msg });
         (* No enq to the next stage *)
+        Retv)%kami_action.
+
+      Definition irInvRs: ActionT var Void :=
+        (Call pelt <- deqP2LR();
+        LET msg <- #pelt!IRPipe@."ir_msg";
+        Assert (#msg!KMsg@."type" && #msg!KMsg@."id" == $$invRsId);
+        Call vmid <- releaseVictim(#msg!KMsg@."addr");
+        Call releaseMSHR(#vmid);
         Retv)%kami_action.
 
     End InfoReadStage.
@@ -287,7 +300,7 @@ Section Compile.
       Definition enqLR2EX := MethodSig enqLR2EXN(LRPipeK): Void.
       Local Notation infoRsValueRq := (infoRsValueRq oidx infoK indexSz lgWay edirLgWay).
 
-      Definition lineReadStageRule: ActionT var Void :=
+      Definition lrRule: ActionT var Void :=
         (Call ir <- deqIR2LR();
         Call rinfo <- infoRsValueRq();
         LET lr <- STRUCT { "lr_ir_pp" ::= #ir; "lr_ir" ::= #rinfo };
@@ -511,7 +524,7 @@ Section Compile.
 
         Local Notation registerUL := (registerUL oidx mshrNumPRqs mshrNumCRqs).
         Local Notation registerDL := (registerDL oidx mshrNumPRqs mshrNumCRqs).
-        Local Notation release := (release oidx mshrNumPRqs mshrNumCRqs).
+        Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
         Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
         Local Notation addRs := (addRs oidx).
 
@@ -532,7 +545,7 @@ Section Compile.
                                        "r_ul_msg" ::= #msgIn;
                                        "r_ul_rsb" ::= $$false;
                                        "r_ul_rsbTo" ::= $$Default }); cont)
-           | HRelUpLock _ => (Call release(#mshrId); cont)
+           | HRelUpLock _ => (Call releaseMSHR(#mshrId); cont)
            | HUpdDownLock rq rssf rsb =>
              (Call registerDL(STRUCT { "r_id" ::= #mshrId;
                                        "r_dl_msg" ::= compile_exp rq;
@@ -548,7 +561,7 @@ Section Compile.
                                         "r_dl_rsb" ::= $$false;
                                         "r_dl_rsbTo" ::= $$Default });
              cont)
-           | HRelDownLock _ => (Call release(#mshrId); cont)
+           | HRelDownLock _ => (Call releaseMSHR(#mshrId); cont)
            | HTrsfUpDown rq rssf rsb =>
              (Call transferUpDown (STRUCT { "r_id" ::= #mshrId;
                                             "r_dl_rss_from" ::= compile_exp rssf });
@@ -646,7 +659,7 @@ Section Compile.
       Local Notation ": f ; cont" :=
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
 
-      Definition execStageRulePP: ActionT var Void :=
+      Definition execPP: ActionT var Void :=
         let (checkUL, checkDL) := check_rule_prec_LockFree (hrule_precond hr (hvar_of var)) in
         (Call lr <- deqLR2EX();
         LET pir <- #lr!LRPipe@."lr_ir";

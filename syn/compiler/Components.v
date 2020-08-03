@@ -242,7 +242,7 @@ Section MSHR.
 
   Definition findUL: Attribute SignatureT := MethodSig ("findUL"+o)(KAddr): MshrId.
   Definition findDL: Attribute SignatureT := MethodSig ("findDL"+o)(KAddr): MshrId.
-  Definition release: Attribute SignatureT := MethodSig ("release"+o)(MshrId): Void.
+  Definition releaseMSHR: Attribute SignatureT := MethodSig ("releaseMSHR"+o)(MshrId): Void.
 
   Definition AddRs :=
     STRUCT { "r_dl_midx" :: KCIdx; "r_dl_msg" :: Struct KMsg }.
@@ -482,7 +482,7 @@ Section MSHR.
                              #rqs);
           Ret #ret
 
-        with Method ("release"+o)(mid: MshrId): Void :=
+        with Method ("releaseMSHR"+o)(mid: MshrId): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
           LET mshr <- #rqs#[#mid];
           LET rrqs <- #rqs#[#mid <- $$Default];
@@ -840,25 +840,21 @@ Section NCID.
   Definition valueRsLineRqN: string := cacheN _++ "valueRsLineRq".
   Definition valueRsLineRq := MethodSig valueRsLineRqN (LineWriteK): valueK.
 
+  Variable mshrSlotSz: nat.
+  Let MshrId := Bit mshrSlotSz.
+
   Definition Victim :=
     STRUCT { "victim_valid" :: Bool;
              "victim_addr" :: Bit addrSz;
              "victim_info" :: infoK;
-             "victim_value" :: valueK }.
+             "victim_value" :: valueK;
+             "victim_req" :: Maybe MshrId }.
   Let VictimK := Struct Victim.
-
-  (* Definition VictimWrite := *)
-  (*   STRUCT { "vw_index" :: Bit victimIdxSz; *)
-  (*            "vw_victim" :: VictimK }. *)
-  (* Let VictimWriteK := Struct VictimWrite. *)
-
-  (* Definition victimWriteN: string := cacheN _++ "victimWrite". *)
-  (* Definition victimWrite := MethodSig victimWriteN (VictimWriteK): Void. *)
 
   (* Definition getVictimN: string := cacheN _++ "getVictim". *)
   (* Definition getVictim := MethodSig getVictimN (): VictimK. *)
-  Definition removeVictimN: string := cacheN _++ "removeVictim".
-  Definition removeVictim := MethodSig removeVictimN (Bit victimIdxSz): Void.
+  Definition releaseVictimN: string := cacheN _++ "releaseVictim".
+  Definition releaseVictim := MethodSig releaseVictimN (Bit addrSz): MshrId.
 
   (*! -- public interface ends here *)
 
@@ -923,8 +919,8 @@ Section NCID.
   Fixpoint victimIterAFix (var: Kind -> Type)
            (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
            (addr: Expr var (SyntaxKind (Bit addrSz)))
-           (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var Void)
-           (cont: ActionT var Void) (n: nat): ActionT var Void :=
+           {retK} (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var retK)
+           (cont: ActionT var retK) (n: nat): ActionT var retK :=
     match n with
     | O => cont
     | S n' =>
@@ -932,14 +928,16 @@ Section NCID.
       If ((#victim!Victim@."victim_valid")
           && #victim!Victim@."victim_addr" == addr)
        then (readF (numVictims - n) (#victim)%kami_expr)
-       else (victimIterAFix victims addr readF cont n'); Retv)%kami_action
+       else (victimIterAFix victims addr readF cont n')
+        as ret;
+      Ret #ret)%kami_action
     end.
 
   Definition victimIterA (var: Kind -> Type)
              (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
              (addr: Expr var (SyntaxKind (Bit addrSz)))
-             (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var Void)
-             (cont: ActionT var Void): ActionT var Void :=
+             {retK} (readF: nat -> Expr var (SyntaxKind VictimK) -> ActionT var retK)
+             (cont: ActionT var retK): ActionT var retK :=
     victimIterAFix victims addr readF cont numVictims.
 
   Fixpoint getVictimSlotFix (var: Kind -> Type)
@@ -1114,7 +1112,8 @@ Section NCID.
                                          "victim_value" ::=
                                            (IF (#lw!LineWrite@."value_write")
                                             then (#lw!LineWrite@."value")
-                                            else (#pv!Victim@."victim_value")) };
+                                            else (#pv!Victim@."victim_value"));
+                                         "victim_req" ::= #pv!Victim@."victim_req" };
              Write victimsN <- #victims#[#vi <- #nv];
              Ret (#pv!Victim@."victim_value"))
         else (Call value <- dataRdResp();
@@ -1145,7 +1144,8 @@ Section NCID.
                         #victims#[#vi <- STRUCT { "victim_valid" ::= $$true;
                                                   "victim_addr" ::= #mv!MayVictim@."mv_addr";
                                                   "victim_info" ::= #mv!MayVictim@."mv_info";
-                                                  "victim_value" ::= #value }];
+                                                  "victim_value" ::= #value;
+                                                  "victim_req" ::= MaybeNone }];
 
                         (** update replacement information *)
                         Call repAccess(STRUCT { "acc_type" ::=
@@ -1190,10 +1190,16 @@ Section NCID.
         as pval;
         Ret #pval
 
-      with Method removeVictimN (vi: Bit victimIdxSz): Void :=
-        Read victims: Array VictimK numVictims <- victimsN;
-        Write victimsN <- #victims#[#vi <- $$Default];
-        Retv
+      with Method releaseVictimN (addr: Bit addrSz): MshrId :=
+        Read victims <- victimsN;
+        victimIterA
+          (#victims)%kami_expr (#addr)%kami_expr
+          (fun i victim =>
+             (Write victimsN <- #victims#[$v$i <- $$Default];
+             (** assumes [victim_req] is valid *)
+             LET vmid <- victim!Victim@."victim_req"!(MaybeStr MshrId)@."data";
+             Ret #vmid))
+          (Ret $$Default)
   }.
 
   Fixpoint infoRams (w: nat) :=
