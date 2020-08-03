@@ -187,8 +187,11 @@ Section Compile.
     Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
 
     (*! Pipeline Stages *)
-    (** * TODO: entry (or execution) rules for
-     * 1) [InvRq], 2) [InvRs], 3) [RsRelease], and 4) [MSHRRetry]. *)
+    (** * TODO: entry rules for
+     * 1) [InvRq] (triggered by [getVictim]) (!!! AVOID possible deadlocks among [RqUp] messages),
+     * 2) [InvRs] (when [msg.id == invRs]) (!!! must NOT enqueue to the next stage),
+     * 3) [RsRelease] (triggered by [getRsFull]), and
+     * 4) [MSHRRetry] (triggered by [getWait]) (!!! the message already in the MSHR slot) *)
 
     Variables deqP2LRN deqC2LRN enqIR2LRN: string.
 
@@ -661,20 +664,20 @@ Section Compile.
            (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
            If !(#mpmid!(MaybeStr MshrId)@."valid")
             then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(STRUCT { "cur_id" ::= #mshrId;
-                                        "wait_for_id" ::= #mpmid!(MaybeStr MshrId)@."data" });
+            else (Call setWait(STRUCT { "s_cur_id" ::= #mshrId;
+                                        "s_wait_id" ::= #mpmid!(MaybeStr MshrId)@."data";
+                                        "s_msg" ::= #msgIn });
                  Retv); Retv)
          | false, true =>
            (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
            If !(#mpmid!(MaybeStr MshrId)@."valid")
             then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(STRUCT { "cur_id" ::= #mshrId;
-                                        "wait_for_id" ::= #mpmid!(MaybeStr MshrId)@."data" });
+            else (Call setWait(STRUCT { "s_cur_id" ::= #mshrId;
+                                        "s_wait_id" ::= #mpmid!(MaybeStr MshrId)@."data";
+                                        "s_msg" ::= #msgIn });
                  Retv); Retv)
          | true, true => Retv (** should not happen *)
          end))%kami_action.
-
-      (** TODO: Definition execStageRuleRetry: ActionT var Void := *)
 
     End ExecStage.
 
