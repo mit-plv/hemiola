@@ -184,6 +184,7 @@ Section Compile.
     Let mshrNumSlots := S predMshrNumSlots.
     Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
     Let MshrId := Bit mshrSlotSz.
+    Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
 
     (*! Pipeline Stages *)
     (** * TODO: entry (or execution) rules for
@@ -631,6 +632,7 @@ Section Compile.
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation canRegister := (canRegister oidx mshrNumPRqs mshrNumCRqs).
       Local Notation setWait := (setWait oidx mshrNumPRqs mshrNumCRqs).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
@@ -656,21 +658,20 @@ Section Compile.
          | false, false =>
            (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
          | true, false =>
-           (Call canUL <- (canRegUL oidx) (#msgIn!KMsg@."addr");
-           If #canUL
+           (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
+           If !(#mpmid!(MaybeStr MshrId)@."valid")
             then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(#mshrId); Retv); Retv)
+            else (Call setWait(STRUCT { "cur_id" ::= #mshrId;
+                                        "wait_for_id" ::= #mpmid!(MaybeStr MshrId)@."data" });
+                 Retv); Retv)
          | false, true =>
-           (Call canDL <- (canRegDL oidx) (#msgIn!KMsg@."addr");
-           If #canDL
+           (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
+           If !(#mpmid!(MaybeStr MshrId)@."valid")
             then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(#mshrId); Retv); Retv)
-         | true, true =>
-           (Call canUL <- (canRegUL oidx) (#msgIn!KMsg@."addr");
-           Call canDL <- (canRegDL oidx) (#msgIn!KMsg@."addr");
-           If (#canUL && #canDL)
-            then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(#mshrId); Retv); Retv)
+            else (Call setWait(STRUCT { "cur_id" ::= #mshrId;
+                                        "wait_for_id" ::= #mpmid!(MaybeStr MshrId)@."data" });
+                 Retv); Retv)
+         | true, true => Retv (** should not happen *)
          end))%kami_action.
 
       (** TODO: Definition execStageRuleRetry: ActionT var Void := *)
