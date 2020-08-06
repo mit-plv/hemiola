@@ -201,8 +201,15 @@ Section MSHR.
              "m_dl_rss" :: Array (Struct KMsg) hcfg_children_max }.
 
   Definition getMSHR: Attribute SignatureT := MethodSig ("getMSHR"+o)(MshrId): Struct MSHR.
-  Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(): Maybe MshrId.
-  Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(): Maybe MshrId.
+
+  Definition PreMSHR :=
+    STRUCT { "r_id" :: MshrId;
+             "r_msg" :: Struct KMsg;
+             "r_rsb" :: Bool;
+             "r_rsbTo" :: KQIdx }.
+  Let PreMSHRK := Struct PreMSHR.
+  Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(PreMSHRK): Maybe MshrId.
+  Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(PreMSHRK): Maybe MshrId.
 
   (** returns [Some mshrId] if not possible to register a lock, where [mshrId] refers to
    * the slot that must be released; returns [None] if possible. *)
@@ -215,11 +222,10 @@ Section MSHR.
              "s_msg" :: Struct KMsg (* contains a line address *) }.
   Let SetWaitK := Struct SetWait.
   Definition setWait: Attribute SignatureT := MethodSig ("setWait"+o)(SetWaitK): Void.
-  Definition getWait: Attribute SignatureT := MethodSig ("getWait"+o)(): Maybe MshrId.
+  Definition getWait: Attribute SignatureT := MethodSig ("getWait"+o)(): Maybe PreMSHRK.
 
   Definition RegUL :=
     STRUCT { "r_id" :: MshrId;
-             "r_ul_msg" :: Struct KMsg; (* contains a line address *)
              "r_ul_rsb" :: Bool;
              "r_ul_rsbTo" :: KCIdx }.
   Let RegULK := Struct RegUL.
@@ -227,7 +233,6 @@ Section MSHR.
 
   Definition RegDL :=
     STRUCT { "r_id" :: MshrId;
-             "r_dl_msg" :: Struct KMsg;
              "r_dl_rss_from" :: KCBv;
              "r_dl_rsb" :: Bool;
              "r_dl_rsbTo" :: KQIdx }.
@@ -316,7 +321,7 @@ Section MSHR.
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
           Ret #rqs#[#mid]
 
-        with Method ("getPRqSlot"+o)(): Maybe MshrId :=
+        with Method ("getPRqSlot"+o)(pmshr: PreMSHRK): Maybe MshrId :=
           Read rqs <- "rqs"+o;
           LET ret <- (prqIter MaybeNone
                               (fun n _ => MaybeSome $n)
@@ -327,9 +332,9 @@ Section MSHR.
                Write "rqs"+o <- #rqs#[#mid <- STRUCT { "m_status" ::= mshrTaken;
                                                        "m_next" ::= MaybeNone;
                                                        "m_is_ul" ::= $$Default;
-                                                       "m_msg" ::= $$Default;
-                                                       "m_rsb" ::= $$Default;
-                                                       "m_rsbTo" ::= $$Default;
+                                                       "m_msg" ::= #pmshr!PreMSHR@."r_msg";
+                                                       "m_rsb" ::= #pmshr!PreMSHR@."r_rsb";
+                                                       "m_rsbTo" ::= #pmshr!PreMSHR@."r_rsbTo";
                                                        "m_dl_rss_from" ::= $$Default;
                                                        "m_dl_rss_recv" ::= $$Default;
                                                        "m_dl_rss" ::= $$Default }];
@@ -393,14 +398,14 @@ Section MSHR.
           Write "rqs"+o <- #prqs;
           Retv
 
-        with Method ("getWait"+o)(): Maybe MshrId :=
+        with Method ("getWait"+o)(): Maybe PreMSHRK :=
           Read rqs <- "rqs"+o;
-          LET ret <- (rqIter MaybeNone
-                             (fun i _ => MaybeSome $i)
-                             (fun m => m!MSHR@."m_status" == mshrWaiting)
-                             #rqs);
-          If (#ret!(MaybeStr MshrId)@."valid")
-          then (LET mid <- #ret!(MaybeStr MshrId)@."data";
+          LET mwait <- (rqIter MaybeNone
+                               (fun i _ => MaybeSome $i)
+                               (fun m => m!MSHR@."m_status" == mshrWaiting)
+                               #rqs);
+          If (#mwait!(MaybeStr MshrId)@."valid")
+          then (LET mid <- #mwait!(MaybeStr MshrId)@."data";
                LET mshr <- #rqs#[#mid];
                Write "rqs"+o <- #rqs#[#mid <-
                                       STRUCT { "m_status" ::= mshrTaken;
@@ -412,7 +417,13 @@ Section MSHR.
                                                "m_dl_rss_from" ::= #mshr!MSHR@."m_dl_rss_from";
                                                "m_dl_rss_recv" ::= #mshr!MSHR@."m_dl_rss_recv";
                                                "m_dl_rss" ::= #mshr!MSHR@."m_dl_rss" }];
-               Retv);
+               LET pre: PreMSHRK <- STRUCT { "r_id" ::= #mid;
+                                             "r_msg" ::= #mshr!MSHR@."m_msg";
+                                             "r_rsb" ::= #mshr!MSHR@."m_rsb";
+                                             "r_rsbTo" ::= #mshr!MSHR@."m_rsbTo" };
+               Ret (MaybeSome #pre))
+          else (Ret MaybeNone)
+          as ret;
           Ret #ret
 
         with Method ("registerUL"+o)(ul: RegULK): Void :=
@@ -422,7 +433,7 @@ Section MSHR.
           LET mshr: Struct MSHR <- STRUCT { "m_status" ::= mshrValid;
                                             "m_next" ::= #pmshr!MSHR@."m_next";
                                             "m_is_ul" ::= $$true;
-                                            "m_msg" ::= #ul!RegUL@."r_ul_msg";
+                                            "m_msg" ::= #pmshr!MSHR@."m_msg";
                                             "m_rsb" ::= #ul!RegUL@."r_ul_rsb";
                                             "m_rsbTo" ::= _zeroExtend_ (#ul!RegUL@."r_ul_rsbTo");
                                             "m_dl_rss_from" ::= $$Default;
@@ -437,7 +448,7 @@ Section MSHR.
           LET mshr: Struct MSHR <- STRUCT { "m_status" ::= mshrValid;
                                             "m_next" ::= #pmshr!MSHR@."m_next";
                                             "m_is_ul" ::= $$false;
-                                            "m_msg" ::= #dl!RegDL@."r_dl_msg";
+                                            "m_msg" ::= #pmshr!MSHR@."m_msg";
                                             "m_rsb" ::= #dl!RegDL@."r_dl_rsb";
                                             "m_rsbTo" ::= #dl!RegDL@."r_dl_rsbTo";
                                             "m_dl_rss_from" ::= #dl!RegDL@."r_dl_rss_from";
@@ -851,8 +862,8 @@ Section NCID.
              "victim_req" :: Maybe MshrId }.
   Let VictimK := Struct Victim.
 
-  (* Definition getVictimN: string := cacheN _++ "getVictim". *)
-  (* Definition getVictim := MethodSig getVictimN (): VictimK. *)
+  Definition getVictimN: string := cacheN _++ "getVictim".
+  Definition getVictim := MethodSig getVictimN (): VictimK.
   Definition releaseVictimN: string := cacheN _++ "releaseVictim".
   Definition releaseVictim := MethodSig releaseVictimN (Bit addrSz): MshrId.
 
@@ -956,48 +967,22 @@ Section NCID.
     : Expr var (SyntaxKind (Maybe (Bit victimIdxSz))) :=
     getVictimSlotFix victims (numVictims - 1).
 
-  (* Fixpoint hasVictimSlotFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*          (n: nat): Expr var (SyntaxKind Bool) := *)
-  (*   (match n with *)
-  (*    | O => !(victims#[$v$0]!Victim@."victim_valid") *)
-  (*    | S n' => *)
-  (*      ((!(victims#[$v$n]!Victim@."victim_valid")) || hasVictimSlotFix victims n') *)
-  (*    end)%kami_expr. *)
-  (* Definition hasVictimSlot (var: Kind -> Type) *)
-  (*            (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*   : Expr var (SyntaxKind Bool) := *)
-  (*   hasVictimSlotFix victims (numVictims - 1). *)
+  Fixpoint getVictimFix (var: Kind -> Type)
+           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
+           (n: nat): Expr var (SyntaxKind VictimK) :=
+    (match n with
+     | O => $$Default
+     | S n' =>
+       (IF ((victims#[$v$n]!Victim@."victim_valid") &&
+            (!(victims#[$v$n]!Victim@."victim_req"!(MaybeStr MshrId)@."valid")))
+        then victims#[$v$n]
+        else getVictimFix victims n')
+     end)%kami_expr.
 
-  (* Fixpoint hasVictimFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*          (n: nat): Expr var (SyntaxKind Bool) := *)
-  (*   (match n with *)
-  (*    | O => (victims#[$v$0]!Victim@."victim_valid") *)
-  (*    | S n' => *)
-  (*      ((victims#[$v$n]!Victim@."victim_valid") || hasVictimFix victims n') *)
-  (*    end)%kami_expr. *)
-
-  (* Fixpoint hasVictimF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*   : Expr var (SyntaxKind Bool) := *)
-  (*   hasVictimFix victims (numVictims - 1). *)
-
-  (* Fixpoint getVictimFix (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*          (n: nat): Expr var (SyntaxKind LineWriteK) := *)
-  (*   (match n with *)
-  (*    | O => (victims#[$v$0]!Victim@."victim_line") *)
-  (*    | S n' => *)
-  (*      (IF (victims#[$v$n]!Victim@."victim_valid") *)
-  (*       then victims#[$v$n]!Victim@."victim_line" *)
-  (*       else getVictimFix victims n') *)
-  (*    end)%kami_expr. *)
-
-  (* Fixpoint getVictimF (var: Kind -> Type) *)
-  (*          (victims: Expr var (SyntaxKind (Array VictimK numVictims))) *)
-  (*   : Expr var (SyntaxKind LineWriteK) := *)
-  (*   getVictimFix victims (numVictims - 1). *)
+  Definition getVictimF (var: Kind -> Type)
+             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
+    : Expr var (SyntaxKind VictimK) :=
+    getVictimFix victims (numVictims - 1).
 
   (** Registers *)
   Definition victimsN: string := "victims"+o.
@@ -1189,6 +1174,11 @@ Section NCID.
              Ret #value)
         as pval;
         Ret #pval
+
+      with Method getVictimN (): VictimK :=
+        Read victims <- victimsN;
+        LET victim <- getVictimF #victims;
+        Ret #victim
 
       with Method releaseVictimN (addr: Bit addrSz): MshrId :=
         Read victims <- victimsN;

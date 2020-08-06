@@ -190,21 +190,20 @@ Section Compile.
     Variable predNumVictims: nat.
 
     (*! Pipeline Stages *)
-    (** * TODO: entry rules for
-     * [ ] 1) [InvRq] (triggered by [getVictim]) (!!! AVOID possible deadlocks among [RqUp] messages),
-     * [v] 2) [InvRs] (when [msg.id == invRs]) (!!! must NOT enqueue to the next stage),
-     * [ ] 3) [RsRelease] (triggered by [getRsFull]), and
-     * [ ] 4) [MSHRRetry] (triggered by [getWait]) (!!! the message already in the MSHR slot) *)
+    (** * TODO: entry (or execution) rules for
+     * [ ] 1) (execution) [InvRq] (triggered by [getVictim]),
+     * [v] 2) (entry) [InvRs] (when [msg.id == invRs]) (!!! must NOT enqueue to the next stage),
+     * [ ] 3) (execution) [RsRelease] (triggered by [getRsFull]), and
+     * [v] 4) (entry) [MSHRRetry] (triggered by [getWait]) (!!! msg already in the MSHR slot) *)
 
     Variables deqP2LRN deqC2LRN enqIR2LRN: string.
 
     Section InfoReadStage.
 
       Definition PPFrom := Bit 2.
-      Definition PPFromPRq: Expr var (SyntaxKind PPFrom) := ($0)%kami_expr.
-      Definition PPFromPRs: Expr var (SyntaxKind PPFrom) := ($1)%kami_expr.
-      Definition PPFromCRq: Expr var (SyntaxKind PPFrom) := ($2)%kami_expr.
-      Definition PPFromCRs: Expr var (SyntaxKind PPFrom) := ($3)%kami_expr.
+      Definition PPFromCRq: Expr var (SyntaxKind PPFrom) := ($0)%kami_expr.
+      Definition PPFromCRs: Expr var (SyntaxKind PPFrom) := ($1)%kami_expr.
+      Definition PPFromP: Expr var (SyntaxKind PPFrom) := ($2)%kami_expr.
       Definition IRPipe :=
         STRUCT { "ir_from" :: PPFrom;
                  "ir_cidx" :: KCIdx;
@@ -214,20 +213,28 @@ Section Compile.
       Definition deqP2LR := MethodSig deqP2LRN(): IRPipeK.
       Definition deqC2LR := MethodSig deqC2LRN(): IRPipeK.
       Definition enqIR2LR := MethodSig enqIR2LRN(IRPipeK): Void.
+
+      Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
+      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
+
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
       Local Notation addRs := (addRs oidx).
-      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
       Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getWait := (getWait oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation PreMSHR := (PreMSHR mshrNumPRqs mshrNumCRqs).
+      Let PreMSHRK := Struct PreMSHR.
 
       Definition irPRq: ActionT var Void :=
         (Call pelt <- deqP2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
-        Call mmid <- getPRqSlot();
+        Call mmid <- getPRqSlot(STRUCT { "r_id" ::= $$Default;
+                                         "r_msg" ::= #msg;
+                                         "r_rsb" ::= $$true;
+                                         "r_rsbTo" ::= {$rsUpIdx, compile_oidx_to_cidx oidx} });
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
         Call infoRq(#msg!KMsg@."addr");
@@ -255,7 +262,10 @@ Section Compile.
         (Call pelt <- deqC2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
-        Call mmid <- getCRqSlot();
+        Call mmid <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
+                                         "r_msg" ::= #msg;
+                                         "r_rsb" ::= $$true;
+                                         "r_rsbTo" ::= {$downIdx, #pelt!IRPipe@."ir_cidx"} });
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
         Call infoRq(#msg!KMsg@."addr");
@@ -273,6 +283,20 @@ Section Compile.
         Call addRs(STRUCT { "r_dl_midx" ::= #pelt!IRPipe@."ir_cidx";
                             "r_dl_msg" ::= #msg });
         (* No enq to the next stage *)
+        Retv)%kami_action.
+
+      (* STRUCT {"r_id" :: MshrId; "r_msg" :: Struct KMsg; "r_rsb" :: Bool; "r_rsbTo" :: KQIdx} *)
+      Definition irRetry: ActionT var Void :=
+        (Call mpmshr <- getWait();
+        Assert (#mpmshr!(MaybeStr PreMSHRK)@."valid");
+        LET pmshr <- #mpmshr!(MaybeStr PreMSHRK)@."data";
+        LET msg <- #pmshr!PreMSHR@."r_msg";
+        Call infoRq(#msg!KMsg@."addr");
+        LET nelt <- STRUCT { "ir_from" ::= $$Default; (** FIXME *)
+                             "ir_cidx" ::= $$Default; (** FIXME *)
+                             "ir_msg" ::= #msg;
+                             "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id" };
+        Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
       Definition irInvRs: ActionT var Void :=
@@ -476,6 +500,25 @@ Section Compile.
             (Assert (compile_rule_prop_prec pprec); cont)%kami_action
           end.
 
+        Definition compile_rule_msg_from (mf: HMsgFrom)
+                   (irp: var IRPipeK) (cont: ActionT var Void): ActionT var Void :=
+          (match mf with
+           | HMsgFromNil => cont
+           | HMsgFromParent pmidx =>
+             (Assert (#irp!IRPipe@."ir_from" == PPFromP); cont)
+           | HMsgFromChild cmidx =>
+             (Assert ((#irp!IRPipe@."ir_from" == PPFromCRq) &&
+                      (#irp!IRPipe@."ir_cidx" == compile_midx_to_cidx cmidx)); cont)
+           | HMsgFromExt emidx =>
+             (Assert ((#irp!IRPipe@."ir_from" == PPFromCRq) &&
+                      (#irp!IRPipe@."ir_cidx" == compile_midx_to_cidx emidx)); cont)
+           | HMsgFromUpLock =>
+             (Assert (#irp!IRPipe@."ir_from" == PPFromP); cont)
+           | HMsgFromDownLock cidx =>
+             (Assert ((#irp!IRPipe@."ir_from" == PPFromCRs) &&
+                      (#irp!IRPipe@."ir_cidx" == compile_oidx_to_cidx cidx)); cont)
+           end)%kami_action.
+
         Definition compile_bval {hbt} (hv: hbval hbt)
           : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
           (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
@@ -533,22 +576,16 @@ Section Compile.
           (match horq with
            | HORqI _ => cont
            | HUpdUpLock rq _ rsb =>
-             (* Call hasV <- (hasVictim oidx)(); Assert (!#hasV); *)
              (Call registerUL(STRUCT { "r_id" ::= #mshrId;
-                                       "r_ul_msg" ::= compile_exp rq;
                                        "r_ul_rsb" ::= $$true;
                                        "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
            | HUpdUpLockS _ =>
              (Call registerUL(STRUCT { "r_id" ::= #mshrId;
-                                       (* already properly set for eviction;
-                                        * see [compile_rule_get_readlock_msg]. *)
-                                       "r_ul_msg" ::= #msgIn;
                                        "r_ul_rsb" ::= $$false;
                                        "r_ul_rsbTo" ::= $$Default }); cont)
            | HRelUpLock _ => (Call releaseMSHR(#mshrId); cont)
            | HUpdDownLock rq rssf rsb =>
              (Call registerDL(STRUCT { "r_id" ::= #mshrId;
-                                       "r_dl_msg" ::= compile_exp rq;
                                        "r_dl_rss_from" ::= compile_exp rssf;
                                        "r_dl_rsb" ::= $$true;
                                        "r_dl_rsbTo" ::= compile_exp rsb }); cont)
@@ -556,7 +593,6 @@ Section Compile.
              (** NOTE: silent down-requests;
               * not used in non-inclusive cache-coherence protocols *)
              (Call registerDL (STRUCT { "r_id" ::= #mshrId;
-                                        "r_dl_msg" ::= $$Default;
                                         "r_dl_rss_from" ::= compile_exp rssf;
                                         "r_dl_rsb" ::= $$false;
                                         "r_dl_rsbTo" ::= $$Default });
@@ -664,10 +700,12 @@ Section Compile.
         (Call lr <- deqLR2EX();
         LET pir <- #lr!LRPipe@."lr_ir";
         LET pinfo <- #pir!InfoRead@."info";
-        LET msgIn <- #lr!LRPipe@."lr_ir_pp"!IRPipe@."ir_msg";
-        LET mshrId <- #lr!LRPipe@."lr_ir_pp"!IRPipe@."ir_mshr_id";
+        LET irpp <- #lr!LRPipe@."lr_ir_pp";
+        LET msgIn <- #irpp!IRPipe@."ir_msg";
+        LET mshrId <- #irpp!IRPipe@."ir_mshr_id";
         Call mshr <- getMSHR(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
+        :compile_rule_msg_from (hrule_msg_from hr) irpp;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
         (match checkUL, checkDL with
