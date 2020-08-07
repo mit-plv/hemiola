@@ -255,6 +255,11 @@ Section MSHR.
     STRUCT { "r_dl_midx" :: KCIdx; "r_dl_msg" :: Struct KMsg }.
   Definition addRs: Attribute SignatureT := MethodSig ("addRs"+o)(Struct AddRs): Void.
 
+  Definition RsReady :=
+    STRUCT { "r_id" :: MshrId; "r_addr" :: KAddr }.
+  Let RsReadyK := Struct RsReady.
+  Definition getRsReady: Attribute SignatureT := MethodSig ("getRsReady"+o)(): RsReadyK.
+
   Fixpoint rqFix {var k}
            (lc: Expr var (SyntaxKind k))
            (tc: nat -> Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind k))
@@ -541,6 +546,20 @@ Section MSHR.
                                                  #[#a!AddRs@."r_dl_midx" <- #a!AddRs@."r_dl_msg"] };
           Write "rqs"+o <- #rqs#[#mid <- #nmshr];
           Retv
+
+        with Method ("getRsReady"+o)(): RsReadyK :=
+          Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
+          LET mid: MshrId <- (rqIter $$Default
+                                     (fun n _ => $n)
+                                     (fun m =>
+                                        m!MSHR@."m_status" == mshrValid &&
+                                        (!(m!MSHR@."m_is_ul")) &&
+                                        m!MSHR@."m_dl_rss_from" == m!MSHR@."m_dl_rss_recv")
+                                     #rqs);
+          LET pmshr <- #rqs#[#mid];
+          LET ret: RsReadyK <- STRUCT { "r_id" ::= #mid;
+                                        "r_addr" ::= #pmshr!MSHR@."m_msg"!KMsg@."addr" };
+          Ret #ret
       }.
 
 End MSHR.

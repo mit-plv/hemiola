@@ -197,7 +197,8 @@ Section Compile.
 
       Definition PPFrom := Bit 2.
       Definition IRPipe :=
-        STRUCT { "ir_msg" :: Struct KMsg;
+        STRUCT { "ir_is_rs_rel" :: Bool;
+                 "ir_msg" :: Struct KMsg;
                  "ir_msg_from" :: KQIdx;
                  "ir_mshr_id" :: MshrId }.
       Definition IRPipeK := Struct IRPipe.
@@ -213,6 +214,9 @@ Section Compile.
       Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation addRs := (addRs oidx).
+      Local Notation getRsReady := (getRsReady oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation RsReady := (RsReady mshrNumPRqs mshrNumCRqs).
+      Let RsReadyK := Struct RsReady.
       Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getWait := (getWait oidx mshrNumPRqs mshrNumCRqs).
       Local Notation PreMSHR := (PreMSHR mshrNumPRqs mshrNumCRqs).
@@ -228,7 +232,8 @@ Section Compile.
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
                              "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
@@ -240,7 +245,8 @@ Section Compile.
         Assert (#msg!KMsg@."type");
         Call mid <- findUL(#msg!KMsg@."addr");
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
                              "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
@@ -256,7 +262,8 @@ Section Compile.
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
                              "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
@@ -271,14 +278,14 @@ Section Compile.
         (* No enq to the next stage *)
         Retv)%kami_action.
 
-      (* STRUCT {"r_id" :: MshrId; "r_msg" :: Struct KMsg; "r_rsb" :: Bool; "r_rsbTo" :: KQIdx} *)
       Definition irRetry: ActionT var Void :=
         (Call mpmshr <- getWait();
         Assert (#mpmshr!(MaybeStr PreMSHRK)@."valid");
         LET pmshr <- #mpmshr!(MaybeStr PreMSHRK)@."data";
         LET msg <- #pmshr!PreMSHR@."r_msg";
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_msg" ::= #msg;
+        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_msg" ::= #msg;
                              "ir_msg_from" ::= #pmshr!PreMSHR@."r_msg_from";
                              "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id" };
         Call enqIR2LR(#nelt);
@@ -290,6 +297,20 @@ Section Compile.
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" == $$invRsId);
         Call vmid <- releaseVictim(#msg!KMsg@."addr");
         Call releaseMSHR(#vmid);
+        Retv)%kami_action.
+
+      Definition irRsRel: ActionT var Void :=
+        (Call rsr <- getRsReady();
+        LET msg: Struct KMsg <- STRUCT { "id" ::= $$Default;
+                                         "type" ::= $$Default;
+                                         "addr" ::= #rsr!RsReady@."r_addr";
+                                         "value" ::= $$Default };
+        Call infoRq(#rsr!RsReady@."r_addr");
+        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$true;
+                             "ir_msg" ::= #msg;
+                             "ir_msg_from" ::= $$Default;
+                             "ir_mshr_id" ::= #rsr!RsReady@."r_id" };
+        Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
     End InfoReadStage.
@@ -677,9 +698,7 @@ Section Compile.
       Local Notation ": f ; cont" :=
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
 
-      (** * TODO: execution rules for
-       * 1) (execInvRq) [InvRq] (triggered by [getVictim]),
-       * 2) (execRsRel) [RsRelease] (triggered by [getRsFull]). *)
+      (** * TODO: execution rules for (execInvRq) [InvRq] (triggered by [getVictim]) *)
 
       Definition execPP: ActionT var Void :=
         let (checkUL, checkDL) := check_rule_prec_LockFree (hrule_precond hr (hvar_of var)) in
