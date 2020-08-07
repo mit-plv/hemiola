@@ -194,8 +194,11 @@ Section MSHR.
              "m_next" :: Maybe MshrId;
              "m_is_ul" :: Bool;
              "m_msg" :: Struct KMsg;
+             (** Heads-up: when [m_status == mshrValid] then the index refers to the
+              * response queue; if [m_status == mshrWaiting || m_status == mshrReady] then
+              * it refers to the input queue. *)
+             "m_qidx" :: KQIdx;
              "m_rsb" :: Bool;
-             "m_rsbTo" :: KQIdx; (* Use as it is for downlocks; truncate for uplocks *)
              "m_dl_rss_from" :: KCBv;
              "m_dl_rss_recv" :: KCBv;
              "m_dl_rss" :: Array (Struct KMsg) hcfg_children_max }.
@@ -205,8 +208,7 @@ Section MSHR.
   Definition PreMSHR :=
     STRUCT { "r_id" :: MshrId;
              "r_msg" :: Struct KMsg;
-             "r_rsb" :: Bool;
-             "r_rsbTo" :: KQIdx }.
+             "r_msg_from" :: KQIdx }.
   Let PreMSHRK := Struct PreMSHR.
   Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(PreMSHRK): Maybe MshrId.
   Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(PreMSHRK): Maybe MshrId.
@@ -333,8 +335,8 @@ Section MSHR.
                                                        "m_next" ::= MaybeNone;
                                                        "m_is_ul" ::= $$Default;
                                                        "m_msg" ::= #pmshr!PreMSHR@."r_msg";
-                                                       "m_rsb" ::= #pmshr!PreMSHR@."r_rsb";
-                                                       "m_rsbTo" ::= #pmshr!PreMSHR@."r_rsbTo";
+                                                       "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
+                                                       "m_rsb" ::= $$Default;
                                                        "m_dl_rss_from" ::= $$Default;
                                                        "m_dl_rss_recv" ::= $$Default;
                                                        "m_dl_rss" ::= $$Default }];
@@ -352,8 +354,8 @@ Section MSHR.
                                                        "m_next" ::= MaybeNone;
                                                        "m_is_ul" ::= $$Default;
                                                        "m_msg" ::= $$Default;
+                                                       "m_qidx" ::= $$Default;
                                                        "m_rsb" ::= $$Default;
-                                                       "m_rsbTo" ::= $$Default;
                                                        "m_dl_rss_from" ::= $$Default;
                                                        "m_dl_rss_recv" ::= $$Default;
                                                        "m_dl_rss" ::= $$Default }];
@@ -381,8 +383,8 @@ Section MSHR.
                                               "m_next" ::= #cmshr!MSHR@."m_next";
                                               "m_is_ul" ::= #cmshr!MSHR@."m_is_ul";
                                               "m_msg" ::= #sw!SetWait@."s_msg";
+                                              "m_qidx" ::= #cmshr!MSHR@."m_qidx";
                                               "m_rsb" ::= #cmshr!MSHR@."m_rsb";
-                                              "m_rsbTo" ::= #cmshr!MSHR@."m_rsbTo";
                                               "m_dl_rss_from" ::= #cmshr!MSHR@."m_dl_rss_from";
                                               "m_dl_rss_recv" ::= #cmshr!MSHR@."m_dl_rss_recv";
                                               "m_dl_rss" ::= #cmshr!MSHR@."m_dl_rss" }];
@@ -390,8 +392,8 @@ Section MSHR.
                                                "m_next" ::= MaybeSome #cmid;
                                                "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
                                                "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                               "m_qidx" ::= #pmshr!MSHR@."m_qidx";
                                                "m_rsb" ::= #pmshr!MSHR@."m_rsb";
-                                               "m_rsbTo" ::= #pmshr!MSHR@."m_rsbTo";
                                                "m_dl_rss_from" ::= #pmshr!MSHR@."m_dl_rss_from";
                                                "m_dl_rss_recv" ::= #pmshr!MSHR@."m_dl_rss_recv";
                                                "m_dl_rss" ::= #pmshr!MSHR@."m_dl_rss" }];
@@ -402,7 +404,7 @@ Section MSHR.
           Read rqs <- "rqs"+o;
           LET mwait <- (rqIter MaybeNone
                                (fun i _ => MaybeSome $i)
-                               (fun m => m!MSHR@."m_status" == mshrWaiting)
+                               (fun m => m!MSHR@."m_status" == mshrReady)
                                #rqs);
           If (#mwait!(MaybeStr MshrId)@."valid")
           then (LET mid <- #mwait!(MaybeStr MshrId)@."data";
@@ -412,15 +414,14 @@ Section MSHR.
                                                "m_next" ::= #mshr!MSHR@."m_next";
                                                "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
                                                "m_msg" ::= #mshr!MSHR@."m_msg";
+                                               "m_qidx" ::= #mshr!MSHR@."m_qidx";
                                                "m_rsb" ::= #mshr!MSHR@."m_rsb";
-                                               "m_rsbTo" ::= #mshr!MSHR@."m_rsbTo";
                                                "m_dl_rss_from" ::= #mshr!MSHR@."m_dl_rss_from";
                                                "m_dl_rss_recv" ::= #mshr!MSHR@."m_dl_rss_recv";
                                                "m_dl_rss" ::= #mshr!MSHR@."m_dl_rss" }];
                LET pre: PreMSHRK <- STRUCT { "r_id" ::= #mid;
                                              "r_msg" ::= #mshr!MSHR@."m_msg";
-                                             "r_rsb" ::= #mshr!MSHR@."m_rsb";
-                                             "r_rsbTo" ::= #mshr!MSHR@."m_rsbTo" };
+                                             "r_msg_from" ::= #mshr!MSHR@."m_qidx" };
                Ret (MaybeSome #pre))
           else (Ret MaybeNone)
           as ret;
@@ -434,8 +435,8 @@ Section MSHR.
                                             "m_next" ::= #pmshr!MSHR@."m_next";
                                             "m_is_ul" ::= $$true;
                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                            "m_qidx" ::= _zeroExtend_ (#ul!RegUL@."r_ul_rsbTo");
                                             "m_rsb" ::= #ul!RegUL@."r_ul_rsb";
-                                            "m_rsbTo" ::= _zeroExtend_ (#ul!RegUL@."r_ul_rsbTo");
                                             "m_dl_rss_from" ::= $$Default;
                                             "m_dl_rss_recv" ::= $$Default;
                                             "m_dl_rss" ::= $$Default };
@@ -449,8 +450,8 @@ Section MSHR.
                                             "m_next" ::= #pmshr!MSHR@."m_next";
                                             "m_is_ul" ::= $$false;
                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                            "m_qidx" ::= #dl!RegDL@."r_dl_rsbTo";
                                             "m_rsb" ::= #dl!RegDL@."r_dl_rsb";
-                                            "m_rsbTo" ::= #dl!RegDL@."r_dl_rsbTo";
                                             "m_dl_rss_from" ::= #dl!RegDL@."r_dl_rss_from";
                                             "m_dl_rss_recv" ::= $$Default;
                                             "m_dl_rss" ::= $$Default };
@@ -465,8 +466,8 @@ Section MSHR.
                                             "m_next" ::= #pmshr!MSHR@."m_next";
                                             "m_is_ul" ::= $$false;
                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                            "m_qidx" ::= #pmshr!MSHR@."m_qidx";
                                             "m_rsb" ::= #pmshr!MSHR@."m_rsb";
-                                            "m_rsbTo" ::= #pmshr!MSHR@."m_rsbTo";
                                             "m_dl_rss_from" ::= #trsf!TrsfUpDown@."r_dl_rss_from";
                                             "m_dl_rss_recv" ::= $$Default;
                                             "m_dl_rss" ::= $$Default };
@@ -504,8 +505,8 @@ Section MSHR.
                                                     "m_next" ::= #cmshr!MSHR@."m_next";
                                                     "m_is_ul" ::= #cmshr!MSHR@."m_is_ul";
                                                     "m_msg" ::= #cmshr!MSHR@."m_msg";
+                                                    "m_qidx" ::= #cmshr!MSHR@."m_qidx";
                                                     "m_rsb" ::= #cmshr!MSHR@."m_rsb";
-                                                    "m_rsbTo" ::= #cmshr!MSHR@."m_rsbTo";
                                                     "m_dl_rss_from" ::= #cmshr!MSHR@."m_dl_rss_from";
                                                     "m_dl_rss_recv" ::= #cmshr!MSHR@."m_dl_rss_recv";
                                                     "m_dl_rss" ::= #cmshr!MSHR@."m_dl_rss" }];
@@ -529,8 +530,8 @@ Section MSHR.
                                              "m_next" ::= #pmshr!MSHR@."m_next";
                                              "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
                                              "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                             "m_qidx" ::= #pmshr!MSHR@."m_qidx";
                                              "m_rsb" ::= #pmshr!MSHR@."m_rsb";
-                                             "m_rsbTo" ::= #pmshr!MSHR@."m_rsbTo";
                                              "m_dl_rss_from" ::= #pmshr!MSHR@."m_dl_rss_from";
                                              "m_dl_rss_recv" ::=
                                                 bvSet (#pmshr!MSHR@."m_dl_rss_recv")

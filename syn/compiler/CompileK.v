@@ -190,24 +190,15 @@ Section Compile.
     Variable predNumVictims: nat.
 
     (*! Pipeline Stages *)
-    (** * TODO: entry (or execution) rules for
-     * [ ] 1) (execution) [InvRq] (triggered by [getVictim]),
-     * [v] 2) (entry) [InvRs] (when [msg.id == invRs]) (!!! must NOT enqueue to the next stage),
-     * [ ] 3) (execution) [RsRelease] (triggered by [getRsFull]), and
-     * [v] 4) (entry) [MSHRRetry] (triggered by [getWait]) (!!! msg already in the MSHR slot) *)
 
     Variables deqP2LRN deqC2LRN enqIR2LRN: string.
 
     Section InfoReadStage.
 
       Definition PPFrom := Bit 2.
-      Definition PPFromCRq: Expr var (SyntaxKind PPFrom) := ($0)%kami_expr.
-      Definition PPFromCRs: Expr var (SyntaxKind PPFrom) := ($1)%kami_expr.
-      Definition PPFromP: Expr var (SyntaxKind PPFrom) := ($2)%kami_expr.
       Definition IRPipe :=
-        STRUCT { "ir_from" :: PPFrom;
-                 "ir_cidx" :: KCIdx;
-                 "ir_msg" :: Struct KMsg;
+        STRUCT { "ir_msg" :: Struct KMsg;
+                 "ir_msg_from" :: KQIdx;
                  "ir_mshr_id" :: MshrId }.
       Definition IRPipeK := Struct IRPipe.
       Definition deqP2LR := MethodSig deqP2LRN(): IRPipeK.
@@ -233,14 +224,12 @@ Section Compile.
         Assert !(#msg!KMsg@."type");
         Call mmid <- getPRqSlot(STRUCT { "r_id" ::= $$Default;
                                          "r_msg" ::= #msg;
-                                         "r_rsb" ::= $$true;
-                                         "r_rsbTo" ::= {$rsUpIdx, compile_oidx_to_cidx oidx} });
+                                         "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
-                             "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
-                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+        LET nelt <- STRUCT { "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
@@ -251,9 +240,8 @@ Section Compile.
         Assert (#msg!KMsg@."type");
         Call mid <- findUL(#msg!KMsg@."addr");
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
-                             "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
-                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+        LET nelt <- STRUCT { "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
@@ -264,14 +252,12 @@ Section Compile.
         Assert !(#msg!KMsg@."type");
         Call mmid <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
                                          "r_msg" ::= #msg;
-                                         "r_rsb" ::= $$true;
-                                         "r_rsbTo" ::= {$downIdx, #pelt!IRPipe@."ir_cidx"} });
+                                         "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_from" ::= #pelt!IRPipe@."ir_from";
-                             "ir_cidx" ::= #pelt!IRPipe@."ir_cidx";
-                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+        LET nelt <- STRUCT { "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
@@ -280,7 +266,7 @@ Section Compile.
         (Call pelt <- deqC2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
-        Call addRs(STRUCT { "r_dl_midx" ::= #pelt!IRPipe@."ir_cidx";
+        Call addRs(STRUCT { "r_dl_midx" ::= _truncate_ (#pelt!IRPipe@."ir_msg_from");
                             "r_dl_msg" ::= #msg });
         (* No enq to the next stage *)
         Retv)%kami_action.
@@ -292,9 +278,8 @@ Section Compile.
         LET pmshr <- #mpmshr!(MaybeStr PreMSHRK)@."data";
         LET msg <- #pmshr!PreMSHR@."r_msg";
         Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_from" ::= $$Default; (** FIXME *)
-                             "ir_cidx" ::= $$Default; (** FIXME *)
-                             "ir_msg" ::= #msg;
+        LET nelt <- STRUCT { "ir_msg" ::= #msg;
+                             "ir_msg_from" ::= #pmshr!PreMSHR@."r_msg_from";
                              "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id" };
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
@@ -398,8 +383,8 @@ Section Compile.
                     (HBType hbt0)
                     (hostf_ty_compat i Heq))
            (* The expressions below are used only when dealing with responses. *)
-           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")})
-           | HDownLockIdxBackI _ => (#mshr!MSHR@."m_rsbTo")
+           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")})
+           | HDownLockIdxBackI _ => (#mshr!MSHR@."m_qidx")
            end)%kami_expr.
 
         Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
@@ -505,18 +490,15 @@ Section Compile.
           (match mf with
            | HMsgFromNil => cont
            | HMsgFromParent pmidx =>
-             (Assert (#irp!IRPipe@."ir_from" == PPFromP); cont)
+             (Assert (#irp!IRPipe@."ir_msg_from" == compile_midx_to_qidx pmidx); cont)
            | HMsgFromChild cmidx =>
-             (Assert ((#irp!IRPipe@."ir_from" == PPFromCRq) &&
-                      (#irp!IRPipe@."ir_cidx" == compile_midx_to_cidx cmidx)); cont)
+             (Assert (#irp!IRPipe@."ir_msg_from" == compile_midx_to_qidx cmidx); cont)
            | HMsgFromExt emidx =>
-             (Assert ((#irp!IRPipe@."ir_from" == PPFromCRq) &&
-                      (#irp!IRPipe@."ir_cidx" == compile_midx_to_cidx emidx)); cont)
+             (Assert (#irp!IRPipe@."ir_msg_from" == compile_midx_to_qidx emidx); cont)
            | HMsgFromUpLock =>
-             (Assert (#irp!IRPipe@."ir_from" == PPFromP); cont)
+             (Assert (#irp!IRPipe@."ir_msg_from" == {$downIdx, compile_oidx_to_cidx oidx}); cont)
            | HMsgFromDownLock cidx =>
-             (Assert ((#irp!IRPipe@."ir_from" == PPFromCRs) &&
-                      (#irp!IRPipe@."ir_cidx" == compile_oidx_to_cidx cidx)); cont)
+             (Assert (#irp!IRPipe@."ir_msg_from" == {$rsUpIdx, compile_oidx_to_cidx cidx}); cont)
            end)%kami_action.
 
         Definition compile_bval {hbt} (hv: hbval hbt)
@@ -525,8 +507,8 @@ Section Compile.
            | HGetFirstMsg => #msgIn
            | HGetUpLockMsg => (#mshr!MSHR@."m_msg")
            | HGetDownLockMsg => (#mshr!MSHR@."m_msg")
-           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_rsbTo")}
-           | HGetDownLockIdxBack => (#mshr!MSHR@."m_rsbTo")
+           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")}
+           | HGetDownLockIdxBack => (#mshr!MSHR@."m_qidx")
            | HGetDownLockFirstRs =>
              (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
               STRUCT { "cidx" ::= {$rsUpIdx, fs};
@@ -694,6 +676,10 @@ Section Compile.
         (f (fun v => cont)) (at level 12, right associativity, only parsing): kami_action_scope.
       Local Notation ": f ; cont" :=
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
+
+      (** * TODO: execution rules for
+       * 1) (execInvRq) [InvRq] (triggered by [getVictim]),
+       * 2) (execRsRel) [RsRelease] (triggered by [getRsFull]). *)
 
       Definition execPP: ActionT var Void :=
         let (checkUL, checkDL) := check_rule_prec_LockFree (hrule_precond hr (hvar_of var)) in
