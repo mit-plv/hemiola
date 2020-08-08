@@ -989,19 +989,19 @@ Section NCID.
 
   Fixpoint getVictimFix (var: Kind -> Type)
            (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-           (n: nat): Expr var (SyntaxKind VictimK) :=
+           (n: nat): Expr var (SyntaxKind (Maybe VictimK)) :=
     (match n with
-     | O => $$Default
+     | O => MaybeNone
      | S n' =>
        (IF ((victims#[$v$n]!Victim@."victim_valid") &&
             (!(victims#[$v$n]!Victim@."victim_req"!(MaybeStr MshrId)@."valid")))
-        then victims#[$v$n]
+        then MaybeSome (victims#[$v$n])
         else getVictimFix victims n')
      end)%kami_expr.
 
   Definition getVictimF (var: Kind -> Type)
              (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-    : Expr var (SyntaxKind VictimK) :=
+    : Expr var (SyntaxKind (Maybe VictimK)) :=
     getVictimFix victims (numVictims - 1).
 
   (** Registers *)
@@ -1197,8 +1197,9 @@ Section NCID.
 
       with Method getVictimN (): VictimK :=
         Read victims <- victimsN;
-        LET victim <- getVictimF #victims;
-        Ret #victim
+        LET mvictim <- getVictimF #victims;
+        Assert (#mvictim!(MaybeStr VictimK)@."valid");
+        Ret #mvictim!(MaybeStr VictimK)@."data"
 
       with Method releaseVictimN (addr: Bit addrSz): MshrId :=
         Read victims <- victimsN;

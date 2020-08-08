@@ -152,22 +152,17 @@ Section Compile.
     Class CompLineRW :=
       { infoK: Kind;
         invRsId: word ∘hcfg_msg_id_sz;
-        (* get_info_addr: *)
-        (*   forall (var: Kind -> Type), *)
-        (*     var infoK -> Expr var (SyntaxKind KAddr); *)
-        (* set_info_addr: *)
-        (*   forall (var: Kind -> Type), *)
-        (*     Expr var (SyntaxKind infoK) -> Expr var (SyntaxKind KAddr) -> *)
-        (*     Expr var (SyntaxKind infoK); *)
-        (* compile_info_read: *)
-        (*   forall (var: Kind -> Type), *)
-        (*     var infoK -> Expr var (SyntaxKind infoK); *)
         compile_info_to_ostVars:
           forall (var: Kind -> Type),
             var infoK ->
             (HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
              ActionT var Void) ->
             ActionT var Void;
+        compile_value_read_to_ostVars:
+          forall (var: Kind -> Type),
+            HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
+            var KValue ->
+            HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty);
         compile_line_update:
           forall (var: Kind -> Type),
             var (LineWriteK infoK) ->
@@ -355,12 +350,6 @@ Section Compile.
       }.
     Context `{CompExtExp}.
 
-    Class ValueInOst :=
-      { valueOstIdx: Fin.t ost_sz;
-        value_ost_idx_ok: kind_of hostf_ty[@valueOstIdx] = KValue
-      }.
-    Context `{ValueInOst}.
-
     Section CompileExec.
       Variables (msgIn: var (Struct KMsg))
                 (mshrId: var MshrId) (mshr: var (Struct MSHR)).
@@ -507,19 +496,19 @@ Section Compile.
           end.
 
         Definition compile_rule_msg_from (mf: HMsgFrom)
-                   (irp: var IRPipeK) (cont: ActionT var Void): ActionT var Void :=
+                   (vmf: var KQIdx) (cont: ActionT var Void): ActionT var Void :=
           (match mf with
            | HMsgFromNil => cont
            | HMsgFromParent pmidx =>
-             (Assert (#irp!IRPipe@."ir_msg_from" == compile_midx_to_qidx pmidx); cont)
+             (Assert (#vmf == compile_midx_to_qidx pmidx); cont)
            | HMsgFromChild cmidx =>
-             (Assert (#irp!IRPipe@."ir_msg_from" == compile_midx_to_qidx cmidx); cont)
+             (Assert (#vmf == compile_midx_to_qidx cmidx); cont)
            | HMsgFromExt emidx =>
-             (Assert (#irp!IRPipe@."ir_msg_from" == compile_midx_to_qidx emidx); cont)
+             (Assert (#vmf == compile_midx_to_qidx emidx); cont)
            | HMsgFromUpLock =>
-             (Assert (#irp!IRPipe@."ir_msg_from" == {$downIdx, compile_oidx_to_cidx oidx}); cont)
+             (Assert (#vmf == {$downIdx, compile_oidx_to_cidx oidx}); cont)
            | HMsgFromDownLock cidx =>
-             (Assert (#irp!IRPipe@."ir_msg_from" == {$rsUpIdx, compile_oidx_to_cidx cidx}); cont)
+             (Assert (#vmf == {$rsUpIdx, compile_oidx_to_cidx cidx}); cont)
            end)%kami_action.
 
         Definition compile_bval {hbt} (hv: hbval hbt)
@@ -635,46 +624,74 @@ Section Compile.
 
       Variables (pir: var (Struct InfoRead)).
 
+      Definition compile_MonadT_ret_ord
+                 (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (cont: ActionT var Void)
+                 (host: HOState (hvar_of var))
+                 (horq: HORq (hvar_of var))
+                 (hmsgs: HMsgsOut (hvar_of var)): ActionT var Void :=
+        (LET pline: (LineWriteK infoK) <- STRUCT { "addr" ::= #msgIn!KMsg@."addr";
+                                                   "info_write" ::= $$false;
+                                                   "info_hit" ::= #pir!InfoRead@."info_hit";
+                                                   "info_way" ::= #pir!InfoRead@."info_way";
+                                                   "edir_hit" ::= #pir!InfoRead@."edir_hit";
+                                                   "edir_way" ::= #pir!InfoRead@."edir_way";
+                                                   "edir_slot" ::= #pir!InfoRead@."edir_slot";
+                                                   "info" ::= #pir!InfoRead@."info";
+                                                   "value_write" ::= $$false;
+                                                   (* The previous value is not used for
+                                                    * local state updates; it may be used for
+                                                    * [OTrs] updates or output messages. *)
+                                                   "value" ::= $$Default };
+        compile_OState_request_write
+          ostVars host pline
+          (fun rvalue: var KValue =>
+             let nostVars := compile_value_read_to_ostVars _ ostVars rvalue in
+             compile_ORq_trs nostVars horq (compile_MsgsOut_trs nostVars hmsgs cont)))%kami_action.
+
+      Definition compile_MonadT_ret_nowrite
+                 (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (cont: ActionT var Void)
+                 (horq: HORq (hvar_of var))
+                 (hmsgs: HMsgsOut (hvar_of var)): ActionT var Void :=
+        (compile_ORq_trs ostVars horq (compile_MsgsOut_trs ostVars hmsgs cont))%kami_action.
+
       Fixpoint compile_MonadT_trs
                (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
                (hm: HMonadT (hvar_of var))
-               (cont: ActionT var Void): ActionT var Void :=
-        (match hm with
-         | HBind hv mcont =>
-           Let_ (compile_bval hv)
-                (fun x: var (kind_of_hbtype _) => compile_MonadT_trs ostVars (mcont x) cont)
-         | HRet host horq hmsgs =>
-           (LET pline: (LineWriteK infoK) <- STRUCT { "addr" ::= #msgIn!KMsg@."addr";
-                                                      "info_write" ::= $$false;
-                                                      "info_hit" ::= #pir!InfoRead@."info_hit";
-                                                      "info_way" ::= #pir!InfoRead@."info_way";
-                                                      "edir_hit" ::= #pir!InfoRead@."edir_hit";
-                                                      "edir_way" ::= #pir!InfoRead@."edir_way";
-                                                      "edir_slot" ::= #pir!InfoRead@."edir_slot";
-                                                      "info" ::= #pir!InfoRead@."info";
-                                                      "value_write" ::= $$false;
-                                                      (* The previous value is not used for
-                                                       * local state updates; it may be used for
-                                                       * [OTrs] updates or output messages. *)
-                                                      "value" ::= $$Default };
-           compile_OState_request_write
-             ostVars host pline
-             (fun rvalue: var KValue =>
-                let nostVars := HVector.hvec_upd
-                                  ostVars valueOstIdx
-                                  (eq_rect_r
-                                     id (eq_rect_r var rvalue value_ost_idx_ok)
-                                     (Vector_nth_map_comp
-                                        (fun hty => var (kind_of hty)) hostf_ty valueOstIdx)) in
-                compile_ORq_trs nostVars horq (compile_MsgsOut_trs nostVars hmsgs cont)))
-         end)%kami_action.
+               (retCont: HOState (hvar_of var) ->
+                         HORq (hvar_of var) ->
+                         HMsgsOut (hvar_of var) ->
+                         ActionT var Void): ActionT var Void :=
+        match hm with
+        | HBind hv mcont =>
+          Let_ (compile_bval hv)
+               (fun x: var (kind_of_hbtype _) => compile_MonadT_trs ostVars (mcont x) retCont)
+        | HRet host horq hmsgs => retCont host horq hmsgs
+        end.
 
       Definition compile_rule_trs
                  (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
-                 (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
+                 (trs: HOTrs)
+                 (retCont: HOState (hvar_of var) ->
+                           HORq (hvar_of var) ->
+                           HMsgsOut (hvar_of var) ->
+                           ActionT var Void): ActionT var Void :=
         match trs with
-        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs ostVars (mn (hvar_of var)) cont
+        | HTrsMTrs (HMTrs mn) => compile_MonadT_trs ostVars (mn (hvar_of var)) retCont
         end.
+
+      Definition compile_rule_trs_ord
+                 (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
+        compile_rule_trs ostVars trs (compile_MonadT_ret_ord ostVars cont).
+
+      Definition compile_rule_trs_nowrite
+                 (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
+        compile_rule_trs
+          ostVars trs
+          (fun _ horq hmsgs => compile_MonadT_ret_nowrite ostVars cont horq hmsgs).
 
     End CompileExec.
 
@@ -689,6 +706,9 @@ Section Compile.
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation canRegister := (canRegister oidx mshrNumPRqs mshrNumCRqs).
       Local Notation setWait := (setWait oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getVictim := (getVictim oidx infoK KValue hcfg_addr_sz mshrSlotSz).
+      Local Notation Victim := (Victim infoK KValue hcfg_addr_sz mshrSlotSz).
+      Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -698,28 +718,27 @@ Section Compile.
       Local Notation ": f ; cont" :=
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
 
-      (** * TODO: execution rules for (execInvRq) [InvRq] (triggered by [getVictim]) *)
-
       Definition execPP: ActionT var Void :=
         let (checkUL, checkDL) := check_rule_prec_LockFree (hrule_precond hr (hvar_of var)) in
         (Call lr <- deqLR2EX();
         LET pir <- #lr!LRPipe@."lr_ir";
         LET pinfo <- #pir!InfoRead@."info";
         LET irpp <- #lr!LRPipe@."lr_ir_pp";
+        LET mf <- #irpp!IRPipe@."ir_msg_from";
         LET msgIn <- #irpp!IRPipe@."ir_msg";
         LET mshrId <- #irpp!IRPipe@."ir_mshr_id";
         Call mshr <- getMSHR(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
-        :compile_rule_msg_from (hrule_msg_from hr) irpp;
+        :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
         (match checkUL, checkDL with
          | false, false =>
-           (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+           (:compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
          | true, false =>
            (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
            If !(#mpmid!(MaybeStr MshrId)@."valid")
-            then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+            then (:compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
             else (Call setWait(STRUCT { "s_cur_id" ::= #mshrId;
                                         "s_wait_id" ::= #mpmid!(MaybeStr MshrId)@."data";
                                         "s_msg" ::= #msgIn });
@@ -727,13 +746,47 @@ Section Compile.
          | false, true =>
            (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
            If !(#mpmid!(MaybeStr MshrId)@."valid")
-            then (:compile_rule_trs msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
+            then (:compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
             else (Call setWait(STRUCT { "s_cur_id" ::= #mshrId;
                                         "s_wait_id" ::= #mpmid!(MaybeStr MshrId)@."data";
                                         "s_msg" ::= #msgIn });
                  Retv); Retv)
          | true, true => Retv (** should not happen *)
          end))%kami_action.
+
+      (** * FIXME: feed [MshrId] to [getVictim] to track the MSHR id. *)
+      (** * FIXME: make the MSHR uplocked *)
+      Definition execInvRq: ActionT var Void :=
+        (Call victim <- getVictim();
+        LET paddr <- #victim!Victim@."victim_addr";
+        LET pinfo <- #victim!Victim@."victim_info";
+        LET pvalue <- #victim!Victim@."victim_value";
+        LET msg <- STRUCT { "id" ::= $$Default;
+                            "type" ::= $$MRq;
+                            "addr" ::= #paddr;
+                            "value" ::= $$Default };
+        Call mmid <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
+                                         "r_msg" ::= #msg;
+                                         "r_msg_from" ::= $$Default });
+        Assert (#mmid!(MaybeStr MshrId)@."valid");
+        LET mid <- #mmid!(MaybeStr MshrId)@."data";
+        LET mshr <- STRUCT { "m_status" ::= mshrValid;
+                             "m_next" ::= $$Default;
+                             "m_is_ul" ::= $$true;
+                             "m_msg" ::= #msg;
+                             "m_qidx" ::= $$Default;
+                             "m_rsb" ::= $$false;
+                             "m_dl_rss_from" ::= $$Default;
+                             "m_dl_rss_recv" ::= $$Default;
+                             "m_dl_rss" ::= $$Default };
+        ostVars <- compile_info_to_ostVars pinfo;
+        let nostVars := compile_value_read_to_ostVars _ ostVars pvalue in
+        :compile_rule_prec
+           msg mshr nostVars (hrule_precond hr (hvar_of var));
+        Call mpmid <- canRegister(#paddr);
+        Assert !(#mpmid!(MaybeStr MshrId)@."valid");
+        :compile_rule_trs_nowrite msg mid mshr nostVars (hrule_trs hr);
+        Retv)%kami_action.
 
     End ExecStage.
 
