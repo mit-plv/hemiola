@@ -241,6 +241,8 @@ Section MSHR.
   Let RegDLK := Struct RegDL.
   Definition registerDL: Attribute SignatureT := MethodSig ("registerDL"+o)(RegDLK): Void.
 
+  Definition getULImm: Attribute SignatureT := MethodSig ("getULImm"+o)(Struct KMsg): MshrId.
+
   Definition TrsfUpDown :=
     STRUCT { "r_id" :: MshrId; "r_dl_rss_from" :: KCBv }.
   Let TrsfUpDownK := Struct TrsfUpDown.
@@ -462,6 +464,25 @@ Section MSHR.
                                             "m_dl_rss" ::= $$Default };
           Write "rqs"+o <- #rqs#[#mid <- #mshr];
           Retv
+
+        with Method ("getULImm"+o)(msg: Struct KMsg): MshrId :=
+          Read rqs <- "rqs"+o;
+          LET ret <- (crqIter MaybeNone
+                              (fun n _ => MaybeSome $(n + numPRqs))
+                              (fun m => m!MSHR@."m_status" == mshrInvalid)
+                              #rqs);
+          Assert (#ret!(MaybeStr MshrId)@."valid");
+          LET mid <- #ret!(MaybeStr MshrId)@."data";
+          Write "rqs"+o <- #rqs#[#mid <- STRUCT { "m_status" ::= mshrValid;
+                                                  "m_next" ::= MaybeNone;
+                                                  "m_is_ul" ::= $$true;
+                                                  "m_msg" ::= #msg;
+                                                  "m_qidx" ::= $$Default;
+                                                  "m_rsb" ::= $$false;
+                                                  "m_dl_rss_from" ::= $$Default;
+                                                  "m_dl_rss_recv" ::= $$Default;
+                                                  "m_dl_rss" ::= $$Default }];
+          Ret #mid
 
         with Method ("transferUpDown"+o)(trsf: TrsfUpDownK): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;

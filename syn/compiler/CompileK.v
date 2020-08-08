@@ -706,10 +706,10 @@ Section Compile.
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation canRegister := (canRegister oidx mshrNumPRqs mshrNumCRqs).
       Local Notation setWait := (setWait oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation getVictim := (getVictim oidx infoK KValue hcfg_addr_sz mshrSlotSz).
       Local Notation Victim := (Victim infoK KValue hcfg_addr_sz mshrSlotSz).
-      Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getVictim := (getVictim oidx infoK KValue hcfg_addr_sz mshrSlotSz).
       Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
+      Local Notation getULImm := (getULImm oidx mshrNumPRqs mshrNumCRqs).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -765,11 +765,7 @@ Section Compile.
                             "type" ::= $$MRq;
                             "addr" ::= #paddr;
                             "value" ::= $$Default };
-        Call mmid <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
-                                         "r_msg" ::= #msg;
-                                         "r_msg_from" ::= $$Default });
-        Assert (#mmid!(MaybeStr MshrId)@."valid");
-        LET mid <- #mmid!(MaybeStr MshrId)@."data";
+        Call mid <- getULImm(#msg);
         Call setVictimRq(STRUCT { "victim_addr" ::= #paddr; "victim_req" ::= #mid });
         LET mshr <- STRUCT { "m_status" ::= mshrValid;
                              "m_next" ::= $$Default;
