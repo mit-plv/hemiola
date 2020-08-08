@@ -709,6 +709,7 @@ Section Compile.
       Local Notation getVictim := (getVictim oidx infoK KValue hcfg_addr_sz mshrSlotSz).
       Local Notation Victim := (Victim infoK KValue hcfg_addr_sz mshrSlotSz).
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -754,7 +755,6 @@ Section Compile.
          | true, true => Retv (** should not happen *)
          end))%kami_action.
 
-      (** * FIXME: feed [MshrId] to [getVictim] to track the MSHR id. *)
       (** * FIXME: make the MSHR uplocked *)
       Definition execInvRq: ActionT var Void :=
         (Call victim <- getVictim();
@@ -770,6 +770,7 @@ Section Compile.
                                          "r_msg_from" ::= $$Default });
         Assert (#mmid!(MaybeStr MshrId)@."valid");
         LET mid <- #mmid!(MaybeStr MshrId)@."data";
+        Call setVictimRq(STRUCT { "victim_addr" ::= #paddr; "victim_req" ::= #mid });
         LET mshr <- STRUCT { "m_status" ::= mshrValid;
                              "m_next" ::= $$Default;
                              "m_is_ul" ::= $$true;

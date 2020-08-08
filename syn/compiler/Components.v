@@ -884,6 +884,13 @@ Section NCID.
 
   Definition getVictimN: string := cacheN _++ "getVictim".
   Definition getVictim := MethodSig getVictimN (): VictimK.
+
+  Definition VictimRq :=
+    STRUCT { "victim_addr" :: Bit addrSz; "victim_req" :: MshrId }.
+  Let VictimRqK := Struct VictimRq.
+  Definition setVictimRqN: string := cacheN _++ "setVictimRq".
+  Definition setVictimRq := MethodSig setVictimRqN (VictimRqK): Void.
+
   Definition releaseVictimN: string := cacheN _++ "releaseVictim".
   Definition releaseVictim := MethodSig releaseVictimN (Bit addrSz): MshrId.
 
@@ -942,8 +949,10 @@ Section NCID.
         else (edirFindEmptySlot _ tags n'))
      end)%kami_expr.
 
-  (** Victim lines *)
+  (** Registers *)
+  Definition victimsN: string := "victims"+o.
 
+  (** Victim lines *)
   Local Notation "$v$ n" :=
     (Const _ (natToWord victimIdxSz n)) (at level 5): kami_expr_scope.
 
@@ -1004,8 +1013,34 @@ Section NCID.
     : Expr var (SyntaxKind (Maybe VictimK)) :=
     getVictimFix victims (numVictims - 1).
 
-  (** Registers *)
-  Definition victimsN: string := "victims"+o.
+  Fixpoint setVictimRqFix (var: Kind -> Type)
+           (addr: Expr var (SyntaxKind (Bit addrSz)))
+           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
+           (mid: Expr var (SyntaxKind MshrId))
+           (cont: ActionT var Void)
+           (n: nat): ActionT var Void :=
+    (match n with
+     | O => cont
+     | S n' =>
+       (LET victim <- victims#[$v$n];
+       If ((#victim!Victim@."victim_valid") &&
+           (#victim!Victim@."victim_addr" == addr))
+        then (LET nvictim: VictimK <- STRUCT { "victim_valid" ::= #victim!Victim@."victim_valid";
+                                               "victim_addr" ::= #victim!Victim@."victim_addr";
+                                               "victim_info" ::= #victim!Victim@."victim_info";
+                                               "victim_value" ::= #victim!Victim@."victim_value";
+                                               "victim_req" ::= MaybeSome mid };
+             Write victimsN <- victims#[$v$n <- #nvictim];
+             Retv)
+        else (setVictimRqFix addr victims mid cont n'); Retv)
+     end)%kami_action.
+
+  Definition setVictimRqF (var: Kind -> Type)
+             (addr: Expr var (SyntaxKind (Bit addrSz)))
+             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
+             (mid: Expr var (SyntaxKind MshrId))
+             (cont: ActionT var Void): ActionT var Void :=
+    setVictimRqFix addr victims mid cont (numVictims - 1).
 
   Definition cacheIfc :=
     MODULE {
@@ -1200,6 +1235,12 @@ Section NCID.
         LET mvictim <- getVictimF #victims;
         Assert (#mvictim!(MaybeStr VictimK)@."valid");
         Ret #mvictim!(MaybeStr VictimK)@."data"
+
+      with Method setVictimRqN (vrq: VictimRqK): Void :=
+        LET addr <- #vrq!VictimRq@."victim_addr";
+        LET mid <- #vrq!VictimRq@."victim_req";
+        Read victims <- victimsN;
+        setVictimRqF (#addr)%kami_expr (#victims)%kami_expr (#mid)%kami_expr Retv
 
       with Method releaseVictimN (addr: Bit addrSz): MshrId :=
         Read victims <- victimsN;
