@@ -183,6 +183,7 @@ Section Compile.
 
     (** Victims *)
     Variable predNumVictims: nat.
+    Let victimIdxSz := Nat.log2 predNumVictims.
 
     (*! Pipeline Stages *)
 
@@ -563,14 +564,21 @@ Section Compile.
         Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
         Local Notation addRs := (addRs oidx).
 
+        Local Notation getULCount := (getULCount oidx mshrNumPRqs mshrNumCRqs).
+        Local Notation getVictimCount := (getVictimCount oidx predNumVictims).
+
         Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
           (match horq with
            | HORqI _ => cont
            | HUpdUpLock rq _ rsb =>
-             (Call registerUL(STRUCT { "r_id" ::= #mshrId;
-                                       "r_ul_rsb" ::= $$true;
-                                       "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
+             (** TODO: is here the best spot to check the counts? *)
+             (Call ulCnt <- getULCount();
+             Call vcCnt <- getVictimCount();
+             Assert (#ulCnt < _zeroExtend_ (UniBit (Neg _) #vcCnt));
+             Call registerUL(STRUCT { "r_id" ::= #mshrId;
+                                      "r_ul_rsb" ::= $$true;
+                                      "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
            | HUpdUpLockS _ =>
              (Call registerUL(STRUCT { "r_id" ::= #mshrId;
                                        "r_ul_rsb" ::= $$false;
@@ -755,7 +763,6 @@ Section Compile.
          | true, true => Retv (** should not happen *)
          end))%kami_action.
 
-      (** * FIXME: make the MSHR uplocked *)
       Definition execInvRq: ActionT var Void :=
         (Call victim <- getVictim();
         LET paddr <- #victim!Victim@."victim_addr";
