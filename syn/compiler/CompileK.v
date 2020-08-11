@@ -207,6 +207,8 @@ Section Compile.
 
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation GetSlot := (GetSlot mshrNumPRqs mshrNumCRqs).
+      Let GetSlotK := Struct GetSlot.
       Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation addRs := (addRs oidx).
@@ -222,17 +224,18 @@ Section Compile.
         (Call pelt <- deqP2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
-        Call mmid <- getPRqSlot(STRUCT { "r_id" ::= $$Default;
-                                         "r_msg" ::= #msg;
-                                         "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
-        Assert (#mmid!(MaybeStr MshrId)@."valid");
-        LET mid <- #mmid!(MaybeStr MshrId)@."data";
-        Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                             "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
-                             "ir_mshr_id" ::= #mid };
-        Call enqIR2LR(#nelt);
+        Call gs <- getPRqSlot(STRUCT { "r_id" ::= $$Default;
+                                       "r_msg" ::= #msg;
+                                       "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
+        Assert (#gs!GetSlot@."s_has_slot");
+        If !(#gs!GetSlot@."s_conflict")
+        then (Call infoRq(#msg!KMsg@."addr");
+             LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                                  "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                                  "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
+                                  "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
+             Call enqIR2LR(#nelt);
+             Retv);
         Retv)%kami_action.
 
       Definition irPRs: ActionT var Void :=
@@ -252,17 +255,18 @@ Section Compile.
         (Call pelt <- deqC2LR();
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
-        Call mmid <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
-                                         "r_msg" ::= #msg;
-                                         "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
-        Assert (#mmid!(MaybeStr MshrId)@."valid");
-        LET mid <- #mmid!(MaybeStr MshrId)@."data";
-        Call infoRq(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                             "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
-                             "ir_mshr_id" ::= #mid };
-        Call enqIR2LR(#nelt);
+        Call gs <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
+                                       "r_msg" ::= #msg;
+                                       "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
+        Assert (#gs!GetSlot@."s_has_slot");
+        If !(#gs!GetSlot@."s_conflict")
+        then (Call infoRq(#msg!KMsg@."addr");
+             LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                                  "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                                  "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
+                                  "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
+             Call enqIR2LR(#nelt);
+             Retv);
         Retv)%kami_action.
 
       Definition irCRs: ActionT var Void :=
@@ -425,23 +429,6 @@ Section Compile.
            | HNativeP _ _ => $$true
            end)%kami_expr.
 
-        Definition check_rule_rqrs_prec_LockFree (rrp: HOPrecR): bool * bool :=
-          (match rrp with
-           | HRqAccepting => (false, false)
-           | HRsAccepting => (false, false)
-           | HUpLockFree => (true, false)
-           | HDownLockFree => (false, true)
-           | HUpLockMsgId mty mid => (false, false)
-           | HUpLockMsg => (false, false)
-           | HUpLockIdxBack => (false, false)
-           | HUpLockBackNone => (false, false)
-           | HDownLockMsgId mty mid => (false, false)
-           | HDownLockMsg => (false, false)
-           | HDownLockIdxBack => (false, false)
-           | HMsgIdFrom msgId => (false, false)
-           | HRssFull => (false, false)
-           end)%kami_action.
-
         Definition compile_rule_rqrs_prec (rrp: HOPrecR)
                    (cont: ActionT var Void): ActionT var Void :=
           (match rrp with
@@ -474,16 +461,6 @@ Section Compile.
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
            | HRssFull => (Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from"); cont)
            end)%kami_action.
-
-        Fixpoint check_rule_prec_LockFree (rp: HOPrecT (hvar_of var)): bool * bool :=
-          match rp with
-          | HOPrecAnd prec1 prec2 =>
-            let (cul1, cdl1) := check_rule_prec_LockFree prec1 in
-            let (cul2, cdl2) := check_rule_prec_LockFree prec2 in
-            (cul1 || cul2, cdl1 || cdl2)
-          | HOPrecRqRs _ rrprec => check_rule_rqrs_prec_LockFree rrprec
-          | HOPrecProp pprec => (false, false)
-          end.
 
         Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))
                  (cont: ActionT var Void): ActionT var Void :=
@@ -712,8 +689,6 @@ Section Compile.
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation canRegister := (canRegister oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation setWait := (setWait oidx mshrNumPRqs mshrNumCRqs).
       Local Notation Victim := (Victim infoK KValue hcfg_addr_sz mshrSlotSz).
       Local Notation getVictim := (getVictim oidx infoK KValue hcfg_addr_sz mshrSlotSz).
       Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
@@ -728,7 +703,6 @@ Section Compile.
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
 
       Definition execPP: ActionT var Void :=
-        let (checkUL, checkDL) := check_rule_prec_LockFree (hrule_precond hr (hvar_of var)) in
         (Call lr <- deqLR2EX();
         LET pir <- #lr!LRPipe@."lr_ir";
         LET pinfo <- #pir!InfoRead@."info";
@@ -741,27 +715,8 @@ Section Compile.
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
-        (match checkUL, checkDL with
-         | false, false =>
-           (:compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-         | true, false =>
-           (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
-           If !(#mpmid!(MaybeStr MshrId)@."valid")
-            then (:compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(STRUCT { "s_cur_id" ::= #mshrId;
-                                        "s_wait_id" ::= #mpmid!(MaybeStr MshrId)@."data";
-                                        "s_msg" ::= #msgIn });
-                 Retv); Retv)
-         | false, true =>
-           (Call mpmid <- canRegister(#msgIn!KMsg@."addr");
-           If !(#mpmid!(MaybeStr MshrId)@."valid")
-            then (:compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr); Retv)
-            else (Call setWait(STRUCT { "s_cur_id" ::= #mshrId;
-                                        "s_wait_id" ::= #mpmid!(MaybeStr MshrId)@."data";
-                                        "s_msg" ::= #msgIn });
-                 Retv); Retv)
-         | true, true => Retv (** should not happen *)
-         end))%kami_action.
+        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr);
+        Retv)%kami_action.
 
       Definition execInvRq: ActionT var Void :=
         (Call victim <- getVictim();
@@ -787,8 +742,6 @@ Section Compile.
         let nostVars := compile_value_read_to_ostVars _ ostVars pvalue in
         :compile_rule_prec
            msg mshr nostVars (hrule_precond hr (hvar_of var));
-        Call mpmid <- canRegister(#paddr);
-        Assert !(#mpmid!(MaybeStr MshrId)@."valid");
         :compile_rule_trs_nowrite msg mid mshr nostVars (hrule_trs hr);
         Retv)%kami_action.
 
