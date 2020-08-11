@@ -78,6 +78,21 @@ Section Compile.
 
   End QueueIfc.
 
+  (** Caches *)
+  Variables indexSz lgWay edirLgWay: nat.
+
+  (** MSHRs *)
+  Variables mshrNumPRqs mshrNumCRqs: nat.
+  Let predMshrNumSlots := mshrNumPRqs + mshrNumCRqs - 1.
+  Let mshrNumSlots := S predMshrNumSlots.
+  Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
+  Let MshrId := Bit mshrSlotSz.
+  Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
+
+  (** Victims *)
+  Variable predNumVictims: nat.
+  Let victimIdxSz := Nat.log2 predNumVictims.
+
   Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
     | HBool => Bool
@@ -143,8 +158,6 @@ Section Compile.
     Context {var: Kind -> Type}.
     Variable oidx: IdxT.
 
-    Variables indexSz lgWay edirLgWay: nat.
-
     Definition LineWrite infoK := LineWrite infoK KValue hcfg_addr_sz lgWay edirLgWay.
     Let LineWriteK infoK := Struct (LineWrite infoK).
 
@@ -172,18 +185,6 @@ Section Compile.
               Expr var (SyntaxKind (LineWriteK infoK))
       }.
     Context `{CompLineRW}.
-
-    (** MSHRs *)
-    Variable mshrNumPRqs mshrNumCRqs: nat.
-    Let predMshrNumSlots := mshrNumPRqs + mshrNumCRqs - 1.
-    Let mshrNumSlots := S predMshrNumSlots.
-    Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
-    Let MshrId := Bit mshrSlotSz.
-    Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
-
-    (** Victims *)
-    Variable predNumVictims: nat.
-    Let victimIdxSz := Nat.log2 predNumVictims.
 
     (*! Pipeline Stages *)
 
@@ -684,6 +685,27 @@ Section Compile.
 
     Section ExecStage.
 
+      (** A static checker whether the rule is for eviction requests *)
+      Definition check_rule_rq_prec_rqrs (rrp: HOPrecR): bool :=
+        match rrp with
+        | HRqAccepting => true
+        | _ => false
+        end.
+
+      Definition hvarU: htype -> Type := fun _ => unit.
+      Fixpoint check_rule_rq_prec (rp: HOPrecT hvarU): bool :=
+        match rp with
+        | HOPrecAnd prec1 prec2 => check_rule_rq_prec prec1 || check_rule_rq_prec prec1
+        | HOPrecRqRs _ rrprec => check_rule_rq_prec_rqrs rrprec
+        | HOPrecProp _ => false
+        end.
+
+      Definition check_rule_msg_from_nil (mf: HMsgFrom): bool :=
+        match mf with
+        | HMsgFromNil => true
+        | _ => false
+        end.
+
       Definition deqLR2EX := MethodSig deqLR2EXN(): LRPipeK.
 
       Local Notation valueRsLineRq :=
@@ -704,12 +726,32 @@ Section Compile.
 
       Definition execPP: ActionT var Void :=
         (Call lr <- deqLR2EX();
-        LET pir <- #lr!LRPipe@."lr_ir";
-        LET pinfo <- #pir!InfoRead@."info";
         LET irpp <- #lr!LRPipe@."lr_ir_pp";
         LET mf <- #irpp!IRPipe@."ir_msg_from";
         LET msgIn <- #irpp!IRPipe@."ir_msg";
         LET mshrId <- #irpp!IRPipe@."ir_mshr_id";
+        LET rsRel <- #irpp!IRPipe@."ir_is_rs_rel";
+        Assert !#rsRel;
+        LET pir <- #lr!LRPipe@."lr_ir";
+        LET pinfo <- #pir!InfoRead@."info";
+        Call mshr <- getMSHR(#mshrId);
+        ostVars <- compile_info_to_ostVars pinfo;
+        :compile_rule_msg_from (hrule_msg_from hr) mf;
+        :compile_rule_prec
+           msgIn mshr ostVars (hrule_precond hr (hvar_of var));
+        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr);
+        Retv)%kami_action.
+
+      Definition execRsRel: ActionT var Void :=
+        (Call lr <- deqLR2EX();
+        LET irpp <- #lr!LRPipe@."lr_ir_pp";
+        LET mf <- #irpp!IRPipe@."ir_msg_from";
+        LET msgIn <- #irpp!IRPipe@."ir_msg";
+        LET mshrId <- #irpp!IRPipe@."ir_mshr_id";
+        LET rsRel <- #irpp!IRPipe@."ir_is_rs_rel";
+        Assert #rsRel;
+        LET pir <- #lr!LRPipe@."lr_ir";
+        LET pinfo <- #pir!InfoRead@."info";
         Call mshr <- getMSHR(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
@@ -749,23 +791,49 @@ Section Compile.
 
   End Pipeline.
 
-  Context `{ee: @ExtExp dv oifc het} `{cet: CompExtType}
-          `{CompExtExp} `{CompLineRW}.
+  Context `{CompExtExp} `{CompLineRW}.
 
   Section WithObj.
-    Variables (oidx: IdxT).
+    Variables (dtr: Topology.DTree) (oidx: IdxT).
+    Variables (deqP2LRN deqC2LRN enqIR2LRN deqIR2LRN enqLR2EXN deqLR2EXN: string).
 
-    Definition ruleNameBase: string := "rule".
-    Definition ruleNameI (ridx: IdxT) :=
-      (ruleNameBase
+    Definition execRuleNameBase: string := "rule".
+    Definition execRuleNameI (ridx: IdxT) :=
+      (execRuleNameBase
          ++ "_" ++ idx_to_string oidx
          ++ "_" ++ idx_to_string ridx)%string.
 
-    Definition compile_rules (dtr: Topology.DTree)
+    Definition compile_execPP
+               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+      let r := projT1 rule in
+      {| attrName := execRuleNameI (rule_idx r);
+         attrType := fun _ => execPP oidx deqLR2EXN rule |}.
+
+    Definition compile_execRsRel
+               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+      let r := projT1 rule in
+      {| attrName := execRuleNameI (rule_idx r);
+         attrType := fun _ => execRsRel oidx deqLR2EXN rule |}.
+
+    Definition compile_execInvRq
+               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+      let r := projT1 rule in
+      {| attrName := execRuleNameI (rule_idx r);
+         attrType := fun _ => execInvRq oidx rule |}.
+
+    Definition compile_exec_rule
+               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+      let hr := projT2 rule in
+      let isRq := check_rule_rq_prec (hrule_precond hr _) in
+      let mfNil := check_rule_msg_from_nil (hrule_msg_from hr) in
+      if mfNil
+      then (if isRq then compile_execInvRq rule else compile_execRsRel rule)
+      else (compile_execPP rule).
+
+    Definition compile_exec_rules (dtr: Topology.DTree)
                (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      (** * TODO: add compiled rules. *)
-      nil.
+      map compile_exec_rule rules.
 
   End WithObj.
 
@@ -943,7 +1011,9 @@ Section Compile.
     : Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    let crules := compile_rules dtr (hobj_rules (projT2 obj)) in
+    (** TODO *)
+    (* let crules := compile_exec_rules dtr (hobj_rules (projT2 obj)) in *)
+    let crules := nil in
     Mod cregs crules nil.
 
   Fixpoint compile_Objects (dtr: Topology.DTree)
