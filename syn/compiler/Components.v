@@ -52,23 +52,66 @@ Definition MaybeNone {var k}: Expr var (SyntaxKind (Maybe k)) :=
 Definition MaybeSome {var k} (v: Expr var (SyntaxKind k)): Expr var (SyntaxKind (Maybe k)) :=
   (STRUCT { "valid" ::= $$true; "data" ::= v })%kami_expr.
 
-Section Acceptor4.
+Section Acceptor3.
   Variable oidx: IdxT.
-  Variables (dataT: Kind).
-  Variables (forwardN acceptN0 acceptN1 acceptN2 acceptN3: string).
+  Variables (peltT0 peltT1 peltT2 eltT: Kind).
+  Variables (eltF0: forall {var}, var peltT0 -> Expr var (SyntaxKind eltT))
+            (eltF1: forall {var}, var peltT1 -> Expr var (SyntaxKind eltT))
+            (eltF2: forall {var}, var peltT2 -> Expr var (SyntaxKind eltT)).
+  Variables (acceptN0 acceptN1 acceptN2 forwardN: string).
 
   Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
-  Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
 
-  Local Notation acceptF0 := (MethodSig acceptN0(): dataT).
-  Local Notation acceptF1 := (MethodSig acceptN1(): dataT).
-  Local Notation acceptF2 := (MethodSig acceptN2(): dataT).
-  Local Notation acceptF3 := (MethodSig acceptN3(): dataT).
-  Local Notation forward := (MethodSig forwardN(dataT): Void).
+  Local Notation acceptF0 := (MethodSig acceptN0(): peltT0).
+  Local Notation acceptF1 := (MethodSig acceptN1(): peltT1).
+  Local Notation acceptF2 := (MethodSig acceptN2(): peltT2).
+  Local Notation forward := (MethodSig forwardN(eltT): Void).
 
   Let rrSz := 2.
 
-  Definition acceptor: Kami.Syntax.Modules :=
+  Definition acceptor3: Kami.Syntax.Modules :=
+    MODULE {
+        Register ("rr"+o): Bit rrSz <- Default
+        with Rule "inc_rr"+o :=
+          Read rr: Bit rrSz <- "rr"+o;
+          Write "rr"+o <- IF #rr == $2 then $0 else #rr + $1;
+          Retv
+        with Rule "accept0"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $0);
+          Call pval <- acceptF0(); LET val <- eltF0 pval;
+          Call forward(#val); Retv
+        with Rule "accept1"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $1);
+          Call pval <- acceptF1(); LET val <- eltF1 pval;
+          Call forward(#val); Retv
+        with Rule "accept2"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $2);
+          Call pval <- acceptF2(); LET val <- eltF2 pval;
+          Call forward(#val); Retv
+      }.
+
+End Acceptor3.
+
+Section Acceptor4.
+  Variable oidx: IdxT.
+  Variables (peltT0 peltT1 peltT2 peltT3 eltT: Kind).
+  Variables (eltF0: forall {var}, var peltT0 -> Expr var (SyntaxKind eltT))
+            (eltF1: forall {var}, var peltT1 -> Expr var (SyntaxKind eltT))
+            (eltF2: forall {var}, var peltT2 -> Expr var (SyntaxKind eltT))
+            (eltF3: forall {var}, var peltT3 -> Expr var (SyntaxKind eltT)).
+  Variables (acceptN0 acceptN1 acceptN2 acceptN3 forwardN: string).
+
+  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+
+  Local Notation acceptF0 := (MethodSig acceptN0(): peltT0).
+  Local Notation acceptF1 := (MethodSig acceptN1(): peltT1).
+  Local Notation acceptF2 := (MethodSig acceptN2(): peltT2).
+  Local Notation acceptF3 := (MethodSig acceptN3(): peltT3).
+  Local Notation forward := (MethodSig forwardN(eltT): Void).
+
+  Let rrSz := 2.
+
+  Definition acceptor4: Kami.Syntax.Modules :=
     MODULE {
         Register ("rr"+o): Bit rrSz <- Default
         with Rule "inc_rr"+o :=
@@ -77,16 +120,20 @@ Section Acceptor4.
           Retv
         with Rule "accept0"+o :=
           Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $0);
-          Call val <- acceptF0(); Call forward(#val); Retv
+          Call pval <- acceptF0(); LET val <- eltF0 pval;
+          Call forward(#val); Retv
         with Rule "accept1"+o :=
           Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $1);
-          Call val <- acceptF1(); Call forward(#val); Retv
+          Call pval <- acceptF1(); LET val <- eltF1 pval;
+          Call forward(#val); Retv
         with Rule "accept2"+o :=
           Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $2);
-          Call val <- acceptF2(); Call forward(#val); Retv
+          Call pval <- acceptF2(); LET val <- eltF2 pval;
+          Call forward(#val); Retv
         with Rule "accept3"+o :=
           Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $3);
-          Call val <- acceptF3(); Call forward(#val); Retv
+          Call pval <- acceptF3(); LET val <- eltF3 pval;
+          Call forward(#val); Retv
       }.
 
 End Acceptor4.

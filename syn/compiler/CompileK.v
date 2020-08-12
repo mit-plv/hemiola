@@ -186,21 +186,70 @@ Section Compile.
       }.
     Context `{CompLineRW}.
 
+    (*! Inputs *)
+
+    (** Gathering messages from children *)
+
+    Definition ChildInput :=
+      STRUCT { "ch_idx" :: KCIdx;
+               "ch_msg" :: Struct KMsg }.
+    Let ChildInputK := Struct ChildInput.
+
+    Definition IRPipe :=
+      STRUCT { "ir_is_rs_rel" :: Bool;
+               "ir_msg" :: Struct KMsg;
+               "ir_msg_from" :: KQIdx;
+               "ir_mshr_id" :: MshrId }.
+    Let IRPipeK := Struct IRPipe.
+
+    Variables enqCRqN enqCRsN: string.
+
+    Definition cRqAcceptor4 (cidx0 cidx1 cidx2 cidx3: IdxT): Modules :=
+      acceptor4
+        oidx (eltT:= ChildInputK)
+        (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $2; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $3; "ch_msg" ::= #msg })%kami_expr
+        (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1))
+        (deqFn (rqUpFrom cidx2)) (deqFn (rqUpFrom cidx3)) enqCRqN.
+
+    Definition cRsAcceptor4 (cidx0 cidx1 cidx2 cidx3: IdxT): Modules :=
+      acceptor4
+        oidx (eltT:= ChildInputK)
+        (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $2; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $3; "ch_msg" ::= #msg })%kami_expr
+        (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1))
+        (deqFn (rqUpFrom cidx2)) (deqFn (rqUpFrom cidx3)) enqCRsN.
+
+    Variables deqCRqN deqCRsN enqInputN: string.
+
+    Definition inputAcceptor: Modules :=
+      acceptor3
+        oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= IRPipeK)
+        (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
+                               "ir_msg" ::= #msg;
+                               "ir_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx};
+                               "ir_mshr_id" ::= $$Default })%kami_expr
+        (fun _ ci => STRUCT { "ir_is_rs_rel" ::= $$false;
+                              "ir_msg" ::= #ci!ChildInput@."ch_msg";
+                              "ir_msg_from" ::= {$rqUpIdx, #ci!ChildInput@."ch_idx"};
+                              "ir_mshr_id" ::= $$Default })%kami_expr
+        (fun _ ci => STRUCT { "ir_is_rs_rel" ::= $$false;
+                              "ir_msg" ::= #ci!ChildInput@."ch_msg";
+                              "ir_msg_from" ::= {$rsUpIdx, #ci!ChildInput@."ch_idx"};
+                              "ir_mshr_id" ::= $$Default })%kami_expr
+        (deqFn (downTo oidx)) deqCRqN deqCRsN enqInputN.
+
     (*! Pipeline Stages *)
 
-    Variables deqP2LRN deqC2LRN enqIR2LRN: string.
+    Variables deqInputN enqIR2LRN: string.
 
     Section InfoReadStage.
 
-      Definition PPFrom := Bit 2.
-      Definition IRPipe :=
-        STRUCT { "ir_is_rs_rel" :: Bool;
-                 "ir_msg" :: Struct KMsg;
-                 "ir_msg_from" :: KQIdx;
-                 "ir_mshr_id" :: MshrId }.
-      Definition IRPipeK := Struct IRPipe.
-      Definition deqP2LR := MethodSig deqP2LRN(): IRPipeK.
-      Definition deqC2LR := MethodSig deqC2LRN(): IRPipeK.
+      Definition deqInput := MethodSig deqInputN(): IRPipeK.
       Definition enqIR2LR := MethodSig enqIR2LRN(IRPipeK): Void.
 
       Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
@@ -222,7 +271,9 @@ Section Compile.
       Let PreMSHRK := Struct PreMSHR.
 
       Definition irPRq: ActionT var Void :=
-        (Call pelt <- deqP2LR();
+        (Call pelt <- deqInput();
+        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
         Call gs <- getPRqSlot(STRUCT { "r_id" ::= $$Default;
@@ -233,50 +284,55 @@ Section Compile.
         then (Call infoRq(#msg!KMsg@."addr");
              LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                                   "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                                  "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
+                                  "ir_msg_from" ::= #mf;
                                   "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
              Call enqIR2LR(#nelt);
              Retv);
         Retv)%kami_action.
 
       Definition irPRs: ActionT var Void :=
-        (Call pelt <- deqP2LR();
+        (Call pelt <- deqInput();
+        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
         LET msg <- #pelt!IRPipe@."ir_msg";
-        Assert (#msg!KMsg@."type");
+        Assert (#msg!KMsg@."type" && #msg!KMsg@."id" != $$invRsId);
         Call mid <- findUL(#msg!KMsg@."addr");
         Call infoRq(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                              "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                             "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
+                             "ir_msg_from" ::= #mf;
                              "ir_mshr_id" ::= #mid };
         Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
       Definition irCRq: ActionT var Void :=
-        (Call pelt <- deqC2LR();
+        (Call pelt <- deqInput();
+        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        Assert (_truncLsb_ #mf == $rqUpIdx);
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert !(#msg!KMsg@."type");
         Call gs <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
                                        "r_msg" ::= #msg;
-                                       "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
+                                       "r_msg_from" ::= #mf });
         Assert (#gs!GetSlot@."s_has_slot");
         If !(#gs!GetSlot@."s_conflict")
         then (Call infoRq(#msg!KMsg@."addr");
              LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                                   "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                                  "ir_msg_from" ::= #pelt!IRPipe@."ir_msg_from";
+                                  "ir_msg_from" ::= #mf;
                                   "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
              Call enqIR2LR(#nelt);
              Retv);
         Retv)%kami_action.
 
       Definition irCRs: ActionT var Void :=
-        (Call pelt <- deqC2LR();
+        (Call pelt <- deqInput();
+        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        Assert (_truncLsb_ #mf == $rsUpIdx);
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
-        Call addRs(STRUCT { "r_dl_midx" ::= _truncate_ (#pelt!IRPipe@."ir_msg_from");
-                            "r_dl_msg" ::= #msg });
-        (* No enq to the next stage *)
+        Call addRs(STRUCT { "r_dl_midx" ::= _truncate_ #mf; "r_dl_msg" ::= #msg });
+        (** No enq to the next stage *)
         Retv)%kami_action.
 
       Definition irRetry: ActionT var Void :=
@@ -293,7 +349,9 @@ Section Compile.
         Retv)%kami_action.
 
       Definition irInvRs: ActionT var Void :=
-        (Call pelt <- deqP2LR();
+        (Call pelt <- deqInput();
+        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" == $$invRsId);
         Call vmid <- releaseVictim(#msg!KMsg@."addr");
@@ -794,10 +852,32 @@ Section Compile.
   Context `{CompExtExp} `{CompLineRW}.
 
   Section WithObj.
-    Variables (dtr: Topology.DTree) (oidx: IdxT).
-    Variables (deqP2LRN deqC2LRN enqIR2LRN deqIR2LRN enqLR2EXN deqLR2EXN: string).
+    Variable (oidx: IdxT).
+    Variables (deqInputN enqIR2LRN deqIR2LRN enqLR2EXN deqLR2EXN: string).
 
-    Definition execRuleNameBase: string := "rule".
+    Definition compile_ir_rules: list (Attribute (Action Void)) :=
+      {| attrName := "rule_ir_prq_" ++ idx_to_string oidx;
+         attrType := fun var => irPRq oidx deqInputN enqIR2LRN |}
+        :: {| attrName := "rule_ir_prs_" ++ idx_to_string oidx;
+              attrType := fun var => irPRs oidx deqInputN enqIR2LRN |}
+        :: {| attrName := "rule_ir_crq_" ++ idx_to_string oidx;
+              attrType := fun var => irCRq oidx deqInputN enqIR2LRN |}
+        :: {| attrName := "rule_ir_crs_" ++ idx_to_string oidx;
+              attrType := fun var => irCRs oidx deqInputN |}
+        :: {| attrName := "rule_ir_retry_" ++ idx_to_string oidx;
+              attrType := fun var => irRetry oidx enqIR2LRN |}
+        :: {| attrName := "rule_ir_invrs_" ++ idx_to_string oidx;
+              attrType := fun var => irInvRs oidx deqInputN |}
+        :: {| attrName := "rule_ir_rsrel_" ++ idx_to_string oidx;
+              attrType := fun var => irRsRel oidx enqIR2LRN |}
+        :: nil.
+
+    Definition compile_lr_rules: list (Attribute (Action Void)) :=
+      {| attrName := "rule_lr_" ++ idx_to_string oidx;
+         attrType := fun var => lrRule oidx deqIR2LRN enqLR2EXN |}
+        :: nil.
+
+    Definition execRuleNameBase: string := "rule_exec".
     Definition execRuleNameI (ridx: IdxT) :=
       (execRuleNameBase
          ++ "_" ++ idx_to_string oidx
@@ -830,17 +910,13 @@ Section Compile.
       then (if isRq then compile_execInvRq rule else compile_execRsRel rule)
       else (compile_execPP rule).
 
-    Definition compile_exec_rules (dtr: Topology.DTree)
-               (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_exec_rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
       map compile_exec_rule rules.
 
   End WithObj.
 
-  Definition compile_OState_init (oidx: IdxT): list RegInitT :=
-    (** * TODO: add necessary registers. *)
-    (* {| attrName := rrReg oidx; attrType := RegInitDefault (SyntaxKind (Bit 1)) |} *)
-    nil.
+  Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
     ((fifo primNormalFifoName
@@ -1011,9 +1087,7 @@ Section Compile.
     : Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    (** TODO *)
-    (* let crules := compile_exec_rules dtr (hobj_rules (projT2 obj)) in *)
-    let crules := nil in
+    let crules := nil in (** FIXME *)
     Mod cregs crules nil.
 
   Fixpoint compile_Objects (dtr: Topology.DTree)
