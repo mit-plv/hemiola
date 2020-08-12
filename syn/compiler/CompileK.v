@@ -226,7 +226,20 @@ Section Compile.
 
     Variables deqCRqN deqCRsN enqInputN: string.
 
-    Definition inputAcceptor: Modules :=
+    Definition inputAcceptor2: Modules :=
+      acceptor2
+        oidx (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= IRPipeK)
+        (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
+                               "ir_msg" ::= #msg;
+                               "ir_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx};
+                               "ir_mshr_id" ::= $$Default })%kami_expr
+        (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
+                               "ir_msg" ::= #msg;
+                               "ir_msg_from" ::= {$rqUpIdx, compile_oidx_to_cidx (l1ExtOf oidx)};
+                               "ir_mshr_id" ::= $$Default })%kami_expr
+        (deqFn (downTo oidx)) (deqFn (rqUpFrom (l1ExtOf oidx))) enqInputN.
+
+    Definition inputAcceptor3: Modules :=
       acceptor3
         oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= IRPipeK)
         (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
@@ -855,7 +868,7 @@ Section Compile.
     Variable (oidx: IdxT).
     Variables (deqInputN enqIR2LRN deqIR2LRN enqLR2EXN deqLR2EXN: string).
 
-    Definition compile_ir_rules: list (Attribute (Action Void)) :=
+    Definition compile_rules_ir: list (Attribute (Action Void)) :=
       {| attrName := "rule_ir_prq_" ++ idx_to_string oidx;
          attrType := fun var => irPRq oidx deqInputN enqIR2LRN |}
         :: {| attrName := "rule_ir_prs_" ++ idx_to_string oidx;
@@ -872,7 +885,7 @@ Section Compile.
               attrType := fun var => irRsRel oidx enqIR2LRN |}
         :: nil.
 
-    Definition compile_lr_rules: list (Attribute (Action Void)) :=
+    Definition compile_rules_lr: list (Attribute (Action Void)) :=
       {| attrName := "rule_lr_" ++ idx_to_string oidx;
          attrType := fun var => lrRule oidx deqIR2LRN enqLR2EXN |}
         :: nil.
@@ -901,7 +914,7 @@ Section Compile.
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execInvRq oidx rule |}.
 
-    Definition compile_exec_rule
+    Definition compile_rule_exec
                (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let hr := projT2 rule in
       let isRq := check_rule_rq_prec (hrule_precond hr _) in
@@ -910,9 +923,13 @@ Section Compile.
       then (if isRq then compile_execInvRq rule else compile_execRsRel rule)
       else (compile_execPP rule).
 
-    Definition compile_exec_rules (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rules_exec (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      map compile_exec_rule rules.
+      map compile_rule_exec rules.
+
+    Definition compile_rules_pipeline (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
+      list (Attribute (Action Void)) :=
+      compile_rules_ir ++ compile_rules_lr ++ compile_rules_exec rules.
 
   End WithObj.
 
@@ -936,7 +953,32 @@ Section Compile.
                 (Struct KMsg))
     )%kami.
 
-  Section MsgOuts.
+  Section Inputs.
+    Variable oidx: IdxT.
+
+    Definition ppCRqInputFifoN: string := ("fifoCRqInput" ++ idx_to_string oidx).
+    Definition enqCRqInputN := ppCRqInputFifoN -- enqN.
+    Definition deqCRqInputN := ppCRqInputFifoN -- deqN.
+
+    Definition ppCRsInputFifoN: string := ("fifoCRsInput" ++ idx_to_string oidx).
+    Definition enqCRsInputN := ppCRsInputFifoN -- enqN.
+    Definition deqCRsInputN := ppCRsInputFifoN -- deqN.
+
+    Definition ppInputFifoN: string := ("fifoInput" ++ idx_to_string oidx).
+    Definition enqInputN := ppInputFifoN -- enqN.
+    Definition deqInputN := ppInputFifoN -- deqN.
+
+    Definition build_inputs_l1: Modules :=
+      inputAcceptor2 oidx enqInputN.
+
+    Definition build_inputs_li_4: Modules :=
+      ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
+         ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
+         ++ (inputAcceptor3 oidx deqCRqInputN deqCRsInputN enqInputN))%kami.
+
+  End Inputs.
+
+  Section Outputs.
     Variable oidx: IdxT.
     Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
 
@@ -1004,7 +1046,7 @@ Section Compile.
       build_enq_child_fix (#cidx)%kami_expr (#msg)%kami_expr
                           hcfg_children_max_pred)%kami_action.
 
-    Definition build_msg_outs_l1_async: Modules :=
+    Definition build_outputs_l1_async: Modules :=
       MODULE {
         Register enqRqN: MakeEnqK <- Default
         with Register enqValidN: Bool <- Default
@@ -1019,7 +1061,7 @@ Section Compile.
         with Rule "make_enq_down_to_child"+o := enqDownToL1
       }.
 
-    Definition build_msg_outs_l1: Modules :=
+    Definition build_outputs_l1: Modules :=
       MODULE {
         Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
           (If (#e!MakeEnq@."enq_type" == $0)
@@ -1032,7 +1074,7 @@ Section Compile.
           Retv)
       }.
 
-    Definition build_msg_outs_li_async: Modules :=
+    Definition build_outputs_li_async: Modules :=
       MODULE {
         Register enqRqN: MakeEnqK <- Default
         with Register enqValidN: Bool <- Default
@@ -1052,7 +1094,7 @@ Section Compile.
         with Rule "make_enq_down_to_child"+o := enqDownToChild
       }.
 
-    Definition build_msg_outs_li: Modules :=
+    Definition build_outputs_li: Modules :=
       MODULE {
         Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
           (If (#e!MakeEnq@."enq_type" == $0)
@@ -1072,7 +1114,7 @@ Section Compile.
                               hcfg_children_max_pred
       }.
 
-    Definition build_msg_outs_mem: Modules :=
+    Definition build_outputs_mem: Modules :=
       MODULE {
         Method (makeEnqFn oidx)(e: MakeEnqK): Void :=
           LET msg <- #e!MakeEnq@."enq_msg";
@@ -1080,31 +1122,40 @@ Section Compile.
           Retv
       }.
 
-  End MsgOuts.
+  End Outputs.
 
-  Definition compile_Object (dtr: Topology.DTree)
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj})
-    : Modules :=
+  Let ppIR2LRN (oidx: IdxT): string := ("fifoIL" ++ idx_to_string oidx).
+  Let enqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- enqN.
+  Let deqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- deqN.
+
+  Let ppLR2EXN (oidx: IdxT): string := ("fifoIL" ++ idx_to_string oidx).
+  Let enqLR2EXN (oidx: IdxT) := (ppLR2EXN oidx) -- enqN.
+  Let deqLR2EXN (oidx: IdxT) := (ppLR2EXN oidx) -- deqN.
+
+  Definition build_pipeline (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    let crules := nil in (** FIXME *)
+    let crules := compile_rules_pipeline
+                    oidx (deqInputN oidx) (enqIR2LRN oidx)
+                    (deqIR2LRN oidx) (enqLR2EXN oidx) (deqLR2EXN oidx)
+                    (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
-  Fixpoint compile_Objects (dtr: Topology.DTree)
-           (objs: list {sobj: Hemiola.Syntax.Object & HObject sobj})
-    : option Kami.Syntax.Modules :=
-    match objs with
-    | nil => None
-    | obj :: nil => Some (compile_Object dtr obj)
-    | obj :: objs' =>
-      (let cmod := compile_Object dtr obj in
-       cmods <-- compile_Objects dtr objs';
-      Some (ConcatMod cmod cmods))
-    end.
+  Definition build_controller_l1
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    ((build_inputs_l1 oidx ++ build_pipeline obj ++ build_outputs_l1 oidx)
+       ++ build_int_fifos oidx ++ build_ext_fifos oidx)%kami.
 
-  Definition compile_System (dtr: Topology.DTree)
-             (sys: {ssys: Hemiola.Syntax.System & HSystem ssys})
-    : option Kami.Syntax.Modules :=
-    compile_Objects dtr (hsys_objs (projT2 sys)).
+  Definition build_controller_li_4
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    ((build_inputs_li_4 oidx ++ build_pipeline obj ++ build_outputs_li oidx)
+       ++ build_int_fifos oidx)%kami.
+
+  Definition build_controller_mem
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    (build_pipeline obj ++ build_outputs_mem oidx)%kami.
 
 End Compile.

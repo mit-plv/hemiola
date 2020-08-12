@@ -52,6 +52,40 @@ Definition MaybeNone {var k}: Expr var (SyntaxKind (Maybe k)) :=
 Definition MaybeSome {var k} (v: Expr var (SyntaxKind k)): Expr var (SyntaxKind (Maybe k)) :=
   (STRUCT { "valid" ::= $$true; "data" ::= v })%kami_expr.
 
+Section Acceptor2.
+  Variable oidx: IdxT.
+  Variables (peltT0 peltT1 eltT: Kind).
+  Variables (eltF0: forall {var}, var peltT0 -> Expr var (SyntaxKind eltT))
+            (eltF1: forall {var}, var peltT1 -> Expr var (SyntaxKind eltT)).
+  Variables (acceptN0 acceptN1 forwardN: string).
+
+  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+
+  Local Notation acceptF0 := (MethodSig acceptN0(): peltT0).
+  Local Notation acceptF1 := (MethodSig acceptN1(): peltT1).
+  Local Notation forward := (MethodSig forwardN(eltT): Void).
+
+  Let rrSz := 1.
+
+  Definition acceptor2: Kami.Syntax.Modules :=
+    MODULE {
+        Register ("rr"+o): Bit rrSz <- Default
+        with Rule "inc_rr"+o :=
+          Read rr: Bit rrSz <- "rr"+o;
+          Write "rr"+o <- #rr + $1;
+          Retv
+        with Rule "accept0"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $0);
+          Call pval <- acceptF0(); LET val <- eltF0 pval;
+          Call forward(#val); Retv
+        with Rule "accept1"+o :=
+          Read rr: Bit rrSz <- "rr"+o; Assert (#rr == $1);
+          Call pval <- acceptF1(); LET val <- eltF1 pval;
+          Call forward(#val); Retv
+      }.
+
+End Acceptor2.
+
 Section Acceptor3.
   Variable oidx: IdxT.
   Variables (peltT0 peltT1 peltT2 eltT: Kind).
