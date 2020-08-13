@@ -24,7 +24,7 @@ Section Directory.
              "dir_sharers" :: KCBv }.
 
   Definition compile_dir_get {var}
-             (oidx: KCIdx @ var) (dir: (Struct KDir) @ var): KMesi @ var :=
+             (oidx: KCIdx @ var) (dir: (Struct KDir) @ var): Expr var (SyntaxKind KMesi) :=
     (let dir_st := dir!KDir@."dir_st" in
      let dir_excl := dir!KDir@."dir_excl" in
      let dir_sharers := dir!KDir@."dir_sharers" in
@@ -37,92 +37,92 @@ End Directory.
 
 Section Instances.
   Context `{TopoConfig}.
-  Variable lgWay: nat.
+  Variables mshrNumPRqs mshrNumCRqs: nat.
 
   Instance MesiCompExtType: CompExtType :=
-    {| kind_of_hetype :=
-         fun het => match het with
-                    | HDir => Struct KDir
-                    end
+    {| kind_of_hetype := fun het => match het with
+                                    | HDir => Struct KDir
+                                    end
     |}.
 
+  Arguments compile_bexp {_ _ _ _ _ _ _ _ _ _ _} _ _ _ {_}.
   Fixpoint compile_dir_exp
            (var: Kind -> Type) {het}
            (msgIn: var (Struct KMsg))
-           (ul: var (Struct UL)) (dl: var (Struct DL))
+           (mshr: var (Struct (MSHR mshrNumPRqs mshrNumCRqs)))
            (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
            (he: heexp (hvar_of var) het): Expr var (SyntaxKind (kind_of het)) :=
     (match he in (hexp_dir _ h) return (Expr var (SyntaxKind (kind_of h))) with
      | HDirC _ => #(HVector.hvec_ith ostvars Mesi.dir)
-     | HDirGetSt dir => ((compile_dir_exp msgIn ul dl ostvars dir)!KDir@."dir_st")
-     | HDirGetExcl dir => ((compile_dir_exp msgIn ul dl ostvars dir)!KDir@."dir_excl")
-     | HDirGetStO oidx dir => compile_dir_get (compile_bexp ostvars msgIn ul dl oidx)
-                                              (compile_dir_exp msgIn ul dl ostvars dir)
-     | HDirGetSh dir => ((compile_dir_exp msgIn ul dl ostvars dir)!KDir@."dir_sharers")
+     | HDirGetSt dir => ((compile_dir_exp msgIn mshr ostvars dir)!KDir@."dir_st")
+     | HDirGetExcl dir => ((compile_dir_exp msgIn mshr ostvars dir)!KDir@."dir_excl")
+     | HDirGetStO oidx dir => compile_dir_get (compile_bexp msgIn mshr ostvars oidx)
+                                              (compile_dir_exp msgIn mshr ostvars dir)
+     | HDirGetSh dir => ((compile_dir_exp msgIn mshr ostvars dir)!KDir@."dir_sharers")
      | HDirRemoveSh sh cidx =>
-       bvUnset (compile_dir_exp msgIn ul dl ostvars sh) (compile_bexp ostvars msgIn ul dl cidx)
+       bvUnset (compile_dir_exp msgIn mshr ostvars sh) (compile_bexp msgIn mshr ostvars cidx)
      | HDirAddSharer oidx dir =>
-       (let kdir := compile_dir_exp msgIn ul dl ostvars dir in
+       (let kdir := compile_dir_exp msgIn mshr ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
                  "dir_sharers" ::=
                    IF (kdir!KDir@."dir_st" == mesiS)
-                 then (bvSet (kdir!KDir@."dir_sharers") (compile_bexp ostvars msgIn ul dl oidx))
-                 else (bvSingleton _ (compile_bexp ostvars msgIn ul dl oidx)) })
+                 then (bvSet (kdir!KDir@."dir_sharers") (compile_bexp msgIn mshr ostvars oidx))
+                 else (bvSingleton _ (compile_bexp msgIn mshr ostvars oidx)) })
      | HDirRemoveSharer oidx dir =>
-       (let kdir := compile_dir_exp msgIn ul dl ostvars dir in
+       (let kdir := compile_dir_exp msgIn mshr ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
                  "dir_sharers" ::= bvUnset (kdir!KDir@."dir_sharers")
-                                           (compile_bexp ostvars msgIn ul dl oidx) })
+                                           (compile_bexp msgIn mshr ostvars oidx) })
 
      | HDirSetM oidx => (STRUCT { "dir_st" ::= mesiM;
-                                  "dir_excl" ::= compile_bexp ostvars msgIn ul dl oidx;
+                                  "dir_excl" ::= compile_bexp msgIn mshr ostvars oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetE oidx => (STRUCT { "dir_st" ::= mesiE;
-                                  "dir_excl" ::= compile_bexp ostvars msgIn ul dl oidx;
+                                  "dir_excl" ::= compile_bexp msgIn mshr ostvars oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetS oinds => (STRUCT { "dir_st" ::= mesiS;
                                    "dir_excl" ::= $$Default;
                                    "dir_sharers" ::=
                                      List.fold_left
                                        (fun bv i => bvSet bv i)
-                                       (map (compile_bexp ostvars msgIn ul dl) oinds)
+                                       (map (compile_bexp msgIn mshr ostvars) oinds)
                                        $$Default })
      | HDirSetI _ => (STRUCT { "dir_st" ::= mesiI;
                                "dir_excl" ::= $$Default;
                                "dir_sharers" ::= $$Default })
 
-     | HRqUpFrom oidx => {$TopoTemplate.rqUpIdx, compile_dir_exp msgIn ul dl ostvars oidx}
-     | HRsUpFrom oidx => {$TopoTemplate.rsUpIdx, compile_dir_exp msgIn ul dl ostvars oidx}
-     | HDownTo oidx => {$TopoTemplate.downIdx, compile_dir_exp msgIn ul dl ostvars oidx}
-     | HRqUpFromM oinds => compile_dir_exp msgIn ul dl ostvars oinds
-     | HRsUpFromM oinds => compile_dir_exp msgIn ul dl ostvars oinds
-     | HDownToM oinds => compile_dir_exp msgIn ul dl ostvars oinds
-     | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp msgIn ul dl ostvars se))
+     | HRqUpFrom oidx => {$TopoTemplate.rqUpIdx, compile_dir_exp msgIn mshr ostvars oidx}
+     | HRsUpFrom oidx => {$TopoTemplate.rsUpIdx, compile_dir_exp msgIn mshr ostvars oidx}
+     | HDownTo oidx => {$TopoTemplate.downIdx, compile_dir_exp msgIn mshr ostvars oidx}
+     | HRqUpFromM oinds => compile_dir_exp msgIn mshr ostvars oinds
+     | HRsUpFromM oinds => compile_dir_exp msgIn mshr ostvars oinds
+     | HDownToM oinds => compile_dir_exp msgIn mshr ostvars oinds
+     | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp msgIn mshr ostvars se))
      | HInvalidate se =>
-       (* (IF ((compile_bexp ostvars msgIn ul dl se) == mesiNP) then mesiNP else mesiI) *)
+       (* (IF ((compile_bexp msgIn mshr ostvars se) == mesiNP) then mesiNP else mesiI) *)
        mesiI
      end)%kami_expr.
 
   Definition compile_dir_OPrec
              (var: Kind -> Type)
              (msgIn: var (Struct KMsg))
-             (ul: var (Struct UL)) (dl: var (Struct DL))
+             (mshr: var (Struct (MSHR mshrNumPRqs mshrNumCRqs)))
              (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
      | DirLastSharer cidx =>
        bvIsSingleton (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-                     (compile_bexp ostvars msgIn ul dl cidx)
+                     (compile_bexp msgIn mshr ostvars cidx)
      | DirNotLastSharer _ =>
        bvCount (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers") > $1
      | DirOtherSharerExists cidx =>
        bvUnset (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-               (compile_bexp ostvars msgIn ul dl cidx) != $0
+               (compile_bexp msgIn mshr ostvars cidx) != $0
      end)%kami_expr.
 
-  Instance MesiCompExtExp: CompExtExp :=
+  Instance MesiCompExtExp: CompExtExp mshrNumPRqs mshrNumCRqs :=
     {| compile_eexp := compile_dir_exp;
        compile_eoprec := compile_dir_OPrec
     |}.
@@ -132,37 +132,39 @@ Section Instances.
              "mesi_status" :: KMesi;
              "mesi_dir_st" :: KMesi;
              "mesi_dir_sharers" :: Bit hcfg_children_max }.
+  Let MesiInfoK := Struct MesiInfo.
 
-  Definition MesiCacheLine := CacheLine hcfg_addr_sz lgWay (Struct MesiInfo) KValue.
-  Definition MesiCacheLineK := CacheLineK hcfg_addr_sz lgWay (Struct MesiInfo) KValue.
+  Variables indexSz lgWay edirLgWay: nat.
 
-  Definition mesi_compile_info_read
-             (var: Kind -> Type) (pinfo: Expr var (SyntaxKind (Struct MesiInfo)))
-    : Expr var (SyntaxKind (Vector.nth
-                              (Vector.map (Struct.attrType (A:=Kind))
-                                          (CacheLine hcfg_addr_sz lgWay (Struct MesiInfo) KValue))
-                              (MesiCacheLine !! "info"))) :=
-    (STRUCT { "mesi_owned" ::= pinfo!MesiInfo@."mesi_owned";
-              "mesi_status" ::=
-                IF (pinfo!MesiInfo@."mesi_status" == mesiNP)
-              then mesiI else pinfo!MesiInfo@."mesi_status";
-              "mesi_dir_st" ::=
-                IF (pinfo!MesiInfo@."mesi_dir_st" == mesiNP)
-              then mesiI else pinfo!MesiInfo@."mesi_dir_st";
-              "mesi_dir_sharers" ::= pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
+  Definition MesiInfoRead := InfoRead MesiInfoK indexSz lgWay edirLgWay.
+  Let MesiInfoReadK := Struct MesiInfoRead.
 
-  Definition mesi_compile_line_read
-             (var: Kind -> Type) (line: var MesiCacheLineK)
-    : Expr var (SyntaxKind MesiCacheLineK) :=
-    (updStruct (#line) (MesiCacheLine !! "info")
-               (mesi_compile_info_read (#line!MesiCacheLine@."info")))%kami_expr.
+  (* Definition mesi_compile_info_read *)
+  (*            (var: Kind -> Type) (pinfo: Expr var (SyntaxKind MesiInfoK)) *)
+  (*   : Expr var (SyntaxKind (Vector.nth *)
+  (*                             (Vector.map (Struct.attrType (A:=Kind)) *)
+  (*                                         (CacheLine hcfg_addr_sz lgWay MesiInfoK KValue)) *)
+  (*                             (MesiInfoRead !! "info"))) := *)
+  (*   (STRUCT { "mesi_owned" ::= pinfo!MesiInfo@."mesi_owned"; *)
+  (*             "mesi_status" ::= *)
+  (*               IF (pinfo!MesiInfo@."mesi_status" == mesiNP) *)
+  (*             then mesiI else pinfo!MesiInfo@."mesi_status"; *)
+  (*             "mesi_dir_st" ::= *)
+  (*               IF (pinfo!MesiInfo@."mesi_dir_st" == mesiNP) *)
+  (*             then mesiI else pinfo!MesiInfo@."mesi_dir_st"; *)
+  (*             "mesi_dir_sharers" ::= pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr. *)
 
-  Definition mesi_compile_line_to_ostVars
-             (var: Kind -> Type) (line: var MesiCacheLineK)
+  (* Definition mesi_compile_line_read *)
+  (*            (var: Kind -> Type) (line: var MesiInfoReadK) *)
+  (*   : Expr var (SyntaxKind MesiInfoReadK) := *)
+  (*   (updStruct (#line) (MesiInfoRead !! "info") *)
+  (*              (mesi_compile_info_read (#line!MesiInfoRead@."info")))%kami_expr. *)
+
+  Definition mesi_compile_info_to_ostVars
+             (var: Kind -> Type) (pinfo: var MesiInfoK)
              (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
                     ActionT var Void): ActionT var Void :=
-    (LET value <- #line!MesiCacheLine@."value";
-    LET pinfo <- #line!MesiCacheLine@."info";
+    (LET value <- $$Default;
     LET owned <- #pinfo!MesiInfo@."mesi_owned";
     LET status: KMesi <- #pinfo!MesiInfo@."mesi_status";
     LET dir <- STRUCT { "dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
@@ -170,10 +172,25 @@ Section Instances.
                         "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
     cont (value, (owned, (status, (dir, tt)))))%kami_action.
 
+  Definition mesi_compile_value_read_to_ostVars
+             (var: Kind -> Type)
+             (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+             (rval: var KValue)
+    : HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) :=
+    HVector.hvec_upd ostVars Mesi.val rval.
+
+  Definition MesiLineWrite := LineWrite lgWay edirLgWay MesiInfoK.
+  Let MesiLineWriteK := Struct MesiLineWrite.
+
+  (*   STRUCT {"addr" :: Bit addrSz; "info_write" :: Bool; "info_hit" :: Bool;  *)
+  (* "info_way" :: Bit lgWay; "edir_hit" :: Bool; "edir_way" :: Bit edirLgWay; *)
+  (* "edir_slot" :: Maybe (Bit edirLgWay); "info" :: infoK; "value_write" :: Bool;  *)
+  (* "value" :: valueK} *)
+
   Definition mesi_compile_line_update
-             (var: Kind -> Type) (line: var MesiCacheLineK)
+             (var: Kind -> Type) (line: var MesiLineWriteK)
              i ht (Heq: Vector.nth hostf_ty i = ht)
-             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind MesiCacheLineK).
+             (ve: Expr var (SyntaxKind (kind_of ht))): Expr var (SyntaxKind MesiLineWriteK).
   Proof.
     subst ht.
     refine (if Fin.eq_dec i Mesi.val then _
@@ -181,61 +198,65 @@ Section Instances.
                  else if Fin.eq_dec i Mesi.status then _
                       else if Fin.eq_dec i Mesi.dir then _
                            else ($$Default)%kami_expr); subst i.
-    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
-                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
-                      "info_way" ::= #line!MesiCacheLine@."info_way";
-                      "info_write" ::= #line!MesiCacheLine@."info_write";
-                      "info" ::= #line!MesiCacheLine@."info";
+    - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
+                      "info_write" ::= #line!MesiLineWrite@."info_write";
+                      "info_hit" ::= #line!MesiLineWrite@."info_hit";
+                      "info_way" ::= #line!MesiLineWrite@."info_way";
+                      "edir_hit" ::= #line!MesiLineWrite@."edir_hit";
+                      "edir_way" ::= #line!MesiLineWrite@."edir_way";
+                      "edir_slot" ::= #line!MesiLineWrite@."edir_slot";
+                      "info" ::= #line!MesiLineWrite@."info";
                       "value_write" ::= $$true;
                       "value" ::= ve })%kami_expr.
-    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
-                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
-                      "info_way" ::= #line!MesiCacheLine@."info_way";
+    - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
                       "info_write" ::= $$true;
-                      "info" ::= updStruct (#line!MesiCacheLine@."info")%kami_expr
+                      "info_hit" ::= #line!MesiLineWrite@."info_hit";
+                      "info_way" ::= #line!MesiLineWrite@."info_way";
+                      "edir_hit" ::= #line!MesiLineWrite@."edir_hit";
+                      "edir_way" ::= #line!MesiLineWrite@."edir_way";
+                      "edir_slot" ::= #line!MesiLineWrite@."edir_slot";
+                      "info" ::= updStruct (#line!MesiLineWrite@."info")%kami_expr
                                            (MesiInfo!!"mesi_owned")
                                            ve;
-                      "value_write" ::= #line!MesiCacheLine@."value_write";
-                      "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
-    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
-                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
-                      "info_way" ::= #line!MesiCacheLine@."info_way";
+                      "value_write" ::= #line!MesiLineWrite@."value_write";
+                      "value" ::= #line!MesiLineWrite@."value" })%kami_expr.
+    - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
                       "info_write" ::= $$true;
-                      "info" ::= updStruct (#line!MesiCacheLine@."info")%kami_expr
+                      "info_hit" ::= #line!MesiLineWrite@."info_hit";
+                      "info_way" ::= #line!MesiLineWrite@."info_way";
+                      "edir_hit" ::= #line!MesiLineWrite@."edir_hit";
+                      "edir_way" ::= #line!MesiLineWrite@."edir_way";
+                      "edir_slot" ::= #line!MesiLineWrite@."edir_slot";
+                      "info" ::= updStruct (#line!MesiLineWrite@."info")%kami_expr
                                            (MesiInfo!!"mesi_status")
                                            ve;
-                      "value_write" ::= #line!MesiCacheLine@."value_write";
-                      "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
-    - exact (STRUCT { "addr" ::= #line!MesiCacheLine@."addr";
-                      "info_hit" ::= #line!MesiCacheLine@."info_hit";
-                      "info_way" ::= #line!MesiCacheLine@."info_way";
+                      "value_write" ::= #line!MesiLineWrite@."value_write";
+                      "value" ::= #line!MesiLineWrite@."value" })%kami_expr.
+    - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
                       "info_write" ::= $$true;
+                      "info_hit" ::= #line!MesiLineWrite@."info_hit";
+                      "info_way" ::= #line!MesiLineWrite@."info_way";
+                      "edir_hit" ::= #line!MesiLineWrite@."edir_hit";
+                      "edir_way" ::= #line!MesiLineWrite@."edir_way";
+                      "edir_slot" ::= #line!MesiLineWrite@."edir_slot";
                       "info" ::=
-                        STRUCT { "mesi_owned" ::= #line!MesiCacheLine@."info"!MesiInfo@."mesi_owned";
-                                 "mesi_status" ::= #line!MesiCacheLine@."info"!MesiInfo@."mesi_status";
+                        STRUCT { "mesi_owned" ::= #line!MesiLineWrite@."info"!MesiInfo@."mesi_owned";
+                                 "mesi_status" ::= #line!MesiLineWrite@."info"!MesiInfo@."mesi_status";
                                  "mesi_dir_st" ::= ve!KDir@."dir_st";
                                  "mesi_dir_sharers" ::=
                                    (IF (ve!KDir@."dir_st" == mesiS)
                                     then (ve!KDir@."dir_sharers")
                                     else (bvSingleton _ (ve!KDir@."dir_excl"))) };
-                      "value_write" ::= #line!MesiCacheLine@."value_write";
-                      "value" ::= #line!MesiCacheLine@."value" })%kami_expr.
+                      "value_write" ::= #line!MesiLineWrite@."value_write";
+                      "value" ::= #line!MesiLineWrite@."value" })%kami_expr.
   Defined.
 
-  Definition mesi_check_inv_response (i: Fin.t Syntax.ost_sz) (st: nat): bool :=
-    if Fin.eq_dec i Mesi.status
-    then (if Peano_dec.eq_nat_dec st Mesi.mesiNP
-          then true else false)
-    else false.
-
-  Instance MesiCompLineRW: CompLineRW :=
-    {| lineK := MesiCacheLineK;
-       get_line_addr := fun _ line => (#line!MesiCacheLine@."addr")%kami_expr;
-       set_line_addr := fun _ line naddr => updStruct line (MesiCacheLine!!"addr") naddr;
-       compile_line_read := mesi_compile_line_read;
-       compile_line_to_ostVars := mesi_compile_line_to_ostVars;
-       compile_line_update := mesi_compile_line_update;
-       check_inv_response := mesi_check_inv_response |}.
+  Instance MesiCompLineRW: CompLineRW lgWay edirLgWay :=
+    {| infoK := MesiInfoK;
+       invRsId := idx_to_word hcfg_msg_id_sz Mesi.mesiInvRs;
+       compile_info_to_ostVars := mesi_compile_info_to_ostVars;
+       compile_value_read_to_ostVars := mesi_compile_value_read_to_ostVars;
+       compile_line_update := mesi_compile_line_update |}.
 
 End Instances.
 
@@ -244,7 +265,7 @@ Require Import Hemiola.Ex.TopoTemplate.
 Section Cache.
   Context `{TopoConfig}.
   Variables (oidx: IdxT)
-            (indexSz lgWay lgNumVictim: nat).
+            (indexSz lgWay edirLgWay predNumVictims mshrSlotSz: nat).
 
   Definition BitsPerByte := 8.
   Definition offsetSz := Nat.log2 (Nat.div hcfg_addr_sz BitsPerByte) + hcfg_line_values_lg.
@@ -266,11 +287,43 @@ Section Cache.
     : Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))) :=
     {#tag, {#index, $0}}%kami_expr.
 
-  Definition evictF (var: Kind -> Type)
-             (minfo: Expr var (SyntaxKind (Struct MesiInfo))): Expr var (SyntaxKind Bool) :=
-    (minfo!MesiInfo@."mesi_dir_st" == mesiI)%kami_expr.
+  Definition MesiEDir :=
+    STRUCT { "mesi_edir_st" :: KMesi;
+             "mesi_edir_sharers" :: Bit hcfg_children_max }.
+  Let MesiEDirK := Struct MesiEDir.
+
+  Definition edirToInfo (var: Kind -> Type)
+             (edir: fullType var (SyntaxKind MesiEDirK))
+    : Expr var (SyntaxKind (Struct MesiInfo)) :=
+    (STRUCT { "mesi_owned" ::= $$false;
+              "mesi_status" ::= mesiI;
+              "mesi_dir_st" ::= #edir!MesiEDir@."mesi_edir_st";
+              "mesi_dir_sharers" ::= #edir!MesiEDir@."mesi_edir_status" })%kami_expr.
+
+  Definition edirFromInfo (var: Kind -> Type)
+             (pinfo: fullType var (SyntaxKind (Struct MesiInfo)))
+    : Expr var (SyntaxKind MesiEDirK) :=
+    (STRUCT { "mesi_edir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+              "mesi_edir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
+
+  Definition isJustDir (var: Kind -> Type)
+             (pinfo: fullType var (SyntaxKind (Struct MesiInfo)))
+    : Expr var (SyntaxKind Bool) :=
+    ((!(#pinfo!MesiInfo@."mesi_owned")) && #pinfo!MesiInfo@."mesi_status" == mesiI)%kami_expr.
+
+  Definition isDirInvalid (var: Kind -> Type)
+             (pinfo: fullType var (SyntaxKind (Struct MesiInfo)))
+    : Expr var (SyntaxKind Bool) :=
+    (#pinfo!MesiInfo@."mesi_dir_st" == mesiNP || #pinfo!MesiInfo@."mesi_dir_st" == mesiI)%kami_expr.
+
+  Definition edirEmptySlot (var: Kind -> Type)
+             (edir: Expr var (SyntaxKind MesiEDirK))
+    : Expr var (SyntaxKind Bool) :=
+    (edir!MesiEDir@."mesi_edir_st" == mesiNP || edir!MesiEDir@."mesi_edir_st" == mesiI)%kami_expr.
 
   Definition mesiCache :=
-    cache oidx lgWay lgNumVictim KValue getIndex getTag buildAddr evictF.
+    cacheIfc
+      oidx KValue lgWay edirLgWay predNumVictims mshrSlotSz
+      getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot.
 
 End Cache.
