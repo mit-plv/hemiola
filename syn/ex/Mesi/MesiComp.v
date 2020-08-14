@@ -139,27 +139,6 @@ Section Instances.
   Definition MesiInfoRead := InfoRead MesiInfoK indexSz lgWay edirLgWay.
   Let MesiInfoReadK := Struct MesiInfoRead.
 
-  (* Definition mesi_compile_info_read *)
-  (*            (var: Kind -> Type) (pinfo: Expr var (SyntaxKind MesiInfoK)) *)
-  (*   : Expr var (SyntaxKind (Vector.nth *)
-  (*                             (Vector.map (Struct.attrType (A:=Kind)) *)
-  (*                                         (CacheLine hcfg_addr_sz lgWay MesiInfoK KValue)) *)
-  (*                             (MesiInfoRead !! "info"))) := *)
-  (*   (STRUCT { "mesi_owned" ::= pinfo!MesiInfo@."mesi_owned"; *)
-  (*             "mesi_status" ::= *)
-  (*               IF (pinfo!MesiInfo@."mesi_status" == mesiNP) *)
-  (*             then mesiI else pinfo!MesiInfo@."mesi_status"; *)
-  (*             "mesi_dir_st" ::= *)
-  (*               IF (pinfo!MesiInfo@."mesi_dir_st" == mesiNP) *)
-  (*             then mesiI else pinfo!MesiInfo@."mesi_dir_st"; *)
-  (*             "mesi_dir_sharers" ::= pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr. *)
-
-  (* Definition mesi_compile_line_read *)
-  (*            (var: Kind -> Type) (line: var MesiInfoReadK) *)
-  (*   : Expr var (SyntaxKind MesiInfoReadK) := *)
-  (*   (updStruct (#line) (MesiInfoRead !! "info") *)
-  (*              (mesi_compile_info_read (#line!MesiInfoRead@."info")))%kami_expr. *)
-
   Definition mesi_compile_info_to_ostVars
              (var: Kind -> Type) (pinfo: var MesiInfoK)
              (cont: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
@@ -181,11 +160,6 @@ Section Instances.
 
   Definition MesiLineWrite := LineWrite lgWay edirLgWay MesiInfoK.
   Let MesiLineWriteK := Struct MesiLineWrite.
-
-  (*   STRUCT {"addr" :: Bit addrSz; "info_write" :: Bool; "info_hit" :: Bool;  *)
-  (* "info_way" :: Bit lgWay; "edir_hit" :: Bool; "edir_way" :: Bit edirLgWay; *)
-  (* "edir_slot" :: Maybe (Bit edirLgWay); "info" :: infoK; "value_write" :: Bool;  *)
-  (* "value" :: valueK} *)
 
   Definition mesi_compile_line_update
              (var: Kind -> Type) (line: var MesiLineWriteK)
@@ -321,9 +295,12 @@ Section Cache.
     : Expr var (SyntaxKind Bool) :=
     (edir!MesiEDir@."mesi_edir_st" == mesiNP || edir!MesiEDir@."mesi_edir_st" == mesiI)%kami_expr.
 
-  Definition mesiCache :=
-    cacheIfc
-      oidx KValue lgWay edirLgWay predNumVictims mshrSlotSz
-      getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot.
+  Definition mesiL1 :=
+    cache oidx MesiEDirK KValue lgWay 0 predNumVictims mshrSlotSz
+          getIndex getTag buildAddr isDirInvalid.
+
+  Definition mesiLi :=
+    ncid oidx KValue lgWay edirLgWay predNumVictims mshrSlotSz
+         getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot.
 
 End Cache.

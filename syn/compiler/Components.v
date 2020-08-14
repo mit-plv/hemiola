@@ -697,7 +697,7 @@ Section MSHR.
 
 End MSHR.
 
-Section NCID.
+Section Cache.
   Variables (oidx: IdxT)
             (* Common *)
             (infoK edirK valueK: Kind)
@@ -1243,6 +1243,175 @@ Section NCID.
              NCall ntis <- makeInfoRdResps tis;
              LET itm <- doTagMatch _ tag ntis (Nat.pow 2 lgWay);
 
+             Call reps <- repGetRs();
+             LET maxWay: Bit lgWay <- $$Default;
+             LET maxAge: RepCntK <- $$Default;
+             NCall2 repWay, _ <- getRepWay maxWay maxAge reps;
+
+             LET linfo: InfoReadK <-
+                        STRUCT { "info_index" ::= #index;
+                                 "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
+                                 "info_way" ::= #itm!(TagMatch infoK lgWay)@."tm_way";
+                                 "edir_hit" ::= $$Default;
+                                 "edir_way" ::= $$Default;
+                                 "edir_slot" ::= $$Default;
+                                 "info" ::= #itm!(TagMatch infoK lgWay)@."tm_value" };
+
+             LET repTagInfo <- #ntis@[#repWay];
+             LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
+             LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
+             Call cpEnq2(STRUCT { "victim_found" ::= MaybeNone;
+                                  "may_victim" ::=
+                                    STRUCT { "mv_addr" ::= buildAddr repTag index;
+                                             "mv_info" ::= #repInfo };
+                                  "reps" ::= #reps });
+             (** On cache hit, request the line value; otherwise, request the victim line value. *)
+             Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
+                              then (#itm!(TagMatch infoK lgWay)@."tm_way")
+                              else #repWay), #index});
+             Ret #linfo)
+        as linfo; Ret #linfo
+
+      with Method valueRsLineRqN (lw: LineWriteK): valueK :=
+        Call cpipe <- cpDeq2();
+        Read victims: Array VictimK numVictims <- victimsN;
+        If (#cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."valid")
+        then (LET vi <- #cpipe!cp2@."victim_found"!(MaybeStr (Bit victimIdxSz))@."data";
+             LET pv <- #victims#[#vi];
+             LET nv: VictimK <- STRUCT { "victim_valid" ::= $$true;
+                                         "victim_addr" ::= #pv!Victim@."victim_addr";
+                                         "victim_info" ::=
+                                           (IF (#lw!LineWrite@."info_write")
+                                            then (#lw!LineWrite@."info")
+                                            else (#pv!Victim@."victim_info"));
+                                         "victim_value" ::=
+                                           (IF (#lw!LineWrite@."value_write")
+                                            then (#lw!LineWrite@."value")
+                                            else (#pv!Victim@."victim_value"));
+                                         "victim_req" ::= #pv!Victim@."victim_req" };
+             Write victimsN <- #victims#[#vi <- #nv];
+             Ret (#pv!Victim@."victim_value"))
+        else (Call value <- dataRdResp();
+             LET addr <- #lw!LineWrite@."addr";
+             LET index <- getIndex addr;
+             LET info_way <- #lw!LineWrite@."info_way";
+             LET ninfo <- #lw!LineWrite@."info";
+
+             (** traditional cache-line write *)
+             If (#lw!LineWrite@."info_write")
+             then (LET irq <- STRUCT { "addr" ::= #index;
+                                       "datain" ::= STRUCT { "tag" ::= getTag addr;
+                                                             "value" ::= #ninfo } };
+                  NCall makeInfoWrReqs info_way irq;
+
+                  If (#lw!LineWrite@."value_write")
+                  then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
+                                            "datain" ::= #lw!LineWrite@."value" };
+                       Call dataWrReq(#drq); Retv);
+
+                  (** may need to register a new victim line *)
+                  If (!(#lw!LineWrite@."info_hit"))
+                  then (LET mv <- #cpipe!cp2@."may_victim";
+                       LET mvi <- getVictimSlot #victims;
+                       (** * TODO: do we need this assertion? *)
+                       (* Assert (#mvi!(MaybeStr (Bit victimIdxSz))@."valid"); *)
+                       LET vi <- #mvi!(MaybeStr (Bit victimIdxSz))@."data";
+                       Write victimsN <-
+                       #victims#[#vi <- STRUCT { "victim_valid" ::= $$true;
+                                                 "victim_addr" ::= #mv!MayVictim@."mv_addr";
+                                                 "victim_info" ::= #mv!MayVictim@."mv_info";
+                                                 "victim_value" ::= #value;
+                                                 "victim_req" ::= MaybeNone }];
+                       Retv);
+
+                  (** update replacement information *)
+                  Call repAccess(STRUCT { "acc_type" ::=
+                                            (IF (isDirInvalid ninfo)
+                                             then accInvalid else accTouch);
+                                          "acc_reps" ::= #cpipe!cp2@."reps";
+                                          "acc_index" ::= #index;
+                                          "acc_way" ::= #info_way });
+                  Retv);
+             Ret #value)
+        as pval;
+        Ret #pval
+
+      with Method getVictimN (): VictimK :=
+        Read victims <- victimsN;
+        LET mvictim <- getVictimF #victims;
+        Assert (#mvictim!(MaybeStr VictimK)@."valid");
+        Ret #mvictim!(MaybeStr VictimK)@."data"
+
+      with Method setVictimRqN (vrq: VictimRqK): Void :=
+        LET addr <- #vrq!VictimRq@."victim_addr";
+        LET mid <- #vrq!VictimRq@."victim_req";
+        Read victims <- victimsN;
+        setVictimRqF (#addr)%kami_expr (#victims)%kami_expr (#mid)%kami_expr Retv
+
+      with Method releaseVictimN (addr: Bit addrSz): MshrId :=
+        Read victims <- victimsN;
+        victimIterA
+          (#victims)%kami_expr (#addr)%kami_expr
+          (fun i victim =>
+             (Write victimsN <- #victims#[$v$i <- $$Default];
+             (** assumes [victim_req] is valid *)
+             LET vmid <- victim!Victim@."victim_req"!(MaybeStr MshrId)@."data";
+             Ret #vmid))
+          (Ret $$Default)
+
+      with Method getVictimCountN (): Bit victimIdxSz :=
+        Read victims <- victimsN;
+        LET cnt <- getVictimCountF #victims;
+        Ret #cnt
+    }.
+
+  Definition ncidIfc :=
+    MODULE {
+      Register victimsN: Array VictimK numVictims <- Default
+
+      with Method infoRqN (addr: Bit addrSz): Void :=
+        Read victims <- victimsN;
+        victimIterA
+          (#victims)%kami_expr (#addr)%kami_expr
+          (fun i _ =>
+             (Call cpEnq1(STRUCT { "tag" ::= getTag addr;
+                                   "index" ::= getIndex addr;
+                                   "victim_found" ::= MaybeSome ($i) });
+             Retv))
+          (LET index <- getIndex addr;
+          NCall makeInfoRdReqs index;
+          NCall makeEDirRdReqs index;
+          Call repGetRq(#index);
+          Call cpEnq1(STRUCT { "tag" ::= getTag addr;
+                               "index" ::= getIndex addr;
+                               "victim_found" ::= MaybeNone });
+          Retv)
+
+      with Method infoRsValueRqN (): InfoReadK :=
+        Call cpipe <- cpDeq1();
+        LET tag <- #cpipe!cp1@."tag";
+        LET index <- #cpipe!cp1@."index";
+        If (#cpipe!cp1@."victim_found"!(MaybeStr (Bit victimIdxSz))@."valid")
+        then (LET vi <- #cpipe!cp1@."victim_found"!(MaybeStr (Bit victimIdxSz))@."data";
+             Read victims <- victimsN;
+             LET victim <- #victims@[#vi];
+             LET linfo: InfoReadK <- STRUCT { "info_index" ::= #index;
+                                              "info_hit" ::= $$true;
+                                              (* [info_way] has no meaning for victim lines *)
+                                              "info_way" ::= $$Default;
+                                              "edir_hit" ::= $$false;
+                                              "edir_way" ::= $$Default;
+                                              "edir_slot" ::= MaybeNone;
+                                              "info" ::= #victim!Victim@."victim_info"
+                                            };
+             Call cpEnq2(STRUCT { "victim_found" ::= #cpipe!cp1@."victim_found";
+                                  "may_victim" ::= $$Default;
+                                  "reps" ::= $$Default });
+             Ret #linfo)
+        else (LET tis: Vector TagInfoK lgWay <- $$Default;
+             NCall ntis <- makeInfoRdResps tis;
+             LET itm <- doTagMatch _ tag ntis (Nat.pow 2 lgWay);
+
              LET tes: Vector TagEDirK edirLgWay <- $$Default;
              NCall ntes <- makeEDirRdResps tes;
              LET etm <- doTagMatch _ tag ntes (Nat.pow 2 edirLgWay);
@@ -1329,10 +1498,11 @@ Section NCID.
                         NCall makeInfoWrReqs info_way irq;
 
                         (** register a new victim to the victim array *)
+                        (** * FIXME: why registering a victim even for [info_hit]? *)
                         LET mv <- #cpipe!cp2@."may_victim";
                         LET mvi <- getVictimSlot #victims;
-                        (** * FIXME: this assertion may cause a serious problem *)
-                        Assert (#mvi!(MaybeStr (Bit victimIdxSz))@."valid");
+                        (** * TODO: do we need this assertion? *)
+                        (* Assert (#mvi!(MaybeStr (Bit victimIdxSz))@."valid"); *)
                         LET vi <- #mvi!(MaybeStr (Bit victimIdxSz))@."data";
                         Write victimsN <-
                         #victims#[#vi <- STRUCT { "victim_valid" ::= $$true;
@@ -1425,7 +1595,7 @@ Section NCID.
     | S w' => (edirRam w ++ edirRams w')%kami
     end.
 
-  Definition ncid :=
+  Definition cache :=
     (cacheIfc
        ++ (cpipe1 ++ cpipe2)
        ++ infoRams (Nat.pow 2 lgWay - 1)
@@ -1433,4 +1603,12 @@ Section NCID.
        ++ dataRam
        ++ rep)%kami.
 
-End NCID.
+  Definition ncid :=
+    (ncidIfc
+       ++ (cpipe1 ++ cpipe2)
+       ++ infoRams (Nat.pow 2 lgWay - 1)
+       ++ edirRams (Nat.pow 2 edirLgWay - 1)
+       ++ dataRam
+       ++ rep)%kami.
+
+End Cache.

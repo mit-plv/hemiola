@@ -93,7 +93,7 @@ Section Compile.
   Variable predNumVictims: nat.
   Let victimIdxSz := Nat.log2 predNumVictims.
 
-  Fixpoint kind_of_hbtype (hbt: hbtype): Kind :=
+  Definition kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
     | HBool => Bool
     | HIdxO => KCIdx
@@ -203,6 +203,20 @@ Section Compile.
     Let IRPipeK := Struct IRPipe.
 
     Variables enqCRqN enqCRsN: string.
+
+    Definition cRqAcceptor2 (cidx0 cidx1: IdxT): Modules :=
+      acceptor2
+        oidx (eltT:= ChildInputK)
+        (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
+        (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1)) enqCRqN.
+
+    Definition cRsAcceptor2 (cidx0 cidx1: IdxT): Modules :=
+      acceptor2
+        oidx (eltT:= ChildInputK)
+        (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
+        (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
+        (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1)) enqCRsN.
 
     Definition cRqAcceptor4 (cidx0 cidx1 cidx2 cidx3: IdxT): Modules :=
       acceptor4
@@ -616,8 +630,8 @@ Section Compile.
         Local Notation getULCount := (getULCount oidx mshrNumPRqs mshrNumCRqs).
         Local Notation getVictimCount := (getVictimCount oidx predNumVictims).
 
-        Fixpoint compile_ORq_trs (horq: HORq (hvar_of var))
-                 (cont: ActionT var Void): ActionT var Void :=
+        Definition compile_ORq_trs (horq: HORq (hvar_of var))
+                   (cont: ActionT var Void): ActionT var Void :=
           (match horq with
            | HORqI _ => cont
            | HUpdUpLock rq _ rsb =>
@@ -971,6 +985,11 @@ Section Compile.
     Definition build_inputs_l1: Modules :=
       inputAcceptor2 oidx enqInputN.
 
+    Definition build_inputs_li_2: Modules :=
+      ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
+         ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
+         ++ (inputAcceptor3 oidx deqCRqInputN deqCRsInputN enqInputN))%kami.
+
     Definition build_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
@@ -1146,6 +1165,12 @@ Section Compile.
     let oidx := obj_idx (projT1 obj) in
     ((build_inputs_l1 oidx ++ build_pipeline obj ++ build_outputs_l1 oidx)
        ++ build_int_fifos oidx ++ build_ext_fifos oidx)%kami.
+
+  Definition build_controller_li_2
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    ((build_inputs_li_2 oidx ++ build_pipeline obj ++ build_outputs_li oidx)
+       ++ build_int_fifos oidx)%kami.
 
   Definition build_controller_li_4
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
