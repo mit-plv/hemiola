@@ -1,4 +1,4 @@
-Require Import List FMap Omega.
+Require Import PeanoNat List FMap Lia.
 Require Import Common Topology IndexSupport Syntax Semantics.
 Require Import RqRsLang.
 
@@ -348,7 +348,7 @@ Section TreeTopo.
       by (rewrite <-H0; reflexivity).
     do 2 rewrite tree2Topo_root_idx.
     apply extendIdx_IdxDisj.
-    omega.
+    lia.
   Qed.
 
   Lemma tree2Topo_TreeTopoChildrenInds:
@@ -855,7 +855,7 @@ Section Facts.
       + specialize (H2 bidx~>0).
         eapply Forall_impl; [|eassumption].
         simpl; intros; dest.
-        split; [|omega].
+        split; [|lia].
         eapply IdxPrefix_trans; [|eassumption].
         exists [0]; reflexivity.
       + apply collect_forall.
@@ -869,7 +869,7 @@ Section Facts.
         rewrite <-H0 in H3; simpl in H3.
         eapply Forall_impl; [|eassumption].
         simpl; intros; dest.
-        split; [|omega].
+        split; [|lia].
         eapply IdxPrefix_trans; [|eassumption].
         eexists [_]; reflexivity.
   Qed.
@@ -922,7 +922,7 @@ Section Facts.
       split.
       + eapply IdxPrefix_trans; [|eassumption].
         eexists [_]; reflexivity.
-      + omega.
+      + lia.
   Qed.
 
   Lemma tree2Topo_disj_inds:
@@ -1060,7 +1060,7 @@ Section Facts.
             apply extendIdx_IdxDisj; auto.
           }
         * apply DisjList_map with (f:= @List.length _).
-          apply (DisjList_spec_1 eq_nat_dec).
+          apply (DisjList_spec_1 Nat.eq_dec).
           intros.
           assert (a = S (List.length bidx)) by (dest_in; reflexivity).
           clear H0; subst.
@@ -1075,7 +1075,7 @@ Section Facts.
             by (rewrite <-H3; reflexivity).
           pose proof (tree2Topo_chns_prefix_base str bidx~>ofs).
           rewrite Forall_forall in H4; specialize (H4 _ H2); dest.
-          simpl in H5; omega.
+          simpl in H5; lia.
   Qed.
 
   Lemma singletonDNode_WfCIfc:
@@ -1117,10 +1117,10 @@ Section Facts.
     induction ctrs; simpl; intros; auto.
     apply IHctrs.
     - simpl; apply (NoDup_app_comm_4 idx_dec).
-      replace oss with (oss + 0) by omega.
+      replace oss with (oss + 0) by lia.
       apply NoDup_DisjList; auto; apply H0; auto.
     - intros; split.
-      + replace (S oss + ofs) with (oss + S ofs) by omega.
+      + replace (S oss + ofs) with (oss + S ofs) by lia.
         apply H0; assumption.
       + simpl.
         apply DisjList_SubList
@@ -1133,12 +1133,12 @@ Section Facts.
           { apply SubList_app_1, SubList_app_2, SubList_refl. }
           { do 2 apply SubList_app_2; apply SubList_refl. }
         * apply DisjList_app_4.
-          { replace (S (oss + ofs)) with (oss + S ofs) by omega.
+          { replace (S (oss + ofs)) with (oss + S ofs) by lia.
             apply H0; assumption.
           }
           { apply IndsDisj_DisjList.
             eapply IdxDisj_base_IndsDisj with (bidx1:= bidx~>oss) (bidx2:= bidx~>(S oss + ofs)).
-            { apply extendIdx_IdxDisj; omega. }
+            { apply extendIdx_IdxDisj; lia. }
             { apply tree2Topo_cifc_inds_prefix_base. }
             { apply tree2Topo_cifc_inds_prefix_base. }
           }
@@ -1162,10 +1162,10 @@ Section Facts.
     induction ctrs; simpl; intros; auto.
     apply IHctrs.
     - simpl; apply (NoDup_app_comm_6 idx_dec).
-      replace oss with (oss + 0) by omega.
+      replace oss with (oss + 0) by lia.
       apply NoDup_DisjList; auto; apply H0; auto.
     - intros; split.
-      + replace (S oss + ofs) with (oss + S ofs) by omega.
+      + replace (S oss + ofs) with (oss + S ofs) by lia.
         apply H0; assumption.
       + simpl.
         apply DisjList_SubList
@@ -1181,12 +1181,12 @@ Section Facts.
           { apply SubList_app_1; do 2 apply SubList_app_2; apply SubList_refl. }
           { do 3 apply SubList_app_2; apply SubList_refl. }
         * apply DisjList_app_4.
-          { replace (S (oss + ofs)) with (oss + S ofs) by omega.
+          { replace (S (oss + ofs)) with (oss + S ofs) by lia.
             apply H0; assumption.
           }
           { apply IndsDisj_DisjList.
             eapply IdxDisj_base_IndsDisj with (bidx1:= bidx~>oss) (bidx2:= bidx~>(S oss + ofs)).
-            { apply extendIdx_IdxDisj; omega. }
+            { apply extendIdx_IdxDisj; lia. }
             { eapply Forall_impl; [|apply tree2Topo_cifc_chns_prefix_base].
               simpl; intros; dest; assumption.
             }
@@ -1234,7 +1234,7 @@ Section Facts.
           rewrite Forall_forall in H.
           apply H; auto.
         * apply DisjList_map with (f:= @List.length _).
-          apply (DisjList_spec_1 eq_nat_dec).
+          apply (DisjList_spec_1 Nat.eq_dec).
           intros.
           assert (a = S (List.length bidx)) by (dest_in; reflexivity).
           clear H0; subst.
@@ -1245,7 +1245,7 @@ Section Facts.
           destruct H1 as [ctr [ofs ?]]; dest; simpl in *.
           pose proof (tree2Topo_cifc_chns_prefix_base ctr bidx~>ofs).
           rewrite Forall_forall in H5; specialize (H5 _ H4).
-          simpl in H5; dest; omega.
+          simpl in H5; dest; lia.
   Qed.
 
   Corollary tree2Topo_minds_merqs_disj:
@@ -1929,17 +1929,17 @@ Section Facts.
     specialize (IHl H5); clear H5.
     simpl; apply IHl.
     - simpl; apply NoPrefix_IndsDisj; auto.
-      replace ofs with (ofs + 0) by omega.
+      replace ofs with (ofs + 0) by lia.
       apply H1; reflexivity.
     - simpl; intros; apply IndsDisj_app_1.
-      + replace (S (ofs + n)) with (ofs + S n) by omega.
+      + replace (S (ofs + n)) with (ofs + S n) by lia.
         apply H1; assumption.
       + eapply IndsDisj_SubList_1; [|apply c_l1_indices_inds_SubList].
         eapply IndsDisj_SubList_2; [|apply c_l1_indices_inds_SubList].
         eapply IdxDisj_base_IndsDisj;
           [|apply tree2Topo_inds_prefix_base
            |apply tree2Topo_inds_prefix_base].
-        apply extendIdx_IdxDisj; omega.
+        apply extendIdx_IdxDisj; lia.
   Qed.
 
   Lemma tree2Topo_root_not_in_tl_li:

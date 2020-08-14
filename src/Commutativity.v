@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat.
 Require Import Common IndexSupport FMap Syntax Semantics StepM SemFacts.
 Require Import Topology Invariant Serial SerialFacts Reduction.
 

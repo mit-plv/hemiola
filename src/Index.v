@@ -1,4 +1,4 @@
-Require Import Bool Ascii List Omega.
+Require Import Bool PeanoNat Compare_dec Ascii List Lia.
 Require Import Common.
 
 Local Open Scope list.
@@ -13,7 +13,7 @@ Definition idx_dec: forall (idx1 idx2: IdxT), {idx1 = idx2} + {idx1 <> idx2}.
 Proof.
   intros.
   decide equality.
-  apply eq_nat_dec.
+  apply Nat.eq_dec.
 Defined.
 Arguments idx_dec: simpl never.
 
@@ -58,7 +58,7 @@ Proof.
   destruct Ht as [|[|]].
   - exfalso; auto.
   - subst.
-    destruct (lt_dec n1 n1); [exfalso; omega|clear n0].
+    destruct (lt_dec n1 n1); [exfalso; lia|clear n0].
     apply IHidx1.
     intro Hx; subst; auto.
   - destruct (lt_dec n1 n2); auto.
@@ -78,18 +78,18 @@ Proof.
     destruct (lt_dec n1 n2).
     + destruct (lt_dec n2 n3).
       * destruct (lt_dec n1 n3); auto.
-        exfalso; omega.
+        exfalso; lia.
       * destruct (lt_dec n3 n2); [exfalso; auto|].
         destruct (lt_dec n1 n3); auto.
-        exfalso; omega.
+        exfalso; lia.
     + destruct (lt_dec n2 n3).
       * destruct (lt_dec n2 n1); [exfalso; auto|].
         destruct (lt_dec n1 n3); auto.
-        exfalso; omega.
+        exfalso; lia.
       * destruct (lt_dec n2 n1); [exfalso; auto|].
         destruct (lt_dec n3 n2); [exfalso; auto|].
         destruct (lt_dec n1 n3); auto.
-        destruct (lt_dec n3 n1); [omega|].
+        destruct (lt_dec n3 n1); [lia|].
         eapply IHidx1; eassumption.
 Qed.
 
@@ -100,7 +100,7 @@ Proof.
   intro Hx; subst.
   induction idx2 as [|n2 idx2]; [inv H|].
   simpl in H.
-  destruct (lt_dec n2 n2); [omega|auto].
+  destruct (lt_dec n2 n2); [lia|auto].
 Qed.
 
 Definition Id (A: Type) := (IdxT * A)%type.
@@ -134,7 +134,7 @@ Definition extendIdx (ext: nat) (idx: IdxT): IdxT :=
 Notation "i ~> e" :=
   (extendIdx e i) (at level 7, left associativity, format "i '~>' e").
 Notation "i1 ~~ i2" :=
-  (i2 ++ i1) (at level 8, right associativity, format "i1 '~~' i2", only parsing).
+  (i2 ++ i1) (at level 8, right associativity, only parsing).
 
 Definition extendInds (ext: nat) (inds: list IdxT): list IdxT :=
   map (extendIdx ext) inds.
@@ -165,7 +165,7 @@ Fixpoint idxPrefixR (i1 i2: IdxT): bool :=
     match i2 with
     | nil => false
     | n2 :: ti2 =>
-      if eq_nat_dec n1 n2 then idxPrefixR ti1 ti2 else false
+      if Nat.eq_dec n1 n2 then idxPrefixR ti1 ti2 else false
     end
   end.
 

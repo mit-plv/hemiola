@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Compare_dec Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -11,7 +11,7 @@ Local Open Scope fmap.
 
 Lemma upLockedNew_equiv_false:
   forall `{dv: DecValue} (orqs1 orqs2: ORqs Msg) oidx,
-    (orqs1@[oidx] >>=[[]] (fun orq => orq))@[upRq] = 
+    (orqs1@[oidx] >>=[[]] (fun orq => orq))@[upRq] =
     (orqs2@[oidx] >>=[[]] (fun orq => orq))@[upRq] ->
     UpLockedNew orqs1 orqs2 oidx ->
     False.
@@ -63,7 +63,7 @@ Section RqRsInvLockEx.
 
     Definition DLIntactAll :=
       forall oidx, DownLockIntact oidx.
-    
+
     Definition DLIntactBound (oidx: IdxT) :=
       forall soidx,
         In soidx (subtreeIndsOf dtr oidx) ->
@@ -82,7 +82,7 @@ Section RqRsInvLockEx.
         DLIntactBound oidx.
 
     (** Newly downlocked states *)
-    
+
     Definition DownLockedNew (oidx: IdxT) :=
       orqs2@[oidx] >>=[False]
            (fun orq2 =>
@@ -106,7 +106,7 @@ Section RqRsInvLockEx.
         orqs2@[oidx] = Some orq ->
         orq@[downRq] = Some rqid ->
         rqid.(rqi_midx_rsb) <> Some midx.
-    
+
     Definition RqDownDLNew (eouts: list (Id Msg)) :=
       forall oidx rqDown pidx,
         RqDownMsgTo dtr oidx rqDown ->
@@ -154,7 +154,7 @@ Section RqRsInvLockEx.
     Definition DLTimeInv (inits eouts: list (Id Msg)) :=
       DLTimeInits inits ->
       DLOutsInv eouts /\ DLNewBackUpLockedNew /\ DLOldPreserved.
-    
+
   End LockStatus.
 
   (** Utility lemmas *)
@@ -220,7 +220,7 @@ Section RqRsInvLockEx.
     specialize (H0 _ H1).
     congruence.
   Qed.
-        
+
   Lemma DLIntactBound_step_neq:
     forall orqs oidx orq otidx,
       ~ In oidx (subtreeIndsOf dtr otidx) ->
@@ -429,7 +429,7 @@ Section RqRsInvLockEx.
       + eapply H; eauto.
       + red; smred.
   Qed.
-      
+
   Lemma DLOldPreserved_orqs_equiv:
     forall (orqs1 orqs2: ORqs Msg),
       (forall oidx,
@@ -530,7 +530,7 @@ Section RqRsInvLockEx.
     - red; intros; apply removeOnce_In_2 in H5; eauto.
     - red; intros; apply removeOnce_In_2 in H5; eauto.
   Qed.
-      
+
   Lemma DLOutsInv_removeL:
     forall orqs1 orqs2 eouts,
       DLOutsInv orqs1 orqs2 eouts ->
@@ -551,7 +551,7 @@ Section RqRsInvLockEx.
 
   Ltac exfalso_wrong_msg_lock :=
     red; intros; dest_in; disc_rule_conds; solve_midx_false;
-    try 
+    try
       match goal with
       | [H: UpLockedNew ?orqs ?orqs _ |- _] =>
         exfalso; eapply upLockedNew_not_refl; eauto
@@ -646,7 +646,7 @@ Section RqRsInvLockEx.
           red in H6; destruct (idx_dec pidx (obj_idx obj)); subst; smred.
         * apply DLOldPreserved_orqs_equiv.
           intros; smred.
-        
+
       + (** case [RqUpUp] *)
         red; intros _.
         repeat ssplit.
@@ -769,7 +769,7 @@ Section RqRsInvLockEx.
 
       + (** case [RsUpUp] *)
         red; intros; exfalso.
-        pose proof (RqRsDownMatch_rs_not_nil H6). 
+        pose proof (RqRsDownMatch_rs_not_nil H6).
         destruct rins as [|rin rins];
           [apply eq_sym, map_eq_nil in H28; auto|].
         inv H17.
@@ -834,7 +834,7 @@ Section RqRsInvLockEx.
       { econstructor; eauto. }
       { econstructor; eauto. }
     }
-    
+
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -912,7 +912,7 @@ Section RqRsInvLockEx.
           eapply DLIntactAll_trans.
           { eapply H33; [|left; reflexivity]; red; eauto. }
           { red; intros; red; smred. }
-          
+
         * red.
           red; intros.
           destruct (idx_dec pidx (obj_idx obj)); subst; smred.
@@ -1102,7 +1102,7 @@ Section RqRsInvLockEx.
 
             assert (RqDownMsgTo dtr (obj_idx obj) (rqFrom, rqfm)) by (red; auto).
             specialize (H38 _ _ _ H49 H50 H4); dest.
-            
+
             assert (~ In rpidx (subtreeIndsOf dtr cidx)).
             { intro Hx.
               move H34 at bottom.
@@ -1132,7 +1132,7 @@ Section RqRsInvLockEx.
           specialize (H29 _ H4); destruct H29 as [oidx ?].
           destruct H29; disc_rule_conds; solve_midx_false.
         }
-        
+
         apply SubList_singleton in H4; subst.
         rewrite removeOnce_nil; simpl.
         disc_rule_conds.
@@ -1171,7 +1171,7 @@ Section RqRsInvLockEx.
           specialize (H25 _ H4); destruct H25 as [oidx ?].
           destruct H25; disc_rule_conds; solve_midx_false.
         }
-        
+
         apply SubList_singleton in H4; subst.
         rewrite removeOnce_nil; simpl.
         disc_rule_conds.
@@ -1211,7 +1211,7 @@ Section RqRsInvLockEx.
         }
         destruct (removeL _ eouts rins); [|destruct l; discriminate].
         inv H7.
-        
+
         disc_rule_conds.
         red; intros.
         specialize (IHAtomic H26); dest.
@@ -1583,10 +1583,10 @@ Section Corollaries.
                trss = ntrss ++ trs2 :: itrss ++ trs1 :: ptrss) as Htrss.
     { apply nth_error_split in H5.
       destruct H5 as [ntrss [ptrss2 ?]]; dest; subst.
-      rewrite nth_error_app2 in H4; [|omega].
+      rewrite nth_error_app2 in H4; [|lia].
       apply nth_error_split in H4.
       destruct H4 as [ntrss1 [ptrss ?]]; dest; subst.
-      destruct ntrss1; [simpl in *; omega|].
+      destruct ntrss1; [simpl in *; lia|].
       simpl in *; inv H4.
       do 3 eexists; reflexivity.
     }
@@ -1642,4 +1642,3 @@ Section Corollaries.
   Qed.
 
 End Corollaries.
-

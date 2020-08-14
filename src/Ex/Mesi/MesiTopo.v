@@ -1,4 +1,4 @@
-Require Import Bool Vector List String Peano_dec Omega.
+Require Import Bool Vector List String Peano_dec.
 Require Import Common FMap HVector ListSupport IndexSupport.
 Require Import Syntax Topology Semantics Invariant.
 Require Import RqRsLang.

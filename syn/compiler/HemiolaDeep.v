@@ -109,7 +109,7 @@ Section Reify.
     | HEType: hetype -> htype.
     Coercion HBType: hbtype >-> htype.
 
-    Fixpoint htypeDenote (ht: htype): Type :=
+    Definition htypeDenote (ht: htype): Type :=
       match ht with
       | HBType hbt => hbtypeDenote hbt
       | HEType het => hetypeDenote het
@@ -540,13 +540,13 @@ Proof. intuition congruence. Qed.
 Lemma ne_iff_sep: forall {t} (A B C D: t), A = B -> C = D -> (A <> C <-> B <> D).
 Proof. intuition congruence. Qed.
 Lemma lt_iff_sep: forall A B C D, A = B -> C = D -> (A < C <-> B < D).
-Proof. firstorder. Qed.
+Proof. intuition congruence. Qed.
 Lemma le_iff_sep: forall A B C D, A = B -> C = D -> (A <= C <-> B <= D).
-Proof. firstorder. Qed.
+Proof. intuition congruence. Qed.
 Lemma gt_iff_sep: forall A B C D, A = B -> C = D -> (A > C <-> B > D).
-Proof. firstorder. Qed.
+Proof. intuition congruence. Qed.
 Lemma ge_iff_sep: forall A B C D, A = B -> C = D -> (A >= C <-> B >= D).
-Proof. firstorder. Qed.
+Proof. intuition congruence. Qed.
 
 Lemma p_f_equal: forall {t} (f: t -> Prop) A B, A = B -> (f A <-> f B).
 Proof. intuition congruence. Qed.

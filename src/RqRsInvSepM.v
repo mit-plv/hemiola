@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial SerialFacts.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -65,7 +65,7 @@ Section Separation.
         rewrite app_length; simpl.
         eapply rqsQ_length_ge_one in H5; [|assumption].
         unfold rqsQ in H5; simpl in H5.
-        omega.
+        lia.
         
       + eapply RqRsDownMatch_rq_rs in H26;
           [|apply in_map with (f:= idOf) in Hx; simpl in Hx; eassumption].
@@ -80,7 +80,7 @@ Section Separation.
         rewrite app_length; simpl.
         eapply rqsQ_length_ge_one in H5; [|assumption].
         unfold rqsQ in H5; simpl in H5.
-        omega.
+        lia.
         
       + eapply RqRsDownMatch_rq_rs in H11;
           [|apply in_map with (f:= idOf) in Hx; simpl in Hx; eassumption].
@@ -96,7 +96,7 @@ Section Separation.
         rewrite app_length; simpl.
         eapply rqsQ_length_ge_one in H5; [|assumption].
         unfold rqsQ in H5; simpl in H5.
-        omega.
+        lia.
 
     - disc_rule_conds.
     - disc_rule_conds.
@@ -120,7 +120,7 @@ Section Separation.
       rewrite app_length; simpl.
       eapply rqsQ_length_ge_one in H5; [|assumption].
       unfold rqsQ in H5; simpl in H5.
-      omega.
+      lia.
   Qed.
   
   Lemma atomic_rqDown_inits_outs_disj:
@@ -296,7 +296,7 @@ Section Separation.
           destruct rqDown as [rqDown rqdm]; simpl in *.
           pose proof (rqsQ_length_ge_one _ _ _ H4 H6).
           simpl in H36; rewrite H29 in H36.
-          simpl in H36; omega.
+          simpl in H36; lia.
         
       + pose proof H9.
         red in H9; mred; dest.
@@ -321,7 +321,7 @@ Section Separation.
           destruct rqDown as [rqDown rqdm]; simpl in *.
           pose proof (rqsQ_length_ge_one _ _ _ H4 H6).
           simpl in H33; rewrite H27 in H33.
-          simpl in H33; omega.
+          simpl in H33; lia.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
@@ -554,7 +554,7 @@ Section Separation.
     assert (InMP down rqdm1 (deqMsgs (idsOf rins) msgs)).
     { apply deqMsgs_InMP; eauto. }
     apply rqsQ_length_ge_one in H16; auto.
-    unfold rqsQ in H16; omega.
+    unfold rqsQ in H16; lia.
   Qed.
 
   Lemma atomic_rqDown_no_rqDown_out:
@@ -874,7 +874,7 @@ Section Separation.
       rewrite app_length; simpl.
       eapply rssQ_length_ge_one in H8; [|assumption].
       unfold rssQ in H8; simpl in H8.
-      omega.
+      lia.
 
     - disc_rule_conds.
       solve_midx_false.
@@ -894,7 +894,7 @@ Section Separation.
         rewrite app_length; simpl.
         eapply rssQ_length_ge_one in H8; [|assumption].
         unfold rssQ in H8; simpl in H8.
-        omega.
+        lia.
       + eapply upLockInvORq_down_rssQ_length_two_False; try eassumption.
         solve_q.
         rewrite filter_app; simpl.
@@ -902,7 +902,7 @@ Section Separation.
         rewrite app_length; simpl.
         eapply rssQ_length_ge_one in H8; [|assumption].
         unfold rssQ in H8; simpl in H8.
-        omega.
+        lia.
       + solve_midx_false.
 
     - disc_rule_conds.

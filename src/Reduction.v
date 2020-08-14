@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec Omega.
+Require Import Bool List String PeanoNat Lia.
 Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
 Require Import Topology Serial SerialFacts.
 

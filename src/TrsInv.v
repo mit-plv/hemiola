@@ -1,8 +1,8 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat.
 Require Import Common FMap ListSupport Syntax Semantics StepM SemFacts.
 Require Import Invariant Serial SerialFacts.
 
-Require Import Omega.
+Require Import Lia.
 
 Set Implicit Arguments.
 

@@ -1128,8 +1128,8 @@ Section NCID.
         else MaybeSome $n)
      end)%kami_expr.
 
-  Fixpoint getVictimSlot (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
+  Definition getVictimSlot (var: Kind -> Type)
+             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
     : Expr var (SyntaxKind (Maybe (Bit victimIdxSz))) :=
     getVictimSlotFix victims (numVictims - 1).
 

@@ -1,4 +1,4 @@
-Require Import Bool Vector List String Peano_dec DecidableClass.
+Require Import Bool Vector List String PeanoNat DecidableClass.
 Require Import Common FMap HVector.
 
 Set Implicit Arguments.

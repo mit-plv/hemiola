@@ -1,4 +1,4 @@
-Require Import Bool Vector List String Peano_dec Omega.
+Require Import Bool Vector List String PeanoNat Lia.
 Require Import Common FMap HVector IndexSupport Syntax Semantics.
 Require Import Topology RqRsLang.
 
@@ -13,7 +13,7 @@ Open Scope fmap.
 Global Instance NatDecValue: DecValue :=
   {| t_type := nat;
      t_default := O;
-     t_eq_dec := eq_nat_dec
+     t_eq_dec := Nat.eq_dec
   |}.
 
 Section System.
@@ -124,8 +124,8 @@ Section System.
         eapply DisjList_comm, DisjList_SubList.
         * apply specRules_head.
         * apply DisjList_comm.
-          repeat (apply (DisjList_cons_inv eq_nat_dec);
-                  [|apply nat_seq_rev_not_in; omega]).
+          repeat (apply (DisjList_cons_inv Nat.eq_dec);
+                  [|apply nat_seq_rev_not_in; lia]).
           apply DisjList_nil_1.
     Qed.
 
@@ -155,7 +155,7 @@ Section System.
       - apply idx_DisjList_head.
         eapply DisjList_SubList; [apply extendInds_idxHd_SubList|].
         eapply DisjList_comm, DisjList_SubList; [apply extendInds_idxHd_SubList|].
-        apply (DisjList_cons_inv eq_nat_dec).
+        apply (DisjList_cons_inv Nat.eq_dec).
         + apply DisjList_nil_1.
         + solve_not_in.
     Qed.

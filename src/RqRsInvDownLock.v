@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -662,7 +662,7 @@ Section DownLockInv.
     { solve_q; rewrite H9; reflexivity. }
 
     rewrite H11, H12.
-    repeat split; try omega.
+    repeat split; try lia.
     xfst; [reflexivity|discriminate|].
 
     apply parentIdxOf_not_eq in H; [|assumption].
@@ -728,7 +728,7 @@ Section DownLockInv.
         [dest|assumption].
       red; split; [|split].
       { rewrite rqsQ_deqMsgs_rss; try assumption.
-        destruct (rqsQ msgs down); [reflexivity|simpl in *; omega].
+        destruct (rqsQ msgs down); [reflexivity|simpl in *; lia].
       }
       { apply in_map with (f:= idOf) in H11; simpl in H11.
         assert (findQ rsUp msgs <> nil) by (destruct (findQ rsUp msgs); discriminate).
@@ -990,9 +990,9 @@ Section DownLockInv.
                   apply rqsQ_length_zero in H11; try assumption;
                   simpl in H11; unfold rqsQ in H11; rewrite H11; reflexivity].
               replace (length (findQ orsUp (enqMP orsUp rsm (deqMP odown msgs)))) with 1;
-                [|solve_q; destruct (findQ orsUp msgs); simpl in *; omega].
-              repeat split; try omega.
-              xsnd; [omega|omega|assumption].
+                [|solve_q; destruct (findQ orsUp msgs); simpl in *; lia].
+              repeat split; try lia.
+              xsnd; [lia|lia|assumption].
             }
             { exfalso; red in H12; dest.
               eapply rqsQ_length_zero_False; eauto.
@@ -1090,9 +1090,9 @@ Section DownLockInv.
                 replace (length (findQ orsUp (enqMsgs mouts (deqMP odown msgs))))
                   with 0; [|solve_q;
                             destruct (findQ orsUp msgs);
-                            simpl in *; omega].
-                repeat split; try omega.
-                xthd; [omega|omega|].
+                            simpl in *; lia].
+                repeat split; try lia.
+                xthd; [lia|lia|].
                 red; mred; simpl.
                 exists rqi; split; [mred|assumption].
               }
@@ -1198,12 +1198,12 @@ Section DownLockInv.
                   [dest|red; mred; simpl; eexists; repeat split; eassumption].
                 replace (length (rqsQ (enqMP orsUp rsm (deqMsgs (map fst (rqi_rss rqi)) msgs))
                                       odown)) with 0;
-                  [|solve_q; unfold rqsQ in H1, H11; omega].
+                  [|solve_q; unfold rqsQ in H1, H11; lia].
                 replace (length (findQ orsUp (enqMP orsUp rsm
                                                     (deqMsgs (map fst (rqi_rss rqi)) msgs))))
-                  with 1; [|solve_q; rewrite app_length; simpl; omega].
-                repeat split; try omega.
-                xsnd; [omega|omega|].
+                  with 1; [|solve_q; rewrite app_length; simpl; lia].
+                repeat split; try lia.
+                xsnd; [lia|lia|].
                 intro Hx; red in Hx; mred; simpl in Hx.
                 destruct Hx as [xrqi [? ?]]; mred.
               }
@@ -1525,11 +1525,11 @@ Proof.
     repeat disc_rule_minds.
     destruct (in_dec _ _ _); eauto.
     red in H5; dest.
-    rewrite H1 in H2; simpl in H2; omega.
+    rewrite H1 in H2; simpl in H2; lia.
   - specialize (H _ H0); dest.
     repeat disc_rule_minds.
     red in H4; dest.
-    rewrite H1 in H2; simpl in H2; omega.
+    rewrite H1 in H2; simpl in H2; lia.
 Qed.
 
 Lemma downLockInvORq_rsUp_length_one_locked:
@@ -1551,11 +1551,11 @@ Proof.
     repeat disc_rule_minds.
     destruct (in_dec _ _ _); eauto.
     red in H5; dest.
-    rewrite H5 in H2; simpl in H2; omega.
+    rewrite H5 in H2; simpl in H2; lia.
   - specialize (H _ H0); dest.
     repeat disc_rule_minds.
     red in H4; dest.
-    rewrite H4 in H2; simpl in H2; omega.
+    rewrite H4 in H2; simpl in H2; lia.
 Qed.
 
 Lemma downLockInvORq_down_rqsQ_rsUp_False:
@@ -1575,13 +1575,13 @@ Proof.
     repeat disc_rule_minds.
     destruct (in_dec _ _ _).
     + red in H7; dest.
-      xor3_contra1 H7; omega.
+      xor3_contra1 H7; lia.
     + red in H7; dest.
-      rewrite H1 in H3; simpl in H3; omega.
+      rewrite H1 in H3; simpl in H3; lia.
   - specialize (H _ H0); dest.
     repeat disc_rule_minds.
     red in H6; dest.
-    rewrite H1 in H3; simpl in H3; omega.
+    rewrite H1 in H3; simpl in H3; lia.
 Qed.
 
 Lemma downLockInvORq_down_rqsQ_length_two_False:
@@ -1598,13 +1598,13 @@ Proof.
     destruct H3 as [rdown [rsUp ?]]; dest.
     repeat disc_rule_minds.
     destruct (in_dec _ _ _).
-    + red in H5; dest; omega.
+    + red in H5; dest; lia.
     + red in H5; dest.
-      destruct (rqsQ msgs down); simpl in *; [omega|discriminate].
+      destruct (rqsQ msgs down); simpl in *; [lia|discriminate].
   - specialize (H _ H0); dest.
     repeat disc_rule_minds.
     red in H4; dest.
-    destruct (rqsQ msgs down); simpl in *; [omega|discriminate].
+    destruct (rqsQ msgs down); simpl in *; [lia|discriminate].
 Qed.
     
 Lemma downLockInvORq_rsUp_length_two_False:
@@ -1621,13 +1621,13 @@ Proof.
     destruct H3 as [down [rrsUp ?]]; dest.
     repeat disc_rule_minds.
     destruct (in_dec _ _ _).
-    + red in H5; dest; omega.
+    + red in H5; dest; lia.
     + red in H5; dest.
-      destruct (findQ rsUp msgs); simpl in *; [omega|discriminate].
+      destruct (findQ rsUp msgs); simpl in *; [lia|discriminate].
   - specialize (H _ H0); dest.
     repeat disc_rule_minds.
     red in H4; dest.
-    destruct (findQ rsUp msgs); simpl in *; [omega|discriminate].
+    destruct (findQ rsUp msgs); simpl in *; [lia|discriminate].
 Qed.
 
 Close Scope list.

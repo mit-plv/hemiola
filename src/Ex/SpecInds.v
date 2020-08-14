@@ -1,4 +1,4 @@
-Require Import Bool Vector List String Peano_dec Omega.
+Require Import Bool Vector List String PeanoNat Lia.
 Require Import Common FMap HVector IndexSupport Syntax Semantics StepM.
 Require Import Topology RqRsLang.
 
@@ -13,7 +13,7 @@ Local Open Scope fmap.
 Global Instance NatDecValue: DecValue :=
   {| t_type := nat;
      t_default := O;
-     t_eq_dec := eq_nat_dec
+     t_eq_dec := Nat.eq_dec
   |}.
 
 Lemma NoPrefix_NoDup:
@@ -24,7 +24,7 @@ Proof.
   apply nth_error_Some in H0.
   destruct (nth_error inds i) eqn:Hi; [clear H0|exfalso; auto].
   apply eq_sym in H1.
-  destruct (eq_nat_dec i j); [assumption|exfalso].
+  destruct (Nat.eq_dec i j); [assumption|exfalso].
   specialize (H _ _ _ _ n Hi H1).
   destruct H.
   elim H.
@@ -170,7 +170,7 @@ Section System.
     - apply idx_DisjList_head.
       eapply DisjList_SubList; [apply extendInds_idxHd_SubList|].
       eapply DisjList_comm, DisjList_SubList; [apply extendInds_idxHd_SubList|].
-      solve_DisjList eq_nat_dec.
+      solve_DisjList Nat.eq_dec.
   Qed.
 
   Definition spec: System :=

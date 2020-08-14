@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List.
+Require Import PeanoNat Lia List.
 Require Import Common FMap IndexSupport.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
@@ -36,16 +36,16 @@ Proof.
   - red in H2.
     destruct (findQ rqUp msgs).
     + intuition.
-    + simpl in *; omega.
+    + simpl in *; lia.
   - unfold rssQ in *; red in H3.
     clear -H3 H4 H8.
     induction (findQ down msgs).
     + intuition.
     + simpl in *.
       destruct H3; subst.
-      * rewrite H4 in *; simpl in *; omega.
+      * rewrite H4 in *; simpl in *; lia.
       * destruct (msg_type a); auto.
-        simpl in *; omega.
+        simpl in *; lia.
 Qed.
 
 Section RqUpReduction.
@@ -146,7 +146,7 @@ Section RqUpReduction.
           rewrite findQ_In_enqMP in *.
           rewrite app_length in H22; simpl in H22.
           rewrite app_length; simpl.
-          omega.
+          lia.
         
       + good_locking_get obj.
         disc_rule_conds.
@@ -159,7 +159,7 @@ Section RqUpReduction.
           rewrite findQ_In_enqMP in *.
           rewrite app_length in H27; simpl in H27.
           rewrite app_length; simpl.
-          omega.
+          lia.
 
       + exfalso; disc_rule_conds.
         apply SubList_singleton_In in H4.

@@ -1,7 +1,7 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat.
 Require Import Common ListSupport FMap Syntax Semantics StepM.
 
-Require Import Omega.
+Require Import Lia.
 
 Set Implicit Arguments.
 

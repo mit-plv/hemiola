@@ -1,4 +1,4 @@
-Require Import Peano_dec List ListSupport.
+Require Import PeanoNat List ListSupport.
 Require Import Common FMap.
 
 Set Implicit Arguments.

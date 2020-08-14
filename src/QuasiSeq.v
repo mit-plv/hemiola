@@ -1,8 +1,8 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat Wf_nat.
 Require Import Common ListSupport FMap Syntax Semantics StepM SemFacts.
 Require Import Serial SerialFacts Reduction.
 
-Require Import Omega Wf.
+Require Import Lia Wf.
 
 Set Implicit Arguments.
 
@@ -277,7 +277,7 @@ Proof.
       econstructor; try reflexivity; [|eassumption].
       apply ssequential_app; [eassumption|].
       econstructor; try reflexivity; eassumption.
-    + omega.
+    + lia.
 Qed.
 
 (** [NonConfluent] says that any transactions in a given system [sys] are
@@ -375,7 +375,7 @@ Section WellInterleaved.
       apply ssequential_app; [eassumption|].
       econstructor; try reflexivity; [eassumption|].
       eapply STrsExtAtomic; eassumption.
-    - simpl; omega.
+    - simpl; lia.
   Qed.
 
   Lemma atomic_transactions_sequential_or_extInterleaved:
@@ -476,7 +476,7 @@ Section WellInterleaved.
             repeat rewrite <-lift_each_concat.
             reflexivity.
           }
-        * omega.
+        * lia.
   Qed.
 
 End WellInterleaved.

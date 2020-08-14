@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -984,10 +984,10 @@ Section UpLockInv.
           disc_rule_conds.
           do 3 eexists; repeat split; try eassumption.
           * solve_q.
-            rewrite H14; simpl; omega.
+            rewrite H14; simpl; lia.
           * solve_q.
             unfold rssQ in H15; rewrite H15.
-            simpl; omega.
+            simpl; lia.
           * apply ONoLockTo_ONoSameLockTo; assumption.
           * xfst.
             { solve_q.
@@ -1008,10 +1008,10 @@ Section UpLockInv.
           disc_rule_conds.
           do 3 eexists; repeat split; try eassumption.
           * solve_q.
-            rewrite H19; simpl; omega.
+            rewrite H19; simpl; lia.
           * solve_q.
             unfold rssQ in H20; rewrite H20.
-            simpl; omega.
+            simpl; lia.
           * apply ONoLockTo_ONoSameLockTo; assumption.
           * xfst.
             { solve_q.
@@ -1132,12 +1132,12 @@ Section UpLockInv.
           right; exists rqTo, rsFrom, pidx.
           repeat split; try assumption.
           * solve_q.
-            apply length_zero_iff_nil; omega.
+            apply length_zero_iff_nil; lia.
           * solve_q.
             apply findQ_In_deqMP_FirstMP in H19; simpl in H19.
             unfold rssQ in H15; rewrite <-H19 in H15.
             simpl in H15; rewrite H20 in H15; simpl in H15.
-            apply length_zero_iff_nil; omega.
+            apply length_zero_iff_nil; lia.
           * apply not_ONoLockTo_OLockedTo; auto.
         + (** case [FootprintReleasingUp-silent]; releasing the uplock. *)
           apply upLockFreeInv_orqs_preserved_self_update.
@@ -1145,12 +1145,12 @@ Section UpLockInv.
           right; exists rqTo, rsFrom, pidx.
           repeat split; try assumption.
           * solve_q.
-            apply length_zero_iff_nil; omega.
+            apply length_zero_iff_nil; lia.
           * solve_q.
             apply findQ_In_deqMP_FirstMP in H17; simpl in H17.
             unfold rssQ in H14; rewrite <-H17 in H14.
             simpl in H14; rewrite H19 in H14; simpl in H14.
-            apply length_zero_iff_nil; omega.
+            apply length_zero_iff_nil; lia.
           * apply not_ONoLockTo_OLockedTo; auto.
 
         + (** case [FootprintReleasingDown]-1 *)
@@ -1225,12 +1225,12 @@ Section UpLockInv.
         red; right.
         exists rqTo, rsFrom0, pidx; repeat split; try assumption.
         + solve_q.
-          apply length_zero_iff_nil; omega.
+          apply length_zero_iff_nil; lia.
         + solve_q.
           apply findQ_In_deqMP_FirstMP in H10; simpl in H10.
           unfold rssQ in H14; rewrite <-H10 in H14.
           simpl in H14; rewrite H7 in H14; simpl in H14.
-          apply length_zero_iff_nil; omega.
+          apply length_zero_iff_nil; lia.
         + apply not_ONoLockTo_OLockedTo; auto.
     Qed.
 
@@ -1268,7 +1268,7 @@ Section UpLockInv.
                 rewrite H6; simpl.
                 rewrite app_length; simpl.
                 xor3_inv1 H15; dest.
-                { unfold rssQ in H2, H13; omega. }
+                { unfold rssQ in H2, H13; lia. }
                 { eapply findQ_length_one; eauto. }
               }
               rewrite H2; clear H2.
@@ -1277,13 +1277,13 @@ Section UpLockInv.
               repeat split; try assumption.
               { apply findQ_In_deqMP_FirstMP in H11; simpl in H11.
                 rewrite <-H11 in H9; simpl in H9.
-                omega.
+                lia.
               }
-              { omega. }
+              { lia. }
               { xsnd.
                 { apply findQ_In_deqMP_FirstMP in H11; simpl in H11.
                   rewrite <-H11 in H9; simpl in H9.
-                  omega.
+                  lia.
                 }
                 { reflexivity. }
                 { apply ONoLockTo_not_OLockedTo.
@@ -1428,17 +1428,17 @@ Section UpLockInv.
               { solve_q.
                 apply findQ_In_deqMP_FirstMP in H14; simpl in H14.
                 rewrite <-H14 in H16; simpl in H16.
-                omega.
+                lia.
               }
               rewrite H9; clear H9.
 
               assert (length (rssQ (enqMP rqTo rqtm (deqMP rqFrom msgs)) rsbTo) = 0).
               { solve_q.
-                unfold rssQ in H2, H19; omega.
+                unfold rssQ in H2, H19; lia.
               }
               rewrite H9; clear H9.
 
-              repeat split; try assumption; try omega.
+              repeat split; try assumption; try lia.
               { unfold ONoSameLockTo, OLockedTo in *.
                 mred; simpl; mred.
                 destruct (porq@[downRq]) as [rqid|]; auto.
@@ -1589,17 +1589,17 @@ Section UpLockInv.
               { solve_q.
                 apply findQ_In_deqMP_FirstMP in H14; simpl in H14.
                 rewrite <-H14 in H16; simpl in H16.
-                omega.
+                lia.
               }
               rewrite H9; clear H9.
 
               assert (length (rssQ (enqMsgs mouts (deqMP rqFrom msgs)) rsbTo) = 0).
               { solve_q.
-                unfold rssQ in H2, H17; omega.
+                unfold rssQ in H2, H17; lia.
               }
               rewrite H9; clear H9.
 
-              repeat split; try assumption; try omega.
+              repeat split; try assumption; try lia.
               { unfold ONoSameLockTo, OLockedTo in *.
                 mred; simpl; mred.
                 destruct (porq@[upRq]) as [rqiu|]; auto.
@@ -1750,7 +1750,7 @@ Section UpLockInv.
               exists rqFrom, rsbTo0, (obj_idx obj).
               xor3_inv3 H22; [dest|red; disc_rule_conds; eexists; intuition].
               assert (length (findQ rqFrom (enqMP rsbTo0 rmsg (deqMP rsFrom msgs))) = 0).
-              { solve_q; omega. }
+              { solve_q; lia. }
               rewrite H15; clear H15.
 
               assert (length (rssQ (enqMP rsbTo0 rmsg (deqMP rsFrom msgs)) rsbTo0) = 1).
@@ -1758,11 +1758,11 @@ Section UpLockInv.
                 rewrite filter_app; simpl.
                 rewrite H12; simpl.
                 rewrite app_length; simpl.
-                unfold rssQ in H14, H20; omega.
+                unfold rssQ in H14, H20; lia.
               }
               rewrite H15; clear H15.
 
-              repeat split; try assumption; try omega.
+              repeat split; try assumption; try lia.
               { red; mred; simpl; mred. }
               { xsnd; [discriminate|reflexivity|].
                 apply ONoLockTo_not_OLockedTo.
@@ -1881,7 +1881,7 @@ Section UpLockInv.
               disc_rule_conds.
               exists rqFrom, rsbTo0, (obj_idx obj).
               xor3_inv3 H20; [dest|red; disc_rule_conds; eexists; intuition].
-              assert (length (findQ rqFrom (enqMP rsbTo0 rsm (deqMsgs (map fst (rqi_rss rqi)) msgs))) = 0) by (solve_q; omega).
+              assert (length (findQ rqFrom (enqMP rsbTo0 rsm (deqMsgs (map fst (rqi_rss rqi)) msgs))) = 0) by (solve_q; lia).
               rewrite H13; clear H13.
 
               assert (length (rssQ (enqMP rsbTo0 rsm (deqMsgs (map fst (rqi_rss rqi)) msgs)) rsbTo0) = 1).
@@ -1889,11 +1889,11 @@ Section UpLockInv.
                 rewrite filter_app; simpl.
                 rewrite H9; simpl.
                 rewrite app_length; simpl.
-                unfold rssQ in H11, H17; omega.
+                unfold rssQ in H11, H17; lia.
               }
               rewrite H13; clear H13.
 
-              repeat split; try assumption; try omega.
+              repeat split; try assumption; try lia.
               { red; mred; simpl; mred.
                 destruct (porq@[upRq]); auto.
               }
@@ -2564,7 +2564,7 @@ Proof.
   - rewrite H in H0; discriminate.
   - destruct H as [rrqUp [down [rpidx ?]]]; dest.
     repeat disc_rule_minds.
-    rewrite H5 in H2; simpl in H2; omega.
+    rewrite H5 in H2; simpl in H2; lia.
 Qed.
 
 Lemma upLockInvORq_down_rssQ_length_one_locked:
@@ -2581,7 +2581,7 @@ Proof.
   - rewrite H in H0; discriminate.
   - destruct H as [rqUp [rdown [rpidx ?]]]; dest.
     repeat disc_rule_minds.
-    rewrite H6 in H2; simpl in H2; omega.
+    rewrite H6 in H2; simpl in H2; lia.
 Qed.
 
 Lemma upLockInvORq_parent_locked_locked:
@@ -2615,12 +2615,12 @@ Proof.
   red in H; destruct (orq@[upRq]).
   - destruct H as [rrqUp [rdown [rpidx ?]]]; dest.
     repeat disc_rule_minds.
-    xor3_contra1 H10; omega.
+    xor3_contra1 H10; lia.
   - destruct H.
     + congruence.
     + destruct H as [rrqUp [rdown [rpidx ?]]]; dest.
       repeat disc_rule_minds.
-      rewrite H7 in H3; simpl in H3; omega.
+      rewrite H7 in H3; simpl in H3; lia.
 Qed.
 
 Lemma upLockInvORq_rqUp_length_two_False:
@@ -2635,12 +2635,12 @@ Proof.
   red in H; destruct (orq@[upRq]).
   - destruct H as [rrqUp [down [rpidx ?]]]; dest.
     repeat disc_rule_minds.
-    omega.
+    lia.
   - destruct H.
     + congruence.
     + destruct H as [rrqUp [down [rpidx ?]]]; dest.
       repeat disc_rule_minds.
-      rewrite H5 in H2; simpl in H2; omega.
+      rewrite H5 in H2; simpl in H2; lia.
 Qed.
 
 Lemma upLockInvORq_down_rssQ_length_two_False:
@@ -2655,12 +2655,12 @@ Proof.
   red in H; destruct (orq@[upRq]).
   - destruct H as [rqUp [rdown [rpidx ?]]]; dest.
     repeat disc_rule_minds.
-    omega.
+    lia.
   - destruct H.
     + congruence.
     + destruct H as [rqUp [rdown [rpidx ?]]]; dest.
       repeat disc_rule_minds.
-      rewrite H6 in H2; simpl in H2; omega.
+      rewrite H6 in H2; simpl in H2; lia.
 Qed.
 
 Close Scope list.

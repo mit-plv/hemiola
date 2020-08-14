@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
@@ -158,7 +158,7 @@ Section RsUpReduction.
 
     red in H12; dest.
     xor3_contra1 H12.
-    { assert_later (length (rqsQ (enqMsgs rqDowns msgs) rqTo) >= 1); [omega|].
+    { assert_later (length (rqsQ (enqMsgs rqDowns msgs) rqTo) >= 1); [lia|].
       apply in_map_iff in H5.
       destruct H5 as [[rqDown rqm] ?]; dest; simpl in *; subst.
       rewrite Forall_forall in H1; specialize (H1 _ H13); simpl in *.
@@ -166,7 +166,7 @@ Section RsUpReduction.
       erewrite findQ_In_NoDup_enqMsgs; eauto.
       rewrite filter_app; simpl.
       rewrite H1; simpl.
-      rewrite app_length; simpl; omega.
+      rewrite app_length; simpl; lia.
     }
     { rewrite <-H3 in H10.
       apply in_map_iff in H10.
@@ -383,7 +383,7 @@ Section RsUpReduction.
       unfold InMPI, InMP in *; simpl in *.
       destruct (findQ rsUp (st_msgs st1)); [elim H8|].
       destruct q; [dest_in; exfalso; auto|].
-      simpl; omega.
+      simpl; lia.
     }
 
     rewrite Forall_forall in H4; specialize (H4 _ H12).
@@ -437,7 +437,7 @@ Section RsUpReduction.
         specialize (H8 _ Hin2).
         remember (findQ rsUp msgs) as q; destruct q.
         { exfalso; eapply InMP_findQ_False; eauto. }
-        { simpl; omega. }
+        { simpl; lia. }
       }
       { destruct (H5 rsUp); auto. }
     }

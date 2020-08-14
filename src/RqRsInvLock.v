@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -245,7 +245,7 @@ Section RqRsDown.
           split; auto.
         }
         rewrite Hq in H; elim H.
-      + simpl in H15; omega.
+      + simpl in H15; lia.
     - eapply rssQ_length_ge_one; eauto.
       eapply InMP_deqMP; eassumption.
   Qed.
@@ -274,7 +274,7 @@ Section RqRsDown.
     simpl in H4; inv H4.
     unfold findQ in H5; mred; simpl in H5.
     destruct q; [elim H5|].
-    simpl; omega.
+    simpl; lia.
   Qed.
 
   Lemma noRqRsDown_step_int:
@@ -924,7 +924,7 @@ Section Corollaries.
     xor3_contra2 H13.
     red in H5.
     destruct (findQ rrqUp (st_msgs st)) as [|e q]; [dest_in|].
-    destruct q; [reflexivity|simpl in H10; omega].
+    destruct q; [reflexivity|simpl in H10; lia].
   Qed.
 
   Corollary rsDown_in_rsDown_in_false:
@@ -998,7 +998,7 @@ Section Corollaries.
     disc_rule_conds.
     xor3_contra3 H13.
     apply rssQ_length_ge_one in H4; [|assumption].
-    omega.
+    lia.
   Qed.
 
   Corollary upLockFree_parent_locked_false:
@@ -1112,7 +1112,7 @@ Section Corollaries.
       red in H12; dest.
       apply FirstMP_InMP in H8.
       apply rqsQ_length_ge_one in H8; [|assumption].
-      rewrite H10 in H8; simpl in H8; omega.
+      rewrite H10 in H8; simpl in H8; lia.
     - dest.
       pose proof (FirstMP_eq H8 H9); subst.
       rewrite H5 in H7; discriminate.
@@ -1167,7 +1167,7 @@ Section Corollaries.
       destruct dq as [|dmsg dq]; [elim H6|].
       simpl in H9; inv H9.
       simpl; rewrite H7; simpl.
-      omega.
+      lia.
   Qed.
 
   Corollary rsDown_in_rsUp_in_false:
@@ -1204,7 +1204,7 @@ Section Corollaries.
       repeat disc_rule_minds.
       red in H12; dest.
       apply findQ_length_ge_one in H8.
-      rewrite H11 in H8; simpl in H8; omega.
+      rewrite H11 in H8; simpl in H8; lia.
     - dest.
       good_locking_get pobj.
       eapply downLockInvORq_rsUp_length_one_locked in H10; eauto;
@@ -1221,9 +1221,9 @@ Section Corollaries.
       red in H13; dest.
       xor3_contra1 H13.
       + destruct (rqsQ (st_msgs st) rdown); [exfalso; auto|].
-        simpl in *; omega.
+        simpl in *; lia.
       + apply findQ_length_ge_one in H8.
-        omega.
+        lia.
   Qed.
 
   Corollary rqDown_in_rqDown_in_false:

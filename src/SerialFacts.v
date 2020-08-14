@@ -1,8 +1,8 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat.
 Require Import Common IndexSupport FMap.
 Require Import Syntax Semantics SemFacts StepM Serial Invariant.
 
-Require Import Omega.
+Require Import Lia.
 Require Import Program.Equality.
 
 Set Implicit Arguments.
@@ -476,7 +476,7 @@ Section MsgParam.
     - exact IHll1.
     - exact H2.
     - reflexivity.
-    - omega.
+    - lia.
   Qed.
   
   Lemma ssequential_app:
@@ -490,7 +490,7 @@ Section MsgParam.
     - exact (IHSSequential H3).
     - eassumption.
     - reflexivity.
-    - omega.
+    - lia.
   Qed.
 
   Lemma ssequential_app_inv:
@@ -513,7 +513,7 @@ Section MsgParam.
         * reflexivity.
         * reflexivity.
       + assumption.
-      + omega.
+      + lia.
   Qed.
 
   Lemma ssequential_distr_inv:
@@ -538,7 +538,7 @@ Section MsgParam.
       + apply ssequential_app; auto.
         econstructor; try reflexivity; auto.
       + assumption.
-      + omega.
+      + lia.
     - inv H0; inv H3.
       specialize (IHDistribution _ H1).
       destruct IHDistribution as [n1 [n2 ?]]; dest; subst.
@@ -548,7 +548,7 @@ Section MsgParam.
       + assumption.
       + apply ssequential_app; auto.
         econstructor; try reflexivity; auto.
-      + omega.
+      + lia.
   Qed.
 
   Lemma intAtomic_stransactional_split_each:
@@ -566,7 +566,7 @@ Section MsgParam.
         * eapply STrsIntAtomic.
           econstructor; eauto.
           econstructor.
-      + simpl; omega.
+      + simpl; lia.
     - specialize (IHAtomic H).
       destruct IHAtomic as [sn [? ?]].
       destruct (subList_dec idx_dec (idsOf rins) (sys_merqs sys)).
@@ -577,7 +577,7 @@ Section MsgParam.
             econstructor; eauto.
             econstructor.
           }
-        * omega.
+        * lia.
       + eexists; split.
         * econstructor; try reflexivity.
           { eassumption. }
@@ -585,7 +585,7 @@ Section MsgParam.
             econstructor; eauto.
             econstructor.
           }
-        * simpl; omega.
+        * simpl; lia.
   Qed.
 
   Corollary internal_stransactional_split_each:
@@ -644,16 +644,15 @@ Lemma atomic_messages_eouts_count_le:
 Proof.
   induction 1; simpl; intros; subst.
   - inv_steps; inv_step; simpl.
-    rewrite countMsg_enqMsgs; omega.
+    rewrite countMsg_enqMsgs; lia.
   - inv_steps; inv_step; simpl.
     rewrite count_occ_app, countMsg_enqMsgs.
-    apply plus_le_compat_r.
     specialize (IHAtomic _ _ _ _ H6 idm); simpl in IHAtomic.
     destruct H14.
     assert (NoDup rins) by (apply idsOf_NoDup in H3; auto).
     pose proof (countMsg_deqMsgs msg_dec idm H3 H13).
     pose proof (count_occ_removeL (id_dec msg_dec) idm H1 H4).
-    omega.
+    lia.
 Qed.
 
 Lemma atomic_messages_eouts_in:
@@ -668,7 +667,7 @@ Proof.
   apply (countMsg_InMPI msg_dec).
   eapply atomic_messages_eouts_count_le with (idm0:= idm) in H; eauto.
   apply (count_occ_In (id_dec msg_dec)) in H1.
-  omega.
+  lia.
 Qed.
 
 Lemma atomic_messages_non_inits_count_eq:
@@ -688,7 +687,7 @@ Proof.
     destruct H11.
     pose proof (countMsg_deqMsgs msg_dec idm H1 H10).
     rewrite (count_occ_not_In (id_dec msg_dec)) in H0.
-    omega.
+    lia.
   - inv_steps; inv_step; simpl.
     rewrite count_occ_app, countMsg_enqMsgs.
     rewrite Nat.add_assoc.
@@ -697,7 +696,7 @@ Proof.
     assert (NoDup rins) by (apply idsOf_NoDup in H3; auto).
     pose proof (countMsg_deqMsgs msg_dec idm H3 H14).
     pose proof (count_occ_removeL (id_dec msg_dec) idm H1 H4).
-    omega.
+    lia.
 Qed.
 
 Lemma atomic_messages_in_in:
@@ -714,7 +713,7 @@ Proof.
   apply (countMsg_InMPI msg_dec) in H1.
   apply (countMsg_InMPI msg_dec).
   pose proof (atomic_messages_non_inits_count_eq H H0 _ H2).
-  omega.
+  lia.
 Qed.
 
 Corollary atomic_messages_ins_ins:
@@ -748,7 +747,7 @@ Proof.
   eapply atomic_messages_non_inits_count_eq in H; [|eassumption..].
   apply (countMsg_InMPI msg_dec) in H2.
   assert (countMsg msg_dec idm st1.(st_msgs) > 0 \/
-          count_occ (id_dec msg_dec) eouts idm > 0) by omega.
+          count_occ (id_dec msg_dec) eouts idm > 0) by lia.
   destruct H3.
   - left; apply (countMsg_InMPI msg_dec); assumption.
   - right; apply (count_occ_In (id_dec msg_dec)); assumption.
@@ -827,7 +826,7 @@ Proof.
     exfalso.
     specialize (H0 _ H4).
     apply findQ_length_ge_one in H1.
-    rewrite H0 in H1; simpl in H1; omega.
+    rewrite H0 in H1; simpl in H1; lia.
   - eapply DisjList_In_2.
     + eapply sys_minds_sys_merqs_DisjList.
     + assumption.

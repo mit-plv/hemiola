@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec Omega.
+Require Import Bool List String PeanoNat Lia.
 Require Import Common ListSupport FMap Syntax.
 
 Set Implicit Arguments.
@@ -507,7 +507,7 @@ Section Facts.
     destruct (findQ midx msgs); [discriminate|].
     inv H0.
     simpl in H.
-    destruct (findQ _ _); [reflexivity|simpl in H; omega].
+    destruct (findQ _ _); [reflexivity|simpl in H; lia].
   Qed.
 
   Lemma findQ_length_ge_one:
@@ -518,7 +518,7 @@ Section Facts.
     unfold InMP; intros.
     destruct (findQ midx msgs); simpl in *.
     - exfalso; auto.
-    - omega.
+    - lia.
   Qed.
 
   Lemma findQ_length_one:
@@ -530,7 +530,7 @@ Section Facts.
     intros.
     remember (findQ midx msgs) as q; destruct q.
     - exfalso; eapply FirstMP_findQ_False; eauto.
-    - simpl in *; omega.
+    - simpl in *; lia.
   Qed.
 
   Lemma findQ_length_two:
@@ -546,12 +546,12 @@ Section Facts.
     - inv H1; [exfalso; auto|].
       clear -H0.
       induction q; [intuition|].
-      inv H0; simpl; omega.
+      inv H0; simpl; lia.
     - inv H1.
       + clear -H2.
         induction q; [intuition|].
-        inv H2; simpl; omega.
-      + specialize (IHq H2 H0); omega.
+        inv H2; simpl; lia.
+      + specialize (IHq H2 H0); lia.
   Qed.
 
   Lemma FirstMP_enqMsgs_order:
@@ -1282,7 +1282,7 @@ Section Facts.
       rewrite IHmsgs by auto.
       destruct (id_dec msgT_dec (amidx, amsg) idm).
       - subst; rewrite countMsg_In_enqMP by reflexivity.
-        omega.
+        lia.
       - rewrite countMsg_not_In_enqMP by auto.
         reflexivity.
     Qed.
@@ -1329,7 +1329,7 @@ Section Facts.
         count_occ (id_dec msgT_dec) msgs idm =
         countMsg msgT_dec idm mp.
     Proof.
-      induction msgs; simpl; intros; [omega|].
+      induction msgs; simpl; intros; [lia|].
       inv H; inv H0.
       destruct (id_dec msgT_dec a idm); subst.
       - rewrite Nat.add_succ_r.

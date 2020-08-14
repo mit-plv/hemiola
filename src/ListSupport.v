@@ -1,4 +1,4 @@
-Require Import Common List Omega.
+Require Import Common PeanoNat List Lia.
 
 Set Implicit Arguments.
 
@@ -688,12 +688,12 @@ Section Removal.
     induction l; simpl; intros; [exfalso; auto|].
     destruct H; subst.
     - destruct (eq_dec a a); [clear e|exfalso; auto].
-      split; omega.
+      split; lia.
     - destruct (eq_dec a a0); [subst|].
-      + split; omega.
+      + split; lia.
       + simpl.
         specialize (IHl H); destruct IHl.
-        split; omega.
+        split; lia.
   Qed.
   
   Lemma removeL_SubList_1:
@@ -877,7 +877,7 @@ Proof.
       * assumption.
     + assumption.
     + simpl; pose proof (removeOnce_length eq_dec _ _ H0); dest.
-      omega.
+      lia.
 Qed.
 
 Section SSubList.
@@ -1590,7 +1590,7 @@ Lemma count_occ_removeL:
     count_occ eq_dec rl a =
     count_occ eq_dec l a.
 Proof.
-  induction rl; simpl; intros; [omega|].
+  induction rl; simpl; intros; [lia|].
   apply SubList_cons_inv in H; dest.
   inv H0.
   destruct (eq_dec a0 a); subst.
@@ -1654,7 +1654,7 @@ Proof.
   - apply Forall_app_inv in H; dest; inv H0.
     apply Forall_app; auto.
   - rewrite app_length in Heqn; simpl in Heqn.
-    rewrite app_length; omega.
+    rewrite app_length; lia.
 Qed.
 
 Lemma list_not_nil_exists_tail:
@@ -1691,7 +1691,7 @@ Proof.
   apply f0.
   apply IHn.
   rewrite app_length in Heqn; simpl in Heqn.
-  omega.
+  lia.
 Qed.
 
 Fixpoint nat_seq_rev (n: nat) :=
@@ -1704,10 +1704,10 @@ Lemma nat_seq_rev_not_in:
   forall n m,
     n < m -> ~ In m (nat_seq_rev n).
 Proof.
-  induction n; simpl; intros; [intuition|].
-  intro Hx; destruct Hx; [intuition|].
+  induction n; simpl; intros; [lia|].
+  intro Hx; destruct Hx; [lia|].
   generalize H0; apply IHn.
-  omega.
+  lia.
 Qed.
 
 Lemma nat_seq_rev_NoDup:
@@ -1716,7 +1716,7 @@ Proof.
   induction n; simpl; intros.
   - repeat constructor; intro; dest_in.
   - constructor; auto.
-    apply nat_seq_rev_not_in; omega.
+    apply nat_seq_rev_not_in; lia.
 Qed.
 
 (** Tactics for solving predicates of constant lists *)

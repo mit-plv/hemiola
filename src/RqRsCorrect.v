@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
@@ -856,7 +856,7 @@ Section NonConfluent.
        *)
       apply In_nth_error in H8; destruct H8 as [n1 ?].
       apply In_nth_error in H13; destruct H13 as [n2 ?].
-      destruct (eq_nat_dec n1 n2).
+      destruct (Nat.eq_dec n1 n2).
       + subst; rewrite H8 in H13; inv H13.
         pose proof (extAtomic_unique H10 H18); dest; subst.
         assumption.

@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec FinFun.
+Require Import Bool List String PeanoNat FinFun.
 Require Import Common FMap Syntax Semantics SemFacts Invariant.
 
 Set Implicit Arguments.

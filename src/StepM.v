@@ -1,4 +1,4 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat.
 Require Import Common FMap Syntax Semantics.
 
 Local Open Scope fmap.

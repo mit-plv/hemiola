@@ -1,4 +1,4 @@
-Require Import List FMap Omega.
+Require Import List FMap Lia.
 Require Import Common Topology Syntax IndexSupport.
 Require Import RqRsLang. Import RqRsNotations.
 

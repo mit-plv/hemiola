@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List ListSupport.
+Require Import PeanoNat Lia List ListSupport.
 Require Import Common FMap.
 Require Import Syntax Semantics SemFacts StepM Invariant Serial.
 Require Import Reduction Commutativity QuasiSeq Topology.
@@ -1141,7 +1141,7 @@ Proof.
   simpl in *; inv H.
   unfold findQ in H0; mred; simpl in H0.
   destruct q; [dest_in|].
-  simpl; omega.
+  simpl; lia.
 Qed.
 
 Section DecValue.
@@ -1159,7 +1159,7 @@ Section DecValue.
   Proof.
     unfold rqsQ, rssQ; intros.
     induction (findQ midx msgs); simpl; [reflexivity|].
-    destruct (msg_type a) eqn:Heq; simpl; rewrite IHq; omega.
+    destruct (msg_type a) eqn:Heq; simpl; rewrite IHq; lia.
   Qed.
 
   Lemma rqsQ_length_zero:
@@ -1175,7 +1175,7 @@ Section DecValue.
     destruct (findQ midx msgs); [discriminate|].
     inv H0.
     simpl in H; rewrite H1 in H; simpl in H.
-    destruct (filter _ _); [reflexivity|simpl in H; omega].
+    destruct (filter _ _); [reflexivity|simpl in H; lia].
   Qed.
 
   Lemma rqsQ_length_zero_False:
@@ -1202,8 +1202,8 @@ Section DecValue.
     induction (findQ midx msgs); simpl; intros.
     - elim H0.
     - inv H0.
-      + rewrite H; simpl; omega.
-      + find_if_inside; simpl; [omega|auto].
+      + rewrite H; simpl; lia.
+      + find_if_inside; simpl; [lia|auto].
   Qed.
 
   Lemma rqsQ_length_one:
@@ -1216,7 +1216,7 @@ Section DecValue.
     intros.
     apply FirstMP_InMP in H1.
     eapply rqsQ_length_ge_one in H1; [|assumption].
-    omega.
+    lia.
   Qed.
 
   Lemma rqsQ_length_two:
@@ -1236,20 +1236,20 @@ Section DecValue.
       clear -H0 H2.
       induction q; [intuition|].
       inv H2.
-      + simpl; rewrite H0; simpl; omega.
+      + simpl; rewrite H0; simpl; lia.
       + simpl; destruct (msg_type a); eauto.
-        simpl; omega.
+        simpl; lia.
     - inv H3.
       + rewrite H0; simpl.
         clear -H H4.
         induction q; [intuition|].
         inv H4.
-        * simpl; rewrite H; simpl; omega.
+        * simpl; rewrite H; simpl; lia.
         * simpl; destruct (msg_type a); eauto.
-          simpl; omega.
+          simpl; lia.
       + specialize (IHq H4 H2).
         destruct (msg_type a); eauto.
-        simpl; omega.
+        simpl; lia.
   Qed.
 
   Lemma rssQ_length_zero:
@@ -1265,7 +1265,7 @@ Section DecValue.
     destruct (findQ midx msgs); [discriminate|].
     inv H0.
     simpl in H; rewrite H1 in H; simpl in H.
-    destruct (filter _ _); [reflexivity|simpl in H; omega].
+    destruct (filter _ _); [reflexivity|simpl in H; lia].
   Qed.
 
   Lemma rssQ_length_zero_False:
@@ -1292,8 +1292,8 @@ Section DecValue.
     induction (findQ midx msgs); simpl; intros.
     - elim H0.
     - inv H0.
-      + rewrite H; simpl; omega.
-      + find_if_inside; simpl; [omega|auto].
+      + rewrite H; simpl; lia.
+      + find_if_inside; simpl; [lia|auto].
   Qed.
 
   Lemma rssQ_length_one:
@@ -1306,7 +1306,7 @@ Section DecValue.
     intros.
     apply FirstMP_InMP in H1.
     eapply rssQ_length_ge_one in H1; [|assumption].
-    omega.
+    lia.
   Qed.
 
   Lemma rssQ_length_two:
@@ -1326,20 +1326,20 @@ Section DecValue.
       clear -H0 H2.
       induction q; [intuition|].
       inv H2.
-      + simpl; rewrite H0; simpl; omega.
+      + simpl; rewrite H0; simpl; lia.
       + simpl; destruct (msg_type a); eauto.
-        simpl; omega.
+        simpl; lia.
     - inv H3.
       + rewrite H0; simpl.
         clear -H H4.
         induction q; [intuition|].
         inv H4.
-        * simpl; rewrite H; simpl; omega.
+        * simpl; rewrite H; simpl; lia.
         * simpl; destruct (msg_type a); eauto.
-          simpl; omega.
+          simpl; lia.
       + specialize (IHq H4 H2).
         destruct (msg_type a); eauto.
-        simpl; omega.
+        simpl; lia.
   Qed.
 
   Lemma rssQ_deq_in_length_two:
@@ -1360,9 +1360,9 @@ Section DecValue.
     clear -H1 H2.
     induction q; intros; [dest_in|].
     inv H1.
-    - simpl; rewrite H2; simpl; omega.
+    - simpl; rewrite H2; simpl; lia.
     - simpl; destruct (msg_type a).
-      + simpl; omega.
+      + simpl; lia.
       + apply IHq; assumption.
   Qed.
 

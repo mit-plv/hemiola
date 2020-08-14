@@ -1,6 +1,6 @@
-Require Import Bool List String Peano_dec.
+Require Import Bool List String PeanoNat.
 Require Import Common FMap ListSupport Syntax Semantics StepM SemFacts.
-Require Import Omega.
+Require Import Lia.
 
 Import PropMonadNotations.
 
@@ -38,7 +38,7 @@ Section Invariant.
     forall ist,
       Reachable (steps stepI) impl ist ->
       ginv ist.
-  
+
   Hypotheses (Hinvi: InvInit)
              (Hinvs: InvStep).
 
@@ -68,7 +68,7 @@ Section Invariant.
     destruct H2 as [ll ?].
     eapply inv_steps; eauto.
   Qed.
-  
+
 End Invariant.
 
 Section MutualInvariant.
@@ -210,7 +210,7 @@ Section ObjInvariant.
   Definition ObjInvReachable :=
     forall ost orq,
       ObjReachable impl ost orq -> oinv ost orq.
-  
+
   Hypotheses (Hoinvi: ObjInvInit)
              (Hoinvs: ObjInvStep).
 
@@ -238,12 +238,12 @@ Section ObjInvariant.
         [|red; simpl; mred].
 
       red in IHsteps; simpl in IHsteps.
-      subst oidx; rewrite H8, H9 in IHsteps; simpl in IHsteps.
-      
-      eapply Hoinvs; subst oidx; [..|eassumption].
+      rewrite e in IHsteps; rewrite H8, H9 in IHsteps; simpl in IHsteps.
+
+      eapply Hoinvs; [..|rewrite e; eassumption].
       + eapply reachable_steps; eauto.
-      + eassumption.
-      + eassumption.
+      + simpl; rewrite e; eassumption.
+      + simpl; rewrite e; eassumption.
       + assumption.
   Qed.
 
@@ -270,4 +270,3 @@ End ObjInvariant.
 
 Definition liftObjInvs `{DecValue} `{OStateIfc} (oinvs: IdxT -> ObjInv): State -> Prop :=
   fun st => forall oidx, liftObjInv oidx (oinvs oidx) st.
-

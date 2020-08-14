@@ -1,4 +1,4 @@
-Require Import Bool Ascii String List Vector Eqdep Omega.
+Require Import Bool Ascii String List Vector Eqdep PeanoNat Lia.
 Require Export ProofIrrelevance.
 
 Set Implicit Arguments.
@@ -195,10 +195,10 @@ Ltac collect_of_type_helper ty ls :=
 Ltac collect_of_type ty := collect_of_type_helper ty (@nil ty).
 
 Definition nat_eq (n1 n2: nat) :=
-  if eq_nat_dec n1 n2 then true else false.
+  if Nat.eq_dec n1 n2 then true else false.
 
 Definition nat_in (n: nat) (ns: list nat) :=
-  if in_dec eq_nat_dec n ns then true else false.
+  if in_dec Nat.eq_dec n ns then true else false.
 
 Infix "==n" := nat_eq (at level 30).
 Infix "?<n" := nat_in (at level 30).

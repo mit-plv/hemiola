@@ -1,4 +1,4 @@
-Require Import List FMap Omega.
+Require Import PeanoNat List FMap Lia.
 Require Import Common Topology IndexSupport Syntax Semantics StepM SemFacts.
 
 Set Implicit Arguments.
@@ -313,22 +313,22 @@ Section Replicate.
   Lemma nats_SubList:
     forall n m, n < m -> SubList (nats n) (nats m).
   Proof.
-    induction m; simpl; intros; [omega|].
+    induction m; simpl; intros; [lia|].
     inv H1.
     - apply SubList_cons_right, SubList_refl.
     - apply SubList_cons_right.
-      apply IHm; omega.
+      apply IHm; lia.
   Qed.
 
   Lemma nats_DisjList:
     forall n m, n < m -> DisjList (nats n) [m].
   Proof.
     induction n; simpl; intros.
-    - apply (DisjList_spec_1 eq_nat_dec); intros; dest_in.
-      intro Hx; dest_in; omega.
-    - apply (DisjList_cons_inv eq_nat_dec).
-      + apply IHn; omega.
-      + intro Hx; dest_in; omega.
+    - apply (DisjList_spec_1 Nat.eq_dec); intros; dest_in.
+      intro Hx; dest_in; lia.
+    - apply (DisjList_cons_inv Nat.eq_dec).
+      + apply IHn; lia.
+      + intro Hx; dest_in; lia.
   Qed.
 
   Definition SystemBound (n: nat) (sys: System) :=
@@ -404,7 +404,7 @@ Section Replicate.
     - apply liftObject_ext_bound.
     - eapply DisjList_comm, DisjList_SubList.
       + eassumption.
-      + apply nats_DisjList; omega.
+      + apply nats_DisjList; lia.
   Qed.
 
   Lemma repSystem_liftChns_disj:
@@ -420,7 +420,7 @@ Section Replicate.
     - apply liftChns_ext_bound.
     - eapply DisjList_comm, DisjList_SubList.
       + eassumption.
-      + apply nats_DisjList; omega.
+      + apply nats_DisjList; lia.
   Qed.
 
   Lemma mergeSystem_SystemBound:
@@ -465,7 +465,7 @@ Section Replicate.
                                     _ _) _).
       apply mergeSystem_SystemBound.
       + apply liftSystem_SystemBound.
-      + apply SystemBound_weakening with (n:= n); [|abstract omega].
+      + apply SystemBound_weakening with (n:= n); [|abstract lia].
         apply (projT2 (repSystemPf n osys)).
 
         Unshelve.

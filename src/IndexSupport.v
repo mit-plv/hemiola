@@ -1,4 +1,4 @@
-Require Import Bool Ascii List Omega.
+Require Import Bool PeanoNat Ascii List Lia.
 Require Import Common.
 Require Export Index ListSupport.
 
@@ -293,11 +293,11 @@ Proof.
   - destruct x; [inv H0; auto|].
     apply (f_equal (@List.length _)) in H0.
     rewrite app_length in H0; simpl in H0.
-    omega.
+    lia.
   - destruct x; [inv H0; auto|].
     apply (f_equal (@List.length _)) in H0.
     rewrite app_length in H0; simpl in H0.
-    omega.
+    lia.
 Qed.
 
 Lemma IdxDisj_base_IndsDisj:
@@ -414,7 +414,7 @@ Proof.
   induction i1 as [|n1 i1]; simpl; intros;
     [eexists; rewrite app_nil_r; reflexivity|].
   destruct i2 as [|n2 i2]; [discriminate|].
-  destruct (eq_nat_dec n1 n2); subst; [|discriminate].
+  destruct (Nat.eq_dec n1 n2); subst; [|discriminate].
   simpl.
   specialize (IHi1 _ H).
   red in IHi1; dest; rewrite H0.

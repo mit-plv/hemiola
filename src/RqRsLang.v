@@ -1,4 +1,4 @@
-Require Import Common Omega List ListSupport HVector FMap.
+Require Import Common Lia List ListSupport HVector FMap.
 Require Import Syntax Topology Semantics SemFacts StepM Invariant Serial.
 
 Require Export RqRsTopo RqRsFacts.

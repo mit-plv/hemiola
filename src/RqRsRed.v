@@ -1,4 +1,4 @@
-Require Import Peano_dec Omega List.
+Require Import PeanoNat Lia List.
 Require Import Common FMap IndexSupport.
 Require Import Syntax Semantics SemFacts StepM Invariant.
 Require Import Serial SerialFacts.
