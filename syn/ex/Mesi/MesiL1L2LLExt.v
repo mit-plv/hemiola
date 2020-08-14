@@ -73,13 +73,13 @@ Definition kl1c (oidx: IdxT): Modules :=
 
 Definition kl2c (oidx: IdxT): Modules :=
   ((build_controller_li_2
-      (H2 := MesiCompLineRW l2LgWay 0) (mshrNumPRqs := l2NumPRqs) (mshrNumCRqs := l2NumCRqs)
+      (H2 := MesiCompLineRW l2LgWay l2EDirLgWay) (mshrNumPRqs := l2NumPRqs) (mshrNumCRqs := l2NumCRqs)
       l2IndexSz l2PredNumVictim (existT _ _ (hli topo oidx)))
      ++ l2Cache oidx ++ l2Mshrs oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
   ((build_controller_li_2
-      (H2 := MesiCompLineRW llLgWay 0) (mshrNumPRqs := llNumPRqs) (mshrNumCRqs := llNumCRqs)
+      (H2 := MesiCompLineRW llLgWay llEDirLgWay) (mshrNumPRqs := llNumPRqs) (mshrNumCRqs := llNumCRqs)
       llIndexSz llPredNumVictim (existT _ _ (hli topo oidx)))
      ++ llCache oidx ++ llMshrs oidx)%kami.
 

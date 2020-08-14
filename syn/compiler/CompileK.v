@@ -240,7 +240,7 @@ Section Compile.
 
     Variables deqCRqN deqCRsN enqInputN: string.
 
-    Definition inputAcceptor2: Modules :=
+    Definition inputAcceptorL1: Modules :=
       acceptor2
         oidx (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= IRPipeK)
         (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
@@ -253,7 +253,7 @@ Section Compile.
                                "ir_mshr_id" ::= $$Default })%kami_expr
         (deqFn (downTo oidx)) (deqFn (rqUpFrom (l1ExtOf oidx))) enqInputN.
 
-    Definition inputAcceptor3: Modules :=
+    Definition inputAcceptorLi: Modules :=
       acceptor3
         oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= IRPipeK)
         (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
@@ -983,17 +983,24 @@ Section Compile.
     Definition deqInputN := ppInputFifoN -- deqN.
 
     Definition build_inputs_l1: Modules :=
-      inputAcceptor2 oidx enqInputN.
+      ((inputAcceptorL1 oidx enqInputN)
+         ++ (fifo primNormalFifoName ppInputFifoN (Struct IRPipe)))%kami.
 
     Definition build_inputs_li_2: Modules :=
       ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
+         ++ (fifo primNormalFifoName ppCRqInputFifoN (Struct ChildInput))
          ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
-         ++ (inputAcceptor3 oidx deqCRqInputN deqCRsInputN enqInputN))%kami.
+         ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
+         ++ (inputAcceptorLi oidx deqCRqInputN deqCRsInputN enqInputN)
+         ++ (fifo primNormalFifoName ppInputFifoN (Struct IRPipe)))%kami.
 
     Definition build_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
+         ++ (fifo primNormalFifoName ppCRqInputFifoN (Struct ChildInput))
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (inputAcceptor3 oidx deqCRqInputN deqCRsInputN enqInputN))%kami.
+         ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
+         ++ (inputAcceptorLi oidx deqCRqInputN deqCRsInputN enqInputN)
+         ++ (fifo primNormalFifoName ppInputFifoN (Struct IRPipe)))%kami.
 
   End Inputs.
 
@@ -1163,19 +1170,31 @@ Section Compile.
   Definition build_controller_l1
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    ((build_inputs_l1 oidx ++ build_pipeline obj ++ build_outputs_l1 oidx)
+    (((build_inputs_l1 oidx)
+        ++ ((build_pipeline obj)
+              ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
+              ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
+        ++ build_outputs_l1 oidx)
        ++ build_int_fifos oidx ++ build_ext_fifos oidx)%kami.
 
   Definition build_controller_li_2
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    ((build_inputs_li_2 oidx ++ build_pipeline obj ++ build_outputs_li oidx)
+    (((build_inputs_li_2 oidx)
+        ++ ((build_pipeline obj)
+              ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
+              ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
+        ++ build_outputs_li oidx)
        ++ build_int_fifos oidx)%kami.
 
   Definition build_controller_li_4
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    ((build_inputs_li_4 oidx ++ build_pipeline obj ++ build_outputs_li oidx)
+    (((build_inputs_li_4 oidx)
+        ++ ((build_pipeline obj)
+              ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
+              ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
+        ++ build_outputs_li oidx)
        ++ build_int_fifos oidx)%kami.
 
   Definition build_controller_mem
