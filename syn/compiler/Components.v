@@ -700,7 +700,9 @@ End MSHR.
 Section Cache.
   Variables (oidx: IdxT)
             (* Common *)
-            (infoK edirK valueK: Kind)
+            (infoK: Kind)
+            (edirK: Kind)
+            (valueK: Kind)
             (* D$ + info cache + "Traditional" directory *)
             (tagSz indexSz offsetSz addrSz lgWay: nat)
             (* "Extended" directory *)
@@ -725,7 +727,11 @@ Section Cache.
   Let TagInfoK := Struct TagInfo.
 
   Definition infoRamN (way: nat): string := "infoRam"+o _++ nat_to_string way.
-  Definition infoRam (way: nat) := bram2 (infoRamN way) indexSz TagInfoK.
+
+  Variable (infoInitVal: ConstT infoK).
+  Definition infoRam (way: nat) :=
+    bram2 (dType:= TagInfoK) (infoRamN way) indexSz
+          (CSTRUCT { "tag" ::= ConstBit $way; "value" ::= infoInitVal })%init.
   Definition infoRdReq (way: nat) :=
     MethodSig ((infoRamN way) -- "rdReq")(Bit indexSz): Void.
   Definition infoRdResp (way: nat) :=
@@ -784,7 +790,10 @@ Section Cache.
   Let TagEDirK := Struct TagEDir.
 
   Definition edirRamN (way: nat): string := "edirRam"+o _++ nat_to_string way.
-  Definition edirRam (way: nat) := bram2 (edirRamN way) indexSz TagEDirK.
+  Variable (edirInitVal: ConstT edirK).
+  Definition edirRam (way: nat) :=
+    bram2 (dType:= TagEDirK) (edirRamN way) indexSz
+          (CSTRUCT { "tag" ::= ConstBit $way; "value" ::= edirInitVal })%init.
   Definition edirRdReq (way: nat) :=
     MethodSig ((edirRamN way) -- "rdReq")(Bit indexSz): Void.
   Definition edirRdResp (way: nat) :=
@@ -841,7 +850,8 @@ Section Cache.
 
   Definition dataIndexSz := indexSz + lgWay.
   Definition dataRamN: string := "dataRam"+o.
-  Definition dataRam := bram2 dataRamN dataIndexSz valueK.
+  Definition dataRam :=
+    bram2 dataRamN dataIndexSz (getDefaultConst valueK).
   Definition dataRdReq := MethodSig (dataRamN -- "rdReq") (Bit dataIndexSz): Void.
   Definition dataRdResp := MethodSig (dataRamN -- "rdResp") (): valueK.
   Definition dataWrReq :=
@@ -853,7 +863,7 @@ Section Cache.
   Definition RepCntK := Bit repCntSz.
   Definition repRamN := "repRam"+o.
   Let repK := Vector RepCntK lgWay.
-  Definition repRam := bram2 repRamN indexSz repK.
+  Definition repRam := bram2 repRamN indexSz (getDefaultConst repK).
   Definition repRdReq := MethodSig (repRamN -- "rdReq") (Bit indexSz): Void.
   Definition repRdResp := MethodSig (repRamN -- "rdResp") (): repK.
   Definition repWrReq :=
@@ -1211,7 +1221,6 @@ Section Cache.
              Retv))
           (LET index <- getIndex addr;
           NCall makeInfoRdReqs index;
-          NCall makeEDirRdReqs index;
           Call repGetRq(#index);
           Call cpEnq1(STRUCT { "tag" ::= getTag addr;
                                "index" ::= getIndex addr;
@@ -1599,7 +1608,6 @@ Section Cache.
     (cacheIfc
        ++ (cpipe1 ++ cpipe2)
        ++ infoRams (Nat.pow 2 lgWay - 1)
-       ++ edirRams (Nat.pow 2 edirLgWay - 1)
        ++ dataRam
        ++ rep)%kami.
 

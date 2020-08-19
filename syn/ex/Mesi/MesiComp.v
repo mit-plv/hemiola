@@ -295,12 +295,24 @@ Section Cache.
     : Expr var (SyntaxKind Bool) :=
     (edir!MesiEDir@."mesi_edir_st" == mesiNP || edir!MesiEDir@."mesi_edir_st" == mesiI)%kami_expr.
 
+  Definition mesiInfoInit: ConstT (Struct MesiInfo) :=
+    (CSTRUCT { "mesi_owned" ::= ConstBool false;
+               "mesi_status" ::= ConstBit $1;
+               "mesi_dir_st" ::= ConstBit $1;
+               "mesi_dir_sharers" ::= ConstBit $0 })%init.
+
+  Definition mesiEDirInit: ConstT MesiEDirK :=
+    (CSTRUCT { "mesi_edir_st" ::= ConstBit $1;
+               "mesi_edir_sharers" ::= ConstBit $0 })%init.
+
   Definition mesiL1 :=
-    cache oidx MesiEDirK KValue lgWay 0 predNumVictims mshrSlotSz
-          getIndex getTag buildAddr isDirInvalid.
+    cache oidx KValue lgWay 0 predNumVictims
+          mesiInfoInit mshrSlotSz getIndex getTag buildAddr isDirInvalid.
 
   Definition mesiLi :=
-    ncid oidx KValue lgWay edirLgWay predNumVictims mshrSlotSz
+    ncid oidx KValue lgWay edirLgWay predNumVictims
+         mesiInfoInit mesiEDirInit
+         mshrSlotSz
          getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot.
 
 End Cache.
