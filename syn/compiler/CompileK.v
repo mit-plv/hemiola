@@ -1150,11 +1150,11 @@ Section Compile.
 
   End Outputs.
 
-  Let ppIR2LRN (oidx: IdxT): string := ("fifoIL" ++ idx_to_string oidx).
+  Let ppIR2LRN (oidx: IdxT): string := ("fifoI2L" ++ idx_to_string oidx).
   Let enqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- enqN.
   Let deqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- deqN.
 
-  Let ppLR2EXN (oidx: IdxT): string := ("fifoIL" ++ idx_to_string oidx).
+  Let ppLR2EXN (oidx: IdxT): string := ("fifoL2E" ++ idx_to_string oidx).
   Let enqLR2EXN (oidx: IdxT) := (ppLR2EXN oidx) -- enqN.
   Let deqLR2EXN (oidx: IdxT) := (ppLR2EXN oidx) -- deqN.
 
@@ -1177,25 +1177,33 @@ Section Compile.
         ++ build_outputs_l1 oidx)
        ++ build_int_fifos oidx ++ build_ext_fifos oidx)%kami.
 
-  Definition build_controller_li_2
+  Definition build_controller_li_2_no_ints
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     (((build_inputs_li_2 oidx)
         ++ ((build_pipeline obj)
               ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
               ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
-        ++ build_outputs_li oidx)
-       ++ build_int_fifos oidx)%kami.
+        ++ build_outputs_li oidx))%kami.
 
-  Definition build_controller_li_4
+  Definition build_controller_li_4_no_ints
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     (((build_inputs_li_4 oidx)
         ++ ((build_pipeline obj)
               ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
               ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
-        ++ build_outputs_li oidx)
-       ++ build_int_fifos oidx)%kami.
+        ++ build_outputs_li oidx))%kami.
+
+  Definition build_controller_li_2
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    (build_controller_li_2_no_ints obj ++ build_int_fifos oidx)%kami.
+
+  Definition build_controller_li_4
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+    let oidx := obj_idx (projT1 obj) in
+    (build_controller_li_4_no_ints obj ++ build_int_fifos oidx)%kami.
 
   Definition build_controller_mem
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=

@@ -132,11 +132,11 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     endmethod
 
     interface DMA memDma;
-        method Action dma_putRq (DmaRq rq);
-            if (rq.write) bram.wrReq(rq.addr, rq.datain);
-            else bram.rdReq(rq.addr);
+        method dma_rdReq = bram.rdReq;
+        method Action dma_wrReq (DmaRq rq);
+            bram.wrReq(rq.addr, rq.datain);
         endmethod
-        method ActionValue#(CCValue) dma_getRs ();
+        method ActionValue#(CCValue) dma_rdResp ();
             bram.deqRdResp();
             return bram.rdResp;
         endmethod
@@ -224,11 +224,13 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
     endmethod
 
     interface DMA memDma;
-        method Action dma_putRq (DmaRq rq);
-            if (rq.write) bram.upd(rq.addr, rq.datain);
-            else dmaRdAddr <= rq.addr;
+        method Action dma_rdReq (MemAddr addr);
+            dmaRdAddr <= addr;
         endmethod
-        method ActionValue#(CCValue) dma_getRs ();
+        method Action dma_wrReq (DmaRq rq);
+            bram.upd(rq.addr, rq.datain);
+        endmethod
+        method ActionValue#(CCValue) dma_rdResp ();
             let bval = bram.sub(dmaRdAddr);
             return bval;
         endmethod

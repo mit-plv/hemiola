@@ -5,11 +5,11 @@ import FIFOF::*;
 
 import HCC::*;
 
-typedef Struct2 CCMsg;
+typedef Struct1 CCMsg;
 typedef Bit#(6) CCMsgId;
 typedef Bit#(64) CCAddr;
 
-typedef Struct21 DmaRq;
+typedef Struct36 DmaRq;
 
 typedef 8 BitsPerByte;
 typedef 8 ValueByte;
