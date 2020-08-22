@@ -5,6 +5,7 @@ RQ_TYPE_SEED ?= 3
 RQ_BADDR_SEED ?= 79
 
 BSC ?= bsc \
+	+RTS -K100M -RTS \
 	-aggressive-conditions \
 	-check-assert \
 	-steps-max-intervals 100 \

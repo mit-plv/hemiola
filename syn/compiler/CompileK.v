@@ -793,24 +793,43 @@ Section Compile.
 
     Section ExecStage.
 
-      (** A static checker whether the rule is for eviction requests *)
       Definition check_rule_rq_prec_rqrs (rrp: HOPrecR): bool :=
         match rrp with
         | HRqAccepting => true
         | _ => false
         end.
 
+      Definition check_rule_rs_prec_rqrs (rrp: HOPrecR): bool :=
+        match rrp with
+        | HRsAccepting => true
+        | _ => false
+        end.
+
       Definition hvarU: htype -> Type := fun _ => unit.
       Fixpoint check_rule_rq_prec (rp: HOPrecT hvarU): bool :=
         match rp with
-        | HOPrecAnd prec1 prec2 => check_rule_rq_prec prec1 || check_rule_rq_prec prec1
+        | HOPrecAnd prec1 prec2 => check_rule_rq_prec prec1 || check_rule_rq_prec prec2
         | HOPrecRqRs _ rrprec => check_rule_rq_prec_rqrs rrprec
+        | HOPrecProp _ => false
+        end.
+
+      Fixpoint check_rule_rs_prec (rp: HOPrecT hvarU): bool :=
+        match rp with
+        | HOPrecAnd prec1 prec2 => check_rule_rs_prec prec1 || check_rule_rs_prec prec2
+        | HOPrecRqRs _ rrprec => check_rule_rs_prec_rqrs rrprec
         | HOPrecProp _ => false
         end.
 
       Definition check_rule_msg_from_nil (mf: HMsgFrom): bool :=
         match mf with
         | HMsgFromNil => true
+        | _ => false
+        end.
+
+      Definition check_rule_msg_from_child (mf: HMsgFrom): bool :=
+        match mf with
+        | HMsgFromChild _ => true
+        | HMsgFromDownLock _ => true
         | _ => false
         end.
 
@@ -953,19 +972,22 @@ Section Compile.
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execInvRq oidx rule |}.
 
-    (** * FIXME: filter response-accepting rules *)
-    Definition compile_rule_exec
-               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+    Definition compile_rule_exec (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+      option (Attribute (Action Void)) :=
       let hr := projT2 rule in
       let isRq := check_rule_rq_prec (hrule_precond hr _) in
+      let isRs := check_rule_rs_prec (hrule_precond hr _) in
       let mfNil := check_rule_msg_from_nil (hrule_msg_from hr) in
+      let mfChild := check_rule_msg_from_child (hrule_msg_from hr) in
       if mfNil
-      then (if isRq then compile_execInvRq rule else compile_execRsRel rule)
-      else (compile_execPP rule).
+      then if isRq then Some (compile_execInvRq rule) else Some (compile_execRsRel rule)
+      else if (isRs && mfChild)
+           then None (* A child-response acceptor is already defined in [lrRsAcc] *)
+           else Some (compile_execPP rule).
 
     Definition compile_rules_exec (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      map compile_rule_exec rules.
+      ListSupport.oll (map compile_rule_exec rules).
 
     Definition compile_rules_pipeline (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
