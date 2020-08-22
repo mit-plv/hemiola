@@ -197,6 +197,7 @@ Section Compile.
 
     Definition IRPipe :=
       STRUCT { "ir_is_rs_rel" :: Bool;
+               "ir_is_rs_acc" :: Bool;
                "ir_msg" :: Struct KMsg;
                "ir_msg_from" :: KQIdx;
                "ir_mshr_id" :: MshrId }.
@@ -244,10 +245,12 @@ Section Compile.
       acceptor2
         oidx (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= IRPipeK)
         (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
+                               "ir_is_rs_acc" ::= $$false;
                                "ir_msg" ::= #msg;
                                "ir_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx};
                                "ir_mshr_id" ::= $$Default })%kami_expr
         (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
+                               "ir_is_rs_acc" ::= $$false;
                                "ir_msg" ::= #msg;
                                "ir_msg_from" ::= {$rqUpIdx, compile_oidx_to_cidx (l1ExtOf oidx)};
                                "ir_mshr_id" ::= $$Default })%kami_expr
@@ -257,14 +260,17 @@ Section Compile.
       acceptor3
         oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= IRPipeK)
         (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
+                               "ir_is_rs_acc" ::= $$false;
                                "ir_msg" ::= #msg;
                                "ir_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx};
                                "ir_mshr_id" ::= $$Default })%kami_expr
         (fun _ ci => STRUCT { "ir_is_rs_rel" ::= $$false;
+                              "ir_is_rs_acc" ::= $$false;
                               "ir_msg" ::= #ci!ChildInput@."ch_msg";
                               "ir_msg_from" ::= {$rqUpIdx, #ci!ChildInput@."ch_idx"};
                               "ir_mshr_id" ::= $$Default })%kami_expr
         (fun _ ci => STRUCT { "ir_is_rs_rel" ::= $$false;
+                              "ir_is_rs_acc" ::= $$false;
                               "ir_msg" ::= #ci!ChildInput@."ch_msg";
                               "ir_msg_from" ::= {$rsUpIdx, #ci!ChildInput@."ch_idx"};
                               "ir_mshr_id" ::= $$Default })%kami_expr
@@ -288,7 +294,6 @@ Section Compile.
       Let GetSlotK := Struct GetSlot.
       Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation addRs := (addRs oidx).
       Local Notation getRsReady := (getRsReady oidx mshrNumPRqs mshrNumCRqs).
       Local Notation RsReady := (RsReady mshrNumPRqs mshrNumCRqs).
       Let RsReadyK := Struct RsReady.
@@ -310,6 +315,7 @@ Section Compile.
         If !(#gs!GetSlot@."s_conflict")
         then (Call infoRq(#msg!KMsg@."addr");
              LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                                  "ir_is_rs_acc" ::= $$false;
                                   "ir_msg" ::= #pelt!IRPipe@."ir_msg";
                                   "ir_msg_from" ::= #mf;
                                   "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
@@ -326,6 +332,7 @@ Section Compile.
         Call mid <- findUL(#msg!KMsg@."addr");
         Call infoRq(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #pelt!IRPipe@."ir_msg";
                              "ir_msg_from" ::= #mf;
                              "ir_mshr_id" ::= #mid };
@@ -345,6 +352,7 @@ Section Compile.
         If !(#gs!GetSlot@."s_conflict")
         then (Call infoRq(#msg!KMsg@."addr");
              LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                                  "ir_is_rs_acc" ::= $$false;
                                   "ir_msg" ::= #pelt!IRPipe@."ir_msg";
                                   "ir_msg_from" ::= #mf;
                                   "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
@@ -358,8 +366,13 @@ Section Compile.
         Assert (_truncLsb_ #mf == $rsUpIdx);
         LET msg <- #pelt!IRPipe@."ir_msg";
         Assert (#msg!KMsg@."type");
-        Call addRs(STRUCT { "r_dl_midx" ::= _truncate_ #mf; "r_dl_msg" ::= #msg });
-        (** No enq to the next stage *)
+        Call mid <- findDL(#msg!KMsg@."addr");
+        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_is_rs_acc" ::= $$true;
+                             "ir_msg" ::= #msg;
+                             "ir_msg_from" ::= #mf;
+                             "ir_mshr_id" ::= #mid };
+        Call enqIR2LR(#nelt);
         Retv)%kami_action.
 
       Definition irRetry: ActionT var Void :=
@@ -369,6 +382,7 @@ Section Compile.
         LET msg <- #pmshr!PreMSHR@."r_msg";
         Call infoRq(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                             "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= #pmshr!PreMSHR@."r_msg_from";
                              "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id" };
@@ -393,6 +407,7 @@ Section Compile.
                                          "value" ::= $$Default };
         Call infoRq(#rsr!RsReady@."r_addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$true;
+                             "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= $$Default;
                              "ir_mshr_id" ::= #rsr!RsReady@."r_id" };
@@ -415,12 +430,22 @@ Section Compile.
       Definition deqIR2LR := MethodSig deqIR2LRN(): IRPipeK.
       Definition enqLR2EX := MethodSig enqLR2EXN(LRPipeK): Void.
       Local Notation infoRsValueRq := (infoRsValueRq oidx infoK indexSz lgWay edirLgWay).
+      Local Notation addRs := (addRs oidx mshrNumPRqs mshrNumCRqs).
 
-      Definition lrRule: ActionT var Void :=
+      Definition lrStep: ActionT var Void :=
         (Call ir <- deqIR2LR();
+        Assert !(#ir!IRPipe@."ir_is_rs_acc");
         Call rinfo <- infoRsValueRq();
         LET lr <- STRUCT { "lr_ir_pp" ::= #ir; "lr_ir" ::= #rinfo };
         Call enqLR2EX(#lr);
+        Retv)%kami_action.
+
+      Definition lrRsAcc: ActionT var Void :=
+        (Call ir <- deqIR2LR();
+        Assert (#ir!IRPipe@."ir_is_rs_acc");
+        Call addRs(STRUCT { "r_id" ::= #ir!IRPipe@."ir_mshr_id";
+                            "r_midx" ::= _truncate_ (#ir!IRPipe@."ir_msg_from");
+                            "r_msg" ::= #ir!IRPipe@."ir_msg" });
         Retv)%kami_action.
 
     End LineReadStage.
@@ -625,7 +650,6 @@ Section Compile.
         Local Notation registerDL := (registerDL oidx mshrNumPRqs mshrNumCRqs).
         Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
         Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
-        Local Notation addRs := (addRs oidx).
 
         Local Notation getULCount := (getULCount oidx mshrNumPRqs mshrNumCRqs).
         Local Notation getVictimCount := (getVictimCount oidx predNumVictims).
@@ -666,9 +690,8 @@ Section Compile.
                                             "r_dl_rss_from" ::= compile_exp rssf });
              cont)
            | HAddRs midx msg =>
-             (Call addRs (STRUCT { "r_dl_midx" ::= _truncate_ (compile_exp midx);
-                                   "r_dl_msg" ::= compile_exp msg });
-             cont)
+             (** Already handled by the previous pipeline stage; see the [lrRsAcc] rule. *)
+             cont
            end)%kami_action.
 
         Definition compile_MsgsOut_trs (hmsgs: HMsgsOut (hvar_of var))
@@ -890,7 +913,7 @@ Section Compile.
         :: {| attrName := "rule_ir_crq_" ++ idx_to_string oidx;
               attrType := fun var => irCRq oidx deqInputN enqIR2LRN |}
         :: {| attrName := "rule_ir_crs_" ++ idx_to_string oidx;
-              attrType := fun var => irCRs oidx deqInputN |}
+              attrType := fun var => irCRs oidx deqInputN enqIR2LRN |}
         :: {| attrName := "rule_ir_retry_" ++ idx_to_string oidx;
               attrType := fun var => irRetry oidx enqIR2LRN |}
         :: {| attrName := "rule_ir_invrs_" ++ idx_to_string oidx;
@@ -900,8 +923,10 @@ Section Compile.
         :: nil.
 
     Definition compile_rules_lr: list (Attribute (Action Void)) :=
-      {| attrName := "rule_lr_" ++ idx_to_string oidx;
-         attrType := fun var => lrRule oidx deqIR2LRN enqLR2EXN |}
+      {| attrName := "rule_lr_step_" ++ idx_to_string oidx;
+         attrType := fun var => lrStep oidx deqIR2LRN enqLR2EXN |}
+        :: {| attrName := "rule_lr_rsacc_" ++ idx_to_string oidx;
+              attrType := fun var => lrRsAcc oidx deqIR2LRN |}
         :: nil.
 
     Definition execRuleNameBase: string := "rule_exec".
@@ -928,6 +953,7 @@ Section Compile.
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execInvRq oidx rule |}.
 
+    (** * FIXME: filter response-accepting rules *)
     Definition compile_rule_exec
                (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let hr := projT2 rule in

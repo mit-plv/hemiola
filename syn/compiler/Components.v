@@ -330,7 +330,7 @@ Section MSHR.
   Definition releaseMSHR: Attribute SignatureT := MethodSig ("releaseMSHR"+o)(MshrId): Void.
 
   Definition AddRs :=
-    STRUCT { "r_dl_midx" :: KCIdx; "r_dl_msg" :: Struct KMsg }.
+    STRUCT { "r_id" :: MshrId; "r_midx" :: KCIdx; "r_msg" :: Struct KMsg }.
   Definition addRs: Attribute SignatureT := MethodSig ("addRs"+o)(Struct AddRs): Void.
 
   Definition RsReady :=
@@ -655,14 +655,7 @@ Section MSHR.
 
         with Method ("addRs"+o)(a: Struct AddRs): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
-          LET addr <- #a!AddRs@."r_msg"!KMsg@."addr";
-          LET mid: MshrId <- (rqIter $$Default
-                                     (fun n _ => $n)
-                                     (fun m =>
-                                        m!MSHR@."m_status" == mshrValid &&
-                                        (!(m!MSHR@."m_is_ul")) &&
-                                        m!MSHR@."m_msg"!KMsg@."addr" == #addr)
-                                     #rqs);
+          LET mid <- #a!AddRs@."r_id";
           LET pmshr <- #rqs#[#mid];
           LET nmshr: Struct MSHR <- STRUCT { "m_status" ::= #pmshr!MSHR@."m_status";
                                              "m_next" ::= #pmshr!MSHR@."m_next";
@@ -673,10 +666,10 @@ Section MSHR.
                                              "m_dl_rss_from" ::= #pmshr!MSHR@."m_dl_rss_from";
                                              "m_dl_rss_recv" ::=
                                                 bvSet (#pmshr!MSHR@."m_dl_rss_recv")
-                                                      (#a!AddRs@."r_dl_midx");
+                                                      (#a!AddRs@."r_midx");
                                              "m_dl_rss" ::=
                                                (#pmshr!MSHR@."m_dl_rss")
-                                                 #[#a!AddRs@."r_dl_midx" <- #a!AddRs@."r_dl_msg"] };
+                                                 #[#a!AddRs@."r_midx" <- #a!AddRs@."r_msg"] };
           Write "rqs"+o <- #rqs#[#mid <- #nmshr];
           Retv
 
