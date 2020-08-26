@@ -302,6 +302,7 @@ Section Compile.
       Local Notation PreMSHR := (PreMSHR mshrNumPRqs mshrNumCRqs).
       Let PreMSHRK := Struct PreMSHR.
 
+      (** * FIXME: the last-level cache does not need this rule. *)
       Definition irPRq: ActionT var Void :=
         (Call pelt <- deqInput();
         LET mf <- #pelt!IRPipe@."ir_msg_from";
@@ -743,12 +744,11 @@ Section Compile.
              let nostVars := compile_value_read_to_ostVars _ ostVars rvalue in
              compile_ORq_trs nostVars horq (compile_MsgsOut_trs nostVars hmsgs cont)))%kami_action.
 
-      Definition compile_MonadT_ret_nowrite
+      Definition compile_MonadT_ret_invrq
                  (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
-                 (cont: ActionT var Void)
-                 (horq: HORq (hvar_of var))
-                 (hmsgs: HMsgsOut (hvar_of var)): ActionT var Void :=
-        (compile_ORq_trs ostVars horq (compile_MsgsOut_trs ostVars hmsgs cont))%kami_action.
+                 (hmsgs: HMsgsOut (hvar_of var))
+                 (cont: ActionT var Void): ActionT var Void :=
+        (compile_MsgsOut_trs ostVars hmsgs cont)%kami_action.
 
       Fixpoint compile_MonadT_trs
                (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
@@ -780,12 +780,12 @@ Section Compile.
                  (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
         compile_rule_trs ostVars trs (compile_MonadT_ret_ord ostVars cont).
 
-      Definition compile_rule_trs_nowrite
+      Definition compile_rule_trs_invrq
                  (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
                  (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
         compile_rule_trs
           ostVars trs
-          (fun _ horq hmsgs => compile_MonadT_ret_nowrite ostVars cont horq hmsgs).
+          (fun _ horq hmsgs => compile_MonadT_ret_invrq ostVars hmsgs cont).
 
     End CompileExec.
 
@@ -911,7 +911,7 @@ Section Compile.
         let nostVars := compile_value_read_to_ostVars _ ostVars pvalue in
         :compile_rule_prec
            msg mshr nostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs_nowrite msg mid mshr nostVars (hrule_trs hr);
+        :compile_rule_trs_invrq msg mshr nostVars (hrule_trs hr);
         Retv)%kami_action.
 
     End ExecStage.
