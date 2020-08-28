@@ -305,14 +305,14 @@ Section Cache.
     (CSTRUCT { "mesi_edir_st" ::= ConstBit $1;
                "mesi_edir_sharers" ::= ConstBit $0 })%init.
 
-  Definition mesiL1 :=
-    cache oidx KValue lgWay 0 predNumVictims
-          mesiInfoInit mshrSlotSz getIndex getTag buildAddr isDirInvalid.
+  Definition mesiL1: Modules :=
+    cache oidx KValue lgWay 0
+          mesiInfoInit getIndex getTag buildAddr isDirInvalid mshrSlotSz predNumVictims.
 
-  Definition mesiLi :=
-    ncid oidx KValue lgWay edirLgWay predNumVictims
+  Definition mesiLi: Modules :=
+    ncid oidx KValue lgWay edirLgWay
          mesiInfoInit mesiEDirInit
-         mshrSlotSz
-         getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot.
+         getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot
+         mshrSlotSz predNumVictims.
 
 End Cache.

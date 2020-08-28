@@ -92,6 +92,7 @@ Section Compile.
   (** Victims *)
   Variable predNumVictims: nat.
   Let victimIdxSz := Nat.log2 predNumVictims.
+  Let MviK := Maybe (Bit victimIdxSz).
 
   Definition kind_of_hbtype (hbt: hbtype): Kind :=
     match hbt with
@@ -195,13 +196,9 @@ Section Compile.
                "ch_msg" :: Struct KMsg }.
     Let ChildInputK := Struct ChildInput.
 
-    Definition IRPipe :=
-      STRUCT { "ir_is_rs_rel" :: Bool;
-               "ir_is_rs_acc" :: Bool;
-               "ir_msg" :: Struct KMsg;
-               "ir_msg_from" :: KQIdx;
-               "ir_mshr_id" :: MshrId }.
-    Let IRPipeK := Struct IRPipe.
+    Definition Input :=
+      STRUCT { "in_msg" :: Struct KMsg; "in_msg_from" :: KQIdx }.
+    Let InputK := Struct Input.
 
     Variables enqCRqN enqCRsN: string.
 
@@ -243,49 +240,45 @@ Section Compile.
 
     Definition inputAcceptorL1: Modules :=
       acceptor2
-        oidx (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= IRPipeK)
-        (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
-                               "ir_is_rs_acc" ::= $$false;
-                               "ir_msg" ::= #msg;
-                               "ir_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx};
-                               "ir_mshr_id" ::= $$Default })%kami_expr
-        (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
-                               "ir_is_rs_acc" ::= $$false;
-                               "ir_msg" ::= #msg;
-                               "ir_msg_from" ::= {$rqUpIdx, compile_oidx_to_cidx (l1ExtOf oidx)};
-                               "ir_mshr_id" ::= $$Default })%kami_expr
+        oidx (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= InputK)
+        (fun _ msg => STRUCT { "in_msg" ::= #msg;
+                               "in_msg_from" ::=
+                                 {$downIdx, compile_oidx_to_cidx oidx} })%kami_expr
+        (fun _ msg => STRUCT { "in_msg" ::= #msg;
+                               "in_msg_from" ::=
+                                 {$rqUpIdx, compile_oidx_to_cidx (l1ExtOf oidx)} })%kami_expr
         (deqFn (downTo oidx)) (deqFn (rqUpFrom (l1ExtOf oidx))) enqInputN.
 
     Definition inputAcceptorLi: Modules :=
       acceptor3
-        oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= IRPipeK)
-        (fun _ msg => STRUCT { "ir_is_rs_rel" ::= $$false;
-                               "ir_is_rs_acc" ::= $$false;
-                               "ir_msg" ::= #msg;
-                               "ir_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx};
-                               "ir_mshr_id" ::= $$Default })%kami_expr
-        (fun _ ci => STRUCT { "ir_is_rs_rel" ::= $$false;
-                              "ir_is_rs_acc" ::= $$false;
-                              "ir_msg" ::= #ci!ChildInput@."ch_msg";
-                              "ir_msg_from" ::= {$rqUpIdx, #ci!ChildInput@."ch_idx"};
-                              "ir_mshr_id" ::= $$Default })%kami_expr
-        (fun _ ci => STRUCT { "ir_is_rs_rel" ::= $$false;
-                              "ir_is_rs_acc" ::= $$false;
-                              "ir_msg" ::= #ci!ChildInput@."ch_msg";
-                              "ir_msg_from" ::= {$rsUpIdx, #ci!ChildInput@."ch_idx"};
-                              "ir_mshr_id" ::= $$Default })%kami_expr
+        oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= InputK)
+        (fun _ msg => STRUCT { "in_msg" ::= #msg;
+                               "in_msg_from" ::=
+                                 {$downIdx, compile_oidx_to_cidx oidx} })%kami_expr
+        (fun _ ci => STRUCT { "in_msg" ::= #ci!ChildInput@."ch_msg";
+                              "in_msg_from" ::= {$rqUpIdx, #ci!ChildInput@."ch_idx"} })%kami_expr
+        (fun _ ci => STRUCT { "in_msg" ::= #ci!ChildInput@."ch_msg";
+                              "in_msg_from" ::= {$rsUpIdx, #ci!ChildInput@."ch_idx"} })%kami_expr
         (deqFn (downTo oidx)) deqCRqN deqCRsN enqInputN.
 
     (*! Pipeline Stages *)
 
-    Variables deqInputN enqIR2LRN: string.
+    Variables deqInputN enqIN2IRN: string.
 
-    Section InfoReadStage.
+    Definition IRElt :=
+      STRUCT { "ir_is_rs_rel" :: Bool;
+               "ir_is_rs_acc" :: Bool;
+               "ir_msg" :: Struct KMsg;
+               "ir_msg_from" :: KQIdx;
+               "ir_mshr_id" :: MshrId;
+               "ir_by_victim" :: MviK }.
+    Let IREltK := Struct IRElt.
 
-      Definition deqInput := MethodSig deqInputN(): IRPipeK.
-      Definition enqIR2LR := MethodSig enqIR2LRN(IRPipeK): Void.
+    Section InputStage.
+      Definition deqInput := MethodSig deqInputN(): InputK.
+      Definition enqIN2IR := MethodSig enqIN2IRN(IREltK): Void.
 
-      Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
+      Local Notation findVictim := (findVictim oidx hcfg_addr_sz predNumVictims).
       Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
 
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
@@ -302,117 +295,159 @@ Section Compile.
       Local Notation PreMSHR := (PreMSHR mshrNumPRqs mshrNumCRqs).
       Let PreMSHRK := Struct PreMSHR.
 
-      (** * FIXME: the last-level cache does not need this rule. *)
-      Definition irPRq: ActionT var Void :=
+      Definition inputPRq: ActionT var Void :=
         (Call pelt <- deqInput();
-        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        LET mf <- #pelt!Input@."in_msg_from";
         Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
-        LET msg <- #pelt!IRPipe@."ir_msg";
+        LET msg <- #pelt!Input@."in_msg";
         Assert !(#msg!KMsg@."type");
         Call gs <- getPRqSlot(STRUCT { "r_id" ::= $$Default;
                                        "r_msg" ::= #msg;
-                                       "r_msg_from" ::= #pelt!IRPipe@."ir_msg_from" });
+                                       "r_msg_from" ::= #pelt!Input@."in_msg_from" });
         Assert (#gs!GetSlot@."s_has_slot");
         If !(#gs!GetSlot@."s_conflict")
-        then (Call infoRq(#msg!KMsg@."addr");
-             LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                                  "ir_is_rs_acc" ::= $$false;
-                                  "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                                  "ir_msg_from" ::= #mf;
-                                  "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
-             Call enqIR2LR(#nelt);
-             Retv);
-        Retv)%kami_action.
+         then (Call mv <- findVictim(#msg!KMsg@."addr");
+              LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                                   "ir_is_rs_acc" ::= $$false;
+                                   "ir_msg" ::= #pelt!Input@."in_msg";
+                                   "ir_msg_from" ::= #mf;
+                                   "ir_mshr_id" ::= #gs!GetSlot@."s_id";
+                                   "ir_by_victim" ::= #mv };
+              Call enqIN2IR(#nelt);
+              Retv);
+         Retv)%kami_action.
 
-      Definition irPRs: ActionT var Void :=
+      Definition inputPRs: ActionT var Void :=
         (Call pelt <- deqInput();
-        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        LET mf <- #pelt!Input@."in_msg_from";
         Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
-        LET msg <- #pelt!IRPipe@."ir_msg";
+        LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" != $$invRsId);
         Call mid <- findUL(#msg!KMsg@."addr");
-        Call infoRq(#msg!KMsg@."addr");
+        Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                              "ir_is_rs_acc" ::= $$false;
-                             "ir_msg" ::= #pelt!IRPipe@."ir_msg";
+                             "ir_msg" ::= #pelt!Input@."in_msg";
                              "ir_msg_from" ::= #mf;
-                             "ir_mshr_id" ::= #mid };
-        Call enqIR2LR(#nelt);
+                             "ir_mshr_id" ::= #mid;
+                             "ir_by_victim" ::= #mv };
+        Call enqIN2IR(#nelt);
         Retv)%kami_action.
 
-      Definition irCRq: ActionT var Void :=
+      Definition inputCRq: ActionT var Void :=
         (Call pelt <- deqInput();
-        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        LET mf <- #pelt!Input@."in_msg_from";
         Assert (_truncLsb_ #mf == $rqUpIdx);
-        LET msg <- #pelt!IRPipe@."ir_msg";
+        LET msg <- #pelt!Input@."in_msg";
         Assert !(#msg!KMsg@."type");
         Call gs <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
                                        "r_msg" ::= #msg;
                                        "r_msg_from" ::= #mf });
         Assert (#gs!GetSlot@."s_has_slot");
         If !(#gs!GetSlot@."s_conflict")
-        then (Call infoRq(#msg!KMsg@."addr");
-             LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                                  "ir_is_rs_acc" ::= $$false;
-                                  "ir_msg" ::= #pelt!IRPipe@."ir_msg";
-                                  "ir_msg_from" ::= #mf;
-                                  "ir_mshr_id" ::= #gs!GetSlot@."s_id" };
-             Call enqIR2LR(#nelt);
-             Retv);
-        Retv)%kami_action.
+         then (Call mv <- findVictim(#msg!KMsg@."addr");
+              LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
+                                   "ir_is_rs_acc" ::= $$false;
+                                   "ir_msg" ::= #pelt!Input@."in_msg";
+                                   "ir_msg_from" ::= #mf;
+                                   "ir_mshr_id" ::= #gs!GetSlot@."s_id";
+                                   "ir_by_victim" ::= #mv };
+              Call enqIN2IR(#nelt);
+              Retv);
+         Retv)%kami_action.
 
-      Definition irCRs: ActionT var Void :=
+      Definition inputCRs: ActionT var Void :=
         (Call pelt <- deqInput();
-        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        LET mf <- #pelt!Input@."in_msg_from";
         Assert (_truncLsb_ #mf == $rsUpIdx);
-        LET msg <- #pelt!IRPipe@."ir_msg";
+        LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type");
         Call mid <- findDL(#msg!KMsg@."addr");
+        Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                              "ir_is_rs_acc" ::= $$true;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= #mf;
-                             "ir_mshr_id" ::= #mid };
-        Call enqIR2LR(#nelt);
+                             "ir_mshr_id" ::= #mid;
+                             "ir_by_victim" ::= #mv };
+        Call enqIN2IR(#nelt);
         Retv)%kami_action.
 
-      Definition irRetry: ActionT var Void :=
+      Definition inputRetry: ActionT var Void :=
         (Call mpmshr <- getWait();
         Assert (#mpmshr!(MaybeStr PreMSHRK)@."valid");
         LET pmshr <- #mpmshr!(MaybeStr PreMSHRK)@."data";
         LET msg <- #pmshr!PreMSHR@."r_msg";
-        Call infoRq(#msg!KMsg@."addr");
+        Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                              "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= #pmshr!PreMSHR@."r_msg_from";
-                             "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id" };
-        Call enqIR2LR(#nelt);
+                             "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id";
+                             "ir_by_victim" ::= #mv };
+        Call enqIN2IR(#nelt);
         Retv)%kami_action.
 
-      Definition irInvRs: ActionT var Void :=
+      Definition inputInvRs: ActionT var Void :=
         (Call pelt <- deqInput();
-        LET mf <- #pelt!IRPipe@."ir_msg_from";
+        LET mf <- #pelt!Input@."in_msg_from";
         Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
-        LET msg <- #pelt!IRPipe@."ir_msg";
+        LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" == $$invRsId);
         Call vmid <- releaseVictim(#msg!KMsg@."addr");
         Call releaseMSHR(#vmid);
         Retv)%kami_action.
 
-      Definition irRsRel: ActionT var Void :=
+      Definition inputRsRel: ActionT var Void :=
         (Call rsr <- getRsReady();
         LET msg: Struct KMsg <- STRUCT { "id" ::= $$Default;
                                          "type" ::= $$Default;
                                          "addr" ::= #rsr!RsReady@."r_addr";
                                          "value" ::= $$Default };
-        Call infoRq(#rsr!RsReady@."r_addr");
+        Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$true;
                              "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= $$Default;
-                             "ir_mshr_id" ::= #rsr!RsReady@."r_id" };
-        Call enqIR2LR(#nelt);
+                             "ir_mshr_id" ::= #rsr!RsReady@."r_id";
+                             "ir_by_victim" ::= #mv };
+        Call enqIN2IR(#nelt);
+        Retv)%kami_action.
+
+    End InputStage.
+
+    Variables deqIN2IRN enqIR2LRN: string.
+
+    Section InfoReadStage.
+
+      Definition deqIN2IR := MethodSig deqIN2IRN(): IREltK.
+      Definition enqIR2LR := MethodSig enqIR2LRN(IREltK): Void.
+
+      Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
+      Local Notation addRs := (addRs oidx mshrNumPRqs mshrNumCRqs).
+
+      Definition irCache: ActionT var Void :=
+        (Call pelt <- deqIN2IR();
+        Assert !(#pelt!IRElt@."ir_is_rs_acc");
+        Assert !(#pelt!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
+        LET msg <- #pelt!IRElt@."ir_msg";
+        Call infoRq(#msg!KMsg@."addr");
+        Call enqIR2LR(#pelt);
+        Retv)%kami_action.
+
+      Definition irVictims: ActionT var Void :=
+        (Call pelt <- deqIN2IR();
+        Assert !(#pelt!IRElt@."ir_is_rs_acc");
+        Assert (#pelt!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
+        Call enqIR2LR(#pelt);
+        Retv)%kami_action.
+
+      Definition irRsAcc: ActionT var Void :=
+        (Call pelt <- deqIN2IR();
+        Assert #pelt!IRElt@."ir_is_rs_acc";
+        Call addRs(STRUCT { "r_id" ::= #pelt!IRElt@."ir_mshr_id";
+                            "r_midx" ::= _truncate_ (#pelt!IRElt@."ir_msg_from");
+                            "r_msg" ::= #pelt!IRElt@."ir_msg" });
         Retv)%kami_action.
 
     End InfoReadStage.
@@ -422,31 +457,45 @@ Section Compile.
 
     Section LineReadStage.
 
-      Definition LRPipe :=
-        STRUCT { "lr_ir_pp" :: IRPipeK;
-                 "lr_ir" :: Struct InfoRead
+      Definition LRElt :=
+        STRUCT { "lr_ir_pp" :: IREltK;
+                 "lr_ir" :: Struct InfoRead;
+                 "lr_value" :: KValue
                }.
-      Definition LRPipeK := Struct LRPipe.
+      Definition LREltK := Struct LRElt.
 
-      Definition deqIR2LR := MethodSig deqIR2LRN(): IRPipeK.
-      Definition enqLR2EX := MethodSig enqLR2EXN(LRPipeK): Void.
+      Definition deqIR2LR := MethodSig deqIR2LRN(): IREltK.
+      Definition enqLR2EX := MethodSig enqLR2EXN(LREltK): Void.
       Local Notation infoRsValueRq := (infoRsValueRq oidx infoK indexSz lgWay edirLgWay).
-      Local Notation addRs := (addRs oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getVictim :=
+        (getVictim oidx hcfg_addr_sz predNumVictims infoK KValue mshrSlotSz).
+      Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
 
-      Definition lrStep: ActionT var Void :=
+      Definition lrCache: ActionT var Void :=
         (Call ir <- deqIR2LR();
-        Assert !(#ir!IRPipe@."ir_is_rs_acc");
+        Assert !(#ir!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
         Call rinfo <- infoRsValueRq();
-        LET lr <- STRUCT { "lr_ir_pp" ::= #ir; "lr_ir" ::= #rinfo };
+        LET lr <- STRUCT { "lr_ir_pp" ::= #ir;
+                           "lr_ir" ::= #rinfo;
+                           "lr_value" ::= $$Default };
         Call enqLR2EX(#lr);
         Retv)%kami_action.
 
-      Definition lrRsAcc: ActionT var Void :=
+      Definition lrVictims: ActionT var Void :=
         (Call ir <- deqIR2LR();
-        Assert (#ir!IRPipe@."ir_is_rs_acc");
-        Call addRs(STRUCT { "r_id" ::= #ir!IRPipe@."ir_mshr_id";
-                            "r_midx" ::= _truncate_ (#ir!IRPipe@."ir_msg_from");
-                            "r_msg" ::= #ir!IRPipe@."ir_msg" });
+        Assert (#ir!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
+        Call victim <- getVictim();
+        LET rinfo <- STRUCT { "info_index" ::= $$Default;
+                              "info_hit" ::= $$Default;
+                              "info_way" ::= $$Default;
+                              "edir_hit" ::= $$Default;
+                              "edir_way" ::= $$Default;
+                              "edir_slot" ::= $$Default;
+                              "info" ::= #victim!Victim@."victim_info" };
+        LET lr <- STRUCT { "lr_ir_pp" ::= #ir;
+                           "lr_ir" ::= #rinfo;
+                           "lr_value" ::= #victim!Victim@."victim_value" };
+        Call enqLR2EX(#lr);
         Retv)%kami_action.
 
     End LineReadStage.
@@ -628,17 +677,30 @@ Section Compile.
 
         Local Notation valueRsLineRq :=
           (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
+        Local Notation setVictim :=
+          (setVictim oidx predNumVictims infoK KValue).
 
         Definition compile_OState_request_write
                    (host: HOState (hvar_of var)) (pline: var (LineWriteK infoK))
+                   (mvi: var MviK) (victimVal: var KValue)
                    (cont: var KValue -> ActionT var Void): ActionT var Void :=
           match host with
           | HOStateI _ =>
-            (** Feeding [$$Default] for [LineWrite] means "no writes." *)
-            (Call rvalue <- valueRsLineRq($$Default); cont rvalue)
-          | _ => compile_OState_write_fix
-                   host pline
-                   (fun nline => Call rvalue <- valueRsLineRq(#nline); cont rvalue)
+            (If (#mvi!(MaybeStr (Bit victimIdxSz))@."valid") then (Ret #victimVal)
+             else (Call val <- valueRsLineRq($$Default); Ret #val)
+              as nvalue; cont nvalue)
+          | _ =>
+            compile_OState_write_fix
+              host pline
+              (fun nline =>
+                 (If (#mvi!(MaybeStr (Bit victimIdxSz))@."valid")
+                  then (Call setVictim
+                             (STRUCT { "victim_idx" ::= #mvi!(MaybeStr (Bit victimIdxSz))@."data";
+                                       "victim_info" ::= #nline!(LineWrite infoK)@."info";
+                                       "victim_value" ::= #nline!(LineWrite infoK)@."value" });
+                       Ret #victimVal)
+                  else (Call val <- valueRsLineRq(#nline); Ret #val)
+                   as nvalue; cont nvalue))
           end%kami_action.
 
       End OstVarsNoValue.
@@ -721,6 +783,7 @@ Section Compile.
 
       Definition compile_MonadT_ret_ord
                  (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (mvi: var MviK) (victimVal: var KValue)
                  (cont: ActionT var Void)
                  (host: HOState (hvar_of var))
                  (horq: HORq (hvar_of var))
@@ -740,6 +803,7 @@ Section Compile.
                                                    "value" ::= $$Default };
         compile_OState_request_write
           ostVars host pline
+          mvi victimVal
           (fun rvalue: var KValue =>
              let nostVars := compile_value_read_to_ostVars _ ostVars rvalue in
              compile_ORq_trs nostVars horq (compile_MsgsOut_trs nostVars hmsgs cont)))%kami_action.
@@ -777,8 +841,9 @@ Section Compile.
 
       Definition compile_rule_trs_ord
                  (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
+                 (mvi: var MviK) (victimVal: var KValue)
                  (trs: HOTrs) (cont: ActionT var Void): ActionT var Void :=
-        compile_rule_trs ostVars trs (compile_MonadT_ret_ord ostVars cont).
+        compile_rule_trs ostVars trs (compile_MonadT_ret_ord ostVars mvi victimVal cont).
 
       Definition compile_rule_trs_invrq
                  (ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
@@ -833,13 +898,13 @@ Section Compile.
         | _ => false
         end.
 
-      Definition deqLR2EX := MethodSig deqLR2EXN(): LRPipeK.
+      Definition deqLR2EX := MethodSig deqLR2EXN(): LREltK.
 
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation Victim := (Victim infoK KValue hcfg_addr_sz mshrSlotSz).
-      Local Notation getVictim := (getVictim oidx infoK KValue hcfg_addr_sz mshrSlotSz).
+      Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
+      Local Notation getFirstVictim := (getFirstVictim oidx hcfg_addr_sz infoK KValue mshrSlotSz).
       Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
       Local Notation getULImm := (getULImm oidx mshrNumPRqs mshrNumCRqs).
 
@@ -853,42 +918,46 @@ Section Compile.
 
       Definition execPP: ActionT var Void :=
         (Call lr <- deqLR2EX();
-        LET irpp <- #lr!LRPipe@."lr_ir_pp";
-        LET mf <- #irpp!IRPipe@."ir_msg_from";
-        LET msgIn <- #irpp!IRPipe@."ir_msg";
-        LET mshrId <- #irpp!IRPipe@."ir_mshr_id";
-        LET rsRel <- #irpp!IRPipe@."ir_is_rs_rel";
+        LET irpp <- #lr!LRElt@."lr_ir_pp";
+        LET mf <- #irpp!IRElt@."ir_msg_from";
+        LET msgIn <- #irpp!IRElt@."ir_msg";
+        LET mshrId <- #irpp!IRElt@."ir_mshr_id";
+        LET rsRel <- #irpp!IRElt@."ir_is_rs_rel";
         Assert !#rsRel;
-        LET pir <- #lr!LRPipe@."lr_ir";
+        LET pir <- #lr!LRElt@."lr_ir";
         LET pinfo <- #pir!InfoRead@."info";
+        LET mvi <- #irpp!IRElt@."ir_by_victim";
+        LET victimVal <- #lr!LRElt@."lr_value";
         Call mshr <- getMSHR(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr);
+        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars mvi victimVal (hrule_trs hr);
         Retv)%kami_action.
 
       Definition execRsRel: ActionT var Void :=
         (Call lr <- deqLR2EX();
-        LET irpp <- #lr!LRPipe@."lr_ir_pp";
-        LET mf <- #irpp!IRPipe@."ir_msg_from";
-        LET msgIn <- #irpp!IRPipe@."ir_msg";
-        LET mshrId <- #irpp!IRPipe@."ir_mshr_id";
-        LET rsRel <- #irpp!IRPipe@."ir_is_rs_rel";
+        LET irpp <- #lr!LRElt@."lr_ir_pp";
+        LET mf <- #irpp!IRElt@."ir_msg_from";
+        LET msgIn <- #irpp!IRElt@."ir_msg";
+        LET mshrId <- #irpp!IRElt@."ir_mshr_id";
+        LET rsRel <- #irpp!IRElt@."ir_is_rs_rel";
         Assert #rsRel;
-        LET pir <- #lr!LRPipe@."lr_ir";
+        LET pir <- #lr!LRElt@."lr_ir";
         LET pinfo <- #pir!InfoRead@."info";
+        LET mvi <- #irpp!IRElt@."ir_by_victim";
+        LET victimVal <- #lr!LRElt@."lr_value";
         Call mshr <- getMSHR(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars (hrule_trs hr);
+        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars mvi victimVal (hrule_trs hr);
         Retv)%kami_action.
 
       Definition execInvRq: ActionT var Void :=
-        (Call victim <- getVictim();
+        (Call victim <- getFirstVictim();
         LET paddr <- #victim!Victim@."victim_addr";
         LET pinfo <- #victim!Victim@."victim_info";
         LET pvalue <- #victim!Victim@."victim_value";
@@ -922,30 +991,41 @@ Section Compile.
 
   Section WithObj.
     Variable (oidx: IdxT).
-    Variables (deqInputN enqIR2LRN deqIR2LRN enqLR2EXN deqLR2EXN: string).
+    Variables (deqInputN enqIN2IRN deqIN2IRN
+                         enqIR2LRN deqIR2LRN
+                         enqLR2EXN deqLR2EXN: string).
+
+    Definition compile_rules_in: list (Attribute (Action Void)) :=
+      {| attrName := "rule_in_prq_" ++ idx_to_string oidx;
+         attrType := fun var => inputPRq oidx deqInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_prs_" ++ idx_to_string oidx;
+              attrType := fun var => inputPRs oidx deqInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_crq_" ++ idx_to_string oidx;
+              attrType := fun var => inputCRq oidx deqInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_crs_" ++ idx_to_string oidx;
+              attrType := fun var => inputCRs oidx deqInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_retry_" ++ idx_to_string oidx;
+              attrType := fun var => inputRetry oidx enqIN2IRN |}
+        :: {| attrName := "rule_in_invrs_" ++ idx_to_string oidx;
+              attrType := fun var => inputInvRs oidx deqInputN |}
+        :: {| attrName := "rule_in_rsrel_" ++ idx_to_string oidx;
+              attrType := fun var => inputRsRel oidx enqIN2IRN |}
+        :: nil.
 
     Definition compile_rules_ir: list (Attribute (Action Void)) :=
-      {| attrName := "rule_ir_prq_" ++ idx_to_string oidx;
-         attrType := fun var => irPRq oidx deqInputN enqIR2LRN |}
-        :: {| attrName := "rule_ir_prs_" ++ idx_to_string oidx;
-              attrType := fun var => irPRs oidx deqInputN enqIR2LRN |}
-        :: {| attrName := "rule_ir_crq_" ++ idx_to_string oidx;
-              attrType := fun var => irCRq oidx deqInputN enqIR2LRN |}
-        :: {| attrName := "rule_ir_crs_" ++ idx_to_string oidx;
-              attrType := fun var => irCRs oidx deqInputN enqIR2LRN |}
-        :: {| attrName := "rule_ir_retry_" ++ idx_to_string oidx;
-              attrType := fun var => irRetry oidx enqIR2LRN |}
-        :: {| attrName := "rule_ir_invrs_" ++ idx_to_string oidx;
-              attrType := fun var => irInvRs oidx deqInputN |}
-        :: {| attrName := "rule_ir_rsrel_" ++ idx_to_string oidx;
-              attrType := fun var => irRsRel oidx enqIR2LRN |}
+      {| attrName := "rule_ir_cache_" ++ idx_to_string oidx;
+         attrType := fun var => irCache oidx deqIN2IRN enqIR2LRN |}
+        :: {| attrName := "rule_ir_victims_" ++ idx_to_string oidx;
+              attrType := fun var => irVictims deqIN2IRN enqIR2LRN |}
+        :: {| attrName := "rule_ir_rs_acc_" ++ idx_to_string oidx;
+              attrType := fun var => irRsAcc oidx deqIN2IRN |}
         :: nil.
 
     Definition compile_rules_lr: list (Attribute (Action Void)) :=
-      {| attrName := "rule_lr_step_" ++ idx_to_string oidx;
-         attrType := fun var => lrStep oidx deqIR2LRN enqLR2EXN |}
-        :: {| attrName := "rule_lr_rsacc_" ++ idx_to_string oidx;
-              attrType := fun var => lrRsAcc oidx deqIR2LRN |}
+      {| attrName := "rule_lr_cache_" ++ idx_to_string oidx;
+         attrType := fun var => lrCache oidx deqIR2LRN enqLR2EXN |}
+        :: {| attrName := "rule_lr_victims_" ++ idx_to_string oidx;
+              attrType := fun var => lrVictims oidx deqIR2LRN enqLR2EXN |}
         :: nil.
 
     Definition execRuleNameBase: string := "rule_exec".
@@ -991,7 +1071,7 @@ Section Compile.
 
     Definition compile_rules_pipeline (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
-      compile_rules_ir ++ compile_rules_lr ++ compile_rules_exec rules.
+      compile_rules_in ++ compile_rules_ir ++ compile_rules_lr ++ compile_rules_exec rules.
 
   End WithObj.
 
@@ -1032,7 +1112,7 @@ Section Compile.
 
     Definition build_inputs_l1: Modules :=
       ((inputAcceptorL1 oidx enqInputN)
-         ++ (fifo primNormalFifoName ppInputFifoN (Struct IRPipe)))%kami.
+         ++ (fifo primNormalFifoName ppInputFifoN (Struct Input)))%kami.
 
     Definition build_inputs_li_2: Modules :=
       ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
@@ -1040,7 +1120,7 @@ Section Compile.
          ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
          ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
          ++ (inputAcceptorLi oidx deqCRqInputN deqCRsInputN enqInputN)
-         ++ (fifo primNormalFifoName ppInputFifoN (Struct IRPipe)))%kami.
+         ++ (fifo primNormalFifoName ppInputFifoN (Struct Input)))%kami.
 
     Definition build_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
@@ -1048,7 +1128,7 @@ Section Compile.
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
          ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
          ++ (inputAcceptorLi oidx deqCRqInputN deqCRsInputN enqInputN)
-         ++ (fifo primNormalFifoName ppInputFifoN (Struct IRPipe)))%kami.
+         ++ (fifo primNormalFifoName ppInputFifoN (Struct Input)))%kami.
 
   End Inputs.
 
@@ -1198,6 +1278,10 @@ Section Compile.
 
   End Outputs.
 
+  Let ppIN2IRN (oidx: IdxT): string := ("fifoN2I" ++ idx_to_string oidx).
+  Let enqIN2IRN (oidx: IdxT) := (ppIN2IRN oidx) -- enqN.
+  Let deqIN2IRN (oidx: IdxT) := (ppIN2IRN oidx) -- deqN.
+
   Let ppIR2LRN (oidx: IdxT): string := ("fifoI2L" ++ idx_to_string oidx).
   Let enqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- enqN.
   Let deqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- deqN.
@@ -1210,8 +1294,10 @@ Section Compile.
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
     let crules := compile_rules_pipeline
-                    oidx (deqInputN oidx) (enqIR2LRN oidx)
-                    (deqIR2LRN oidx) (enqLR2EXN oidx) (deqLR2EXN oidx)
+                    oidx (deqInputN oidx)
+                    (enqIN2IRN oidx) (deqIN2IRN oidx)
+                    (enqIR2LRN oidx) (deqIR2LRN oidx)
+                    (enqLR2EXN oidx) (deqLR2EXN oidx)
                     (hobj_rules (projT2 obj)) in
     Mod cregs crules nil.
 
@@ -1220,8 +1306,9 @@ Section Compile.
     let oidx := obj_idx (projT1 obj) in
     (((build_inputs_l1 oidx)
         ++ ((build_pipeline obj)
-              ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
-              ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
+              ++ (fifo primNormalFifoName (ppIN2IRN oidx) (Struct IRElt))
+              ++ (fifo primPipelineFifoName (ppIR2LRN oidx) (Struct IRElt))
+              ++ (fifo primPipelineFifoName (ppLR2EXN oidx) (Struct LRElt)))
         ++ build_outputs_l1 oidx)
        ++ build_int_fifos oidx ++ build_ext_fifos oidx)%kami.
 
@@ -1230,8 +1317,9 @@ Section Compile.
     let oidx := obj_idx (projT1 obj) in
     (((build_inputs_li_2 oidx)
         ++ ((build_pipeline obj)
-              ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
-              ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
+              ++ (fifo primNormalFifoName (ppIN2IRN oidx) (Struct IRElt))
+              ++ (fifo primPipelineFifoName (ppIR2LRN oidx) (Struct IRElt))
+              ++ (fifo primPipelineFifoName (ppLR2EXN oidx) (Struct LRElt)))
         ++ build_outputs_li oidx))%kami.
 
   Definition build_controller_li_4_no_ints
@@ -1239,8 +1327,9 @@ Section Compile.
     let oidx := obj_idx (projT1 obj) in
     (((build_inputs_li_4 oidx)
         ++ ((build_pipeline obj)
-              ++ (fifo primNormalFifoName (ppIR2LRN oidx) (Struct IRPipe))
-              ++ (fifo primNormalFifoName (ppLR2EXN oidx) (Struct LRPipe)))
+              ++ (fifo primNormalFifoName (ppIN2IRN oidx) (Struct IRElt))
+              ++ (fifo primPipelineFifoName (ppIR2LRN oidx) (Struct IRElt))
+              ++ (fifo primPipelineFifoName (ppLR2EXN oidx) (Struct LRElt)))
         ++ build_outputs_li oidx))%kami.
 
   Definition build_controller_li_2
