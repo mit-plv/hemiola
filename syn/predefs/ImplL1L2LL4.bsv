@@ -1,15 +1,14 @@
-    //// Interface
+//// Interface
 
-    function MemRqRs getMemRqRs (function Action enq_rq (Struct1 _),
-                                 function ActionValue#(Struct1) deq_rs ());
+    function MemRqRs#(Struct1) getMemRqRs (function Action enq_rq (Struct1 _),
+                                           function ActionValue#(Struct1) deq_rs ());
         return interface MemRqRs;
                    method mem_enq_rq = enq_rq;
                    method mem_deq_rs = deq_rs;
                endinterface;
     endfunction
 
-    //// 4-staged
-    Vector#(L1Num, MemRqRs) _l1Ifc = newVector();
+    Vector#(L1Num, MemRqRs#(Struct1)) _l1Ifc = newVector();
     _l1Ifc[0] = getMemRqRs(m71.enq_fifo000000, m72.deq_fifo000002);
     _l1Ifc[1] = getMemRqRs(m90.enq_fifo000100, m91.deq_fifo000102);
     _l1Ifc[2] = getMemRqRs(m136.enq_fifo001000, m137.deq_fifo001002);

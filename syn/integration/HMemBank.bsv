@@ -7,16 +7,18 @@ import RegFile::*;
 import SpecialFIFOs::*;
 
 import HCC::*;
+import HCCIfc::*;
 import HCCTypes::*;
+
+typedef 14 MemAddrSz;
+typedef Bit#(MemAddrSz) MemAddr;
+typedef struct { MemAddr addr; CCValue datain; } MemDmaRq deriving (Bits, Eq);
 
 interface MemBank;
     method Action putMemRq(CCMsg _);
     method ActionValue#(CCMsg) getMemRs();
-    interface DMA memDma;
+    interface DMA#(MemAddr, MemDmaRq, CCValue) memDma;
 endinterface
-
-typedef 14 MemAddrSz;
-typedef Bit#(MemAddrSz) MemAddr;
 
 typedef 30 MemLatency; // #cycles to delay
 module mkDelayedBram(RWBramCore#(addrT, dataT)) provisos(
@@ -133,7 +135,7 @@ module mkMemBankBramA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
 
     interface DMA memDma;
         method dma_rdReq = bram.rdReq;
-        method Action dma_wrReq (DmaRq rq);
+        method Action dma_wrReq (MemDmaRq rq);
             bram.wrReq(rq.addr, rq.datain);
         endmethod
         method ActionValue#(CCValue) dma_rdResp ();
@@ -227,7 +229,7 @@ module mkMemBankRegFileA#(FIFOF#(CCMsg) rqs, FIFOF#(CCMsg) rss)(MemBank);
         method Action dma_rdReq (MemAddr addr);
             dmaRdAddr <= addr;
         endmethod
-        method Action dma_wrReq (DmaRq rq);
+        method Action dma_wrReq (MemDmaRq rq);
             bram.upd(rq.addr, rq.datain);
         endmethod
         method ActionValue#(CCValue) dma_rdResp ();

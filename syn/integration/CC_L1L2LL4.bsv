@@ -8885,11 +8885,13 @@ module mkModule167#(function ActionValue#(Struct1) deq_fifo0010(),
     Reg#(Bit#(1)) rr_00 <- mkReg(unpack(0));
 
     rule inc_rr_00;
+        $display ("Rule fired: inc_rr_00 at %t", $time);
         let x_0 = (rr_00);
         rr_00 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_00;
+        $display ("Rule fired: accept0_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0000();
@@ -8898,6 +8900,7 @@ module mkModule167#(function ActionValue#(Struct1) deq_fifo0010(),
     endrule
 
     rule accept1_00;
+        $display ("Rule fired: accept1_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo0010();
@@ -8919,11 +8922,13 @@ module mkModule168#(function ActionValue#(Struct1) deq_fifo0010(),
     Reg#(Bit#(1)) rr_00 <- mkReg(unpack(0));
 
     rule inc_rr_00;
+        $display ("Rule fired: inc_rr_00 at %t", $time);
         let x_0 = (rr_00);
         rr_00 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_00;
+        $display ("Rule fired: accept0_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0000();
@@ -8932,6 +8937,7 @@ module mkModule168#(function ActionValue#(Struct1) deq_fifo0010(),
     endrule
 
     rule accept1_00;
+        $display ("Rule fired: accept1_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo0010();
@@ -8954,12 +8960,14 @@ module mkModule169#(function ActionValue#(Struct2) deq_fifoCRsInput00(),
     Reg#(Bit#(2)) rr_00 <- mkReg(unpack(0));
 
     rule inc_rr_00;
+        $display ("Rule fired: inc_rr_00 at %t", $time);
         let x_0 = (rr_00);
         rr_00 <= ((x_0) == ((Bit#(2))'(2'h2)) ? ((Bit#(2))'(2'h0)) : ((x_0) +
         ((Bit#(2))'(2'h1))));
     endrule
 
     rule accept0_00;
+        $display ("Rule fired: accept0_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(2))'(2'h0)), noAction);
         let x_1 <- deq_fifo002();
@@ -8969,6 +8977,7 @@ module mkModule169#(function ActionValue#(Struct2) deq_fifoCRsInput00(),
     endrule
 
     rule accept1_00;
+        $display ("Rule fired: accept1_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 <- deq_fifoCRqInput00();
@@ -8978,6 +8987,7 @@ module mkModule169#(function ActionValue#(Struct2) deq_fifoCRsInput00(),
     endrule
 
     rule accept2_00;
+        $display ("Rule fired: accept2_00 at %t", $time);
         let x_0 = (rr_00);
         when ((x_0) == ((Bit#(2))'(2'h2)), noAction);
         let x_1 <- deq_fifoCRsInput00();
@@ -9193,11 +9203,13 @@ module mkModule172#(function ActionValue#(Struct1) deq_fifo00010(),
     Reg#(Bit#(1)) rr_000 <- mkReg(unpack(0));
 
     rule inc_rr_000;
+        $display ("Rule fired: inc_rr_000 at %t", $time);
         let x_0 = (rr_000);
         rr_000 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_000;
+        $display ("Rule fired: accept0_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00000();
@@ -9206,6 +9218,7 @@ module mkModule172#(function ActionValue#(Struct1) deq_fifo00010(),
     endrule
 
     rule accept1_000;
+        $display ("Rule fired: accept1_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo00010();
@@ -9227,11 +9240,13 @@ module mkModule173#(function ActionValue#(Struct1) deq_fifo00010(),
     Reg#(Bit#(1)) rr_000 <- mkReg(unpack(0));
 
     rule inc_rr_000;
+        $display ("Rule fired: inc_rr_000 at %t", $time);
         let x_0 = (rr_000);
         rr_000 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_000;
+        $display ("Rule fired: accept0_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00000();
@@ -9240,6 +9255,7 @@ module mkModule173#(function ActionValue#(Struct1) deq_fifo00010(),
     endrule
 
     rule accept1_000;
+        $display ("Rule fired: accept1_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo00010();
@@ -9262,12 +9278,14 @@ module mkModule174#(function ActionValue#(Struct2) deq_fifoCRsInput000(),
     Reg#(Bit#(2)) rr_000 <- mkReg(unpack(0));
 
     rule inc_rr_000;
+        $display ("Rule fired: inc_rr_000 at %t", $time);
         let x_0 = (rr_000);
         rr_000 <= ((x_0) == ((Bit#(2))'(2'h2)) ? ((Bit#(2))'(2'h0)) : ((x_0)
         + ((Bit#(2))'(2'h1))));
     endrule
 
     rule accept0_000;
+        $display ("Rule fired: accept0_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(2))'(2'h0)), noAction);
         let x_1 <- deq_fifo0002();
@@ -9277,6 +9295,7 @@ module mkModule174#(function ActionValue#(Struct2) deq_fifoCRsInput000(),
     endrule
 
     rule accept1_000;
+        $display ("Rule fired: accept1_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 <- deq_fifoCRqInput000();
@@ -9286,6 +9305,7 @@ module mkModule174#(function ActionValue#(Struct2) deq_fifoCRsInput000(),
     endrule
 
     rule accept2_000;
+        $display ("Rule fired: accept2_000 at %t", $time);
         let x_0 = (rr_000);
         when ((x_0) == ((Bit#(2))'(2'h2)), noAction);
         let x_1 <- deq_fifoCRsInput000();
@@ -9453,11 +9473,13 @@ module mkModule177#(function ActionValue#(Struct1) deq_fifo000000(),
     Reg#(Bit#(1)) rr_0000 <- mkReg(unpack(0));
 
     rule inc_rr_0000;
+        $display ("Rule fired: inc_rr_0000 at %t", $time);
         let x_0 = (rr_0000);
         rr_0000 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_0000;
+        $display ("Rule fired: accept0_0000 at %t", $time);
         let x_0 = (rr_0000);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00002();
@@ -9467,6 +9489,7 @@ module mkModule177#(function ActionValue#(Struct1) deq_fifo000000(),
     endrule
 
     rule accept1_0000;
+        $display ("Rule fired: accept1_0000 at %t", $time);
         let x_0 = (rr_0000);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo000000();
@@ -9579,11 +9602,13 @@ module mkModule180#(function ActionValue#(Struct1) deq_fifo000100(),
     Reg#(Bit#(1)) rr_0001 <- mkReg(unpack(0));
 
     rule inc_rr_0001;
+        $display ("Rule fired: inc_rr_0001 at %t", $time);
         let x_0 = (rr_0001);
         rr_0001 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_0001;
+        $display ("Rule fired: accept0_0001 at %t", $time);
         let x_0 = (rr_0001);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00012();
@@ -9593,6 +9618,7 @@ module mkModule180#(function ActionValue#(Struct1) deq_fifo000100(),
     endrule
 
     rule accept1_0001;
+        $display ("Rule fired: accept1_0001 at %t", $time);
         let x_0 = (rr_0001);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo000100();
@@ -9705,11 +9731,13 @@ module mkModule183#(function ActionValue#(Struct1) deq_fifo00110(),
     Reg#(Bit#(1)) rr_001 <- mkReg(unpack(0));
 
     rule inc_rr_001;
+        $display ("Rule fired: inc_rr_001 at %t", $time);
         let x_0 = (rr_001);
         rr_001 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_001;
+        $display ("Rule fired: accept0_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00100();
@@ -9718,6 +9746,7 @@ module mkModule183#(function ActionValue#(Struct1) deq_fifo00110(),
     endrule
 
     rule accept1_001;
+        $display ("Rule fired: accept1_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo00110();
@@ -9739,11 +9768,13 @@ module mkModule184#(function ActionValue#(Struct1) deq_fifo00110(),
     Reg#(Bit#(1)) rr_001 <- mkReg(unpack(0));
 
     rule inc_rr_001;
+        $display ("Rule fired: inc_rr_001 at %t", $time);
         let x_0 = (rr_001);
         rr_001 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_001;
+        $display ("Rule fired: accept0_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00100();
@@ -9752,6 +9783,7 @@ module mkModule184#(function ActionValue#(Struct1) deq_fifo00110(),
     endrule
 
     rule accept1_001;
+        $display ("Rule fired: accept1_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo00110();
@@ -9774,12 +9806,14 @@ module mkModule185#(function ActionValue#(Struct2) deq_fifoCRsInput001(),
     Reg#(Bit#(2)) rr_001 <- mkReg(unpack(0));
 
     rule inc_rr_001;
+        $display ("Rule fired: inc_rr_001 at %t", $time);
         let x_0 = (rr_001);
         rr_001 <= ((x_0) == ((Bit#(2))'(2'h2)) ? ((Bit#(2))'(2'h0)) : ((x_0)
         + ((Bit#(2))'(2'h1))));
     endrule
 
     rule accept0_001;
+        $display ("Rule fired: accept0_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(2))'(2'h0)), noAction);
         let x_1 <- deq_fifo0012();
@@ -9789,6 +9823,7 @@ module mkModule185#(function ActionValue#(Struct2) deq_fifoCRsInput001(),
     endrule
 
     rule accept1_001;
+        $display ("Rule fired: accept1_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 <- deq_fifoCRqInput001();
@@ -9798,6 +9833,7 @@ module mkModule185#(function ActionValue#(Struct2) deq_fifoCRsInput001(),
     endrule
 
     rule accept2_001;
+        $display ("Rule fired: accept2_001 at %t", $time);
         let x_0 = (rr_001);
         when ((x_0) == ((Bit#(2))'(2'h2)), noAction);
         let x_1 <- deq_fifoCRsInput001();
@@ -9965,11 +10001,13 @@ module mkModule188#(function ActionValue#(Struct1) deq_fifo001000(),
     Reg#(Bit#(1)) rr_0010 <- mkReg(unpack(0));
 
     rule inc_rr_0010;
+        $display ("Rule fired: inc_rr_0010 at %t", $time);
         let x_0 = (rr_0010);
         rr_0010 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_0010;
+        $display ("Rule fired: accept0_0010 at %t", $time);
         let x_0 = (rr_0010);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00102();
@@ -9979,6 +10017,7 @@ module mkModule188#(function ActionValue#(Struct1) deq_fifo001000(),
     endrule
 
     rule accept1_0010;
+        $display ("Rule fired: accept1_0010 at %t", $time);
         let x_0 = (rr_0010);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo001000();
@@ -10091,11 +10130,13 @@ module mkModule191#(function ActionValue#(Struct1) deq_fifo001100(),
     Reg#(Bit#(1)) rr_0011 <- mkReg(unpack(0));
 
     rule inc_rr_0011;
+        $display ("Rule fired: inc_rr_0011 at %t", $time);
         let x_0 = (rr_0011);
         rr_0011 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_0011;
+        $display ("Rule fired: accept0_0011 at %t", $time);
         let x_0 = (rr_0011);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo00112();
@@ -10105,6 +10146,7 @@ module mkModule191#(function ActionValue#(Struct1) deq_fifo001100(),
     endrule
 
     rule accept1_0011;
+        $display ("Rule fired: accept1_0011 at %t", $time);
         let x_0 = (rr_0011);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo001100();
@@ -12295,7 +12337,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
     function ActionValue#(Struct3) deq_fifoInput00())
     (Module201);
 
-    rule rule_in_prq_00;
+    rule
+        rule_in_prq_00;
+        $display ("Rule fired: rule_in_prq_00 at %t", $time);
         let x_0 <- deq_fifoInput00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -12317,7 +12361,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         end
     endrule
 
-    rule rule_in_prs_00;
+    rule
+        rule_in_prs_00;
+        $display ("Rule fired: rule_in_prs_00 at %t", $time);
         let x_0 <- deq_fifoInput00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -12333,7 +12379,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_6 <- enq_fifoN2I00(x_5);
     endrule
 
-    rule rule_in_crq_00;
+    rule
+        rule_in_crq_00;
+        $display ("Rule fired: rule_in_crq_00 at %t", $time);
         let x_0 <- deq_fifoInput00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -12354,7 +12402,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         end
     endrule
 
-    rule rule_in_crs_00;
+    rule
+        rule_in_crs_00;
+        $display ("Rule fired: rule_in_crs_00 at %t", $time);
         let x_0 <- deq_fifoInput00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -12368,7 +12418,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_6 <- enq_fifoN2I00(x_5);
     endrule
 
-    rule rule_in_retry_00;
+    rule
+        rule_in_retry_00;
+        $display ("Rule fired: rule_in_retry_00 at %t", $time);
         let x_0 <- getWait_00();
         when ((x_0).valid, noAction);
         Struct4 x_1 = ((x_0).data);
@@ -12380,7 +12432,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_5 <- enq_fifoN2I00(x_4);
     endrule
 
-    rule rule_in_invrs_00;
+    rule
+        rule_in_invrs_00;
+        $display ("Rule fired: rule_in_invrs_00 at %t", $time);
         let x_0 <- deq_fifoInput00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -12392,7 +12446,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_4 <- releaseMSHR_00(x_3);
     endrule
 
-    rule rule_in_rsrel_00;
+    rule
+        rule_in_rsrel_00;
+        $display ("Rule fired: rule_in_rsrel_00 at %t", $time);
         let x_0 <- getRsReady_00();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -12403,7 +12459,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_4 <- enq_fifoN2I00(x_3);
     endrule
 
-    rule rule_ir_cache_00;
+    rule
+        rule_ir_cache_00;
+        $display ("Rule fired: rule_ir_cache_00 at %t", $time);
         let x_0 <- deq_fifoN2I00();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -12412,21 +12470,27 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_3 <- enq_fifoI2L00(x_0);
     endrule
 
-    rule rule_ir_victims_00;
+    rule
+        rule_ir_victims_00;
+        $display ("Rule fired: rule_ir_victims_00 at %t", $time);
         let x_0 <- deq_fifoN2I00();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L00(x_0);
     endrule
 
-    rule rule_ir_rs_acc_00;
+    rule
+        rule_ir_rs_acc_00;
+        $display ("Rule fired: rule_ir_rs_acc_00 at %t", $time);
         let x_0 <- deq_fifoN2I00();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_00(Struct10 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_00;
+    rule
+        rule_lr_cache_00;
+        $display ("Rule fired: rule_lr_cache_00 at %t", $time);
         let x_0 <- deq_fifoI2L00();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__00__infoRsValueRq();
@@ -12435,7 +12499,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_3 <- enq_fifoL2E00(x_2);
     endrule
 
-    rule rule_lr_victims_00;
+    rule
+        rule_lr_victims_00;
+        $display ("Rule fired: rule_lr_victims_00 at %t", $time);
         let x_0 <- deq_fifoI2L00();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__00__getVictim((Bit#(1))'(1'h0));
@@ -12447,7 +12513,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_4 <- enq_fifoL2E00(x_3);
     endrule
 
-    rule rule_exec_00_000000;
+    rule
+        rule_exec_00_000000;
+        $display ("Rule fired: rule_exec_00_000000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12523,7 +12591,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_001000;
+    rule
+        rule_exec_00_001000;
+        $display ("Rule fired: rule_exec_00_001000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12599,7 +12669,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_01000;
+    rule
+        rule_exec_00_01000;
+        $display ("Rule fired: rule_exec_00_01000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12655,7 +12727,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_03000;
+    rule
+        rule_exec_00_03000;
+        $display ("Rule fired: rule_exec_00_03000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12712,7 +12786,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren00(x_20);
     endrule
 
-    rule rule_exec_00_10000;
+    rule
+        rule_exec_00_10000;
+        $display ("Rule fired: rule_exec_00_10000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12798,7 +12874,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_24 <- makeEnq_parentChildren00(x_23);
     endrule
 
-    rule rule_exec_00_11000;
+    rule
+        rule_exec_00_11000;
+        $display ("Rule fired: rule_exec_00_11000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12854,7 +12932,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_14000;
+    rule
+        rule_exec_00_14000;
+        $display ("Rule fired: rule_exec_00_14000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12911,7 +12991,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren00(x_20);
     endrule
 
-    rule rule_exec_00_15000;
+    rule
+        rule_exec_00_15000;
+        $display ("Rule fired: rule_exec_00_15000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -12964,7 +13046,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_00_25000;
+    rule
+        rule_exec_00_25000;
+        $display ("Rule fired: rule_exec_00_25000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13019,7 +13103,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren00(x_19);
     endrule
 
-    rule rule_exec_00_2600000;
+    rule
+        rule_exec_00_2600000;
+        $display ("Rule fired: rule_exec_00_2600000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13093,7 +13179,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_2601000;
+    rule
+        rule_exec_00_2601000;
+        $display ("Rule fired: rule_exec_00_2601000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13177,7 +13265,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_261000;
+    rule
+        rule_exec_00_261000;
+        $display ("Rule fired: rule_exec_00_261000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13259,7 +13349,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_27000;
+    rule
+        rule_exec_00_27000;
+        $display ("Rule fired: rule_exec_00_27000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13340,7 +13432,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_28000;
+    rule
+        rule_exec_00_28000;
+        $display ("Rule fired: rule_exec_00_28000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13395,7 +13489,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren00(x_19);
     endrule
 
-    rule rule_exec_00_290000;
+    rule
+        rule_exec_00_290000;
+        $display ("Rule fired: rule_exec_00_290000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13469,7 +13565,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_291000;
+    rule
+        rule_exec_00_291000;
+        $display ("Rule fired: rule_exec_00_291000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13551,7 +13649,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_210000;
+    rule
+        rule_exec_00_210000;
+        $display ("Rule fired: rule_exec_00_210000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13635,7 +13735,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_211000;
+    rule
+        rule_exec_00_211000;
+        $display ("Rule fired: rule_exec_00_211000 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13728,7 +13830,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_25 <- makeEnq_parentChildren00(x_24);
     endrule
 
-    rule rule_exec_00_000001;
+    rule
+        rule_exec_00_000001;
+        $display ("Rule fired: rule_exec_00_000001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13804,7 +13908,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_001001;
+    rule
+        rule_exec_00_001001;
+        $display ("Rule fired: rule_exec_00_001001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13880,7 +13986,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_01001;
+    rule
+        rule_exec_00_01001;
+        $display ("Rule fired: rule_exec_00_01001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13936,7 +14044,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_03001;
+    rule
+        rule_exec_00_03001;
+        $display ("Rule fired: rule_exec_00_03001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -13993,7 +14103,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren00(x_20);
     endrule
 
-    rule rule_exec_00_10001;
+    rule
+        rule_exec_00_10001;
+        $display ("Rule fired: rule_exec_00_10001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14079,7 +14191,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_24 <- makeEnq_parentChildren00(x_23);
     endrule
 
-    rule rule_exec_00_11001;
+    rule
+        rule_exec_00_11001;
+        $display ("Rule fired: rule_exec_00_11001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14135,7 +14249,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_14001;
+    rule
+        rule_exec_00_14001;
+        $display ("Rule fired: rule_exec_00_14001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14192,7 +14308,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren00(x_20);
     endrule
 
-    rule rule_exec_00_15001;
+    rule
+        rule_exec_00_15001;
+        $display ("Rule fired: rule_exec_00_15001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14245,7 +14363,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_00_25001;
+    rule
+        rule_exec_00_25001;
+        $display ("Rule fired: rule_exec_00_25001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14300,7 +14420,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren00(x_19);
     endrule
 
-    rule rule_exec_00_2600001;
+    rule
+        rule_exec_00_2600001;
+        $display ("Rule fired: rule_exec_00_2600001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14374,7 +14496,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_2601001;
+    rule
+        rule_exec_00_2601001;
+        $display ("Rule fired: rule_exec_00_2601001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14458,7 +14582,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_261001;
+    rule
+        rule_exec_00_261001;
+        $display ("Rule fired: rule_exec_00_261001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14540,7 +14666,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_27001;
+    rule
+        rule_exec_00_27001;
+        $display ("Rule fired: rule_exec_00_27001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14621,7 +14749,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_28001;
+    rule
+        rule_exec_00_28001;
+        $display ("Rule fired: rule_exec_00_28001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14676,7 +14806,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren00(x_19);
     endrule
 
-    rule rule_exec_00_290001;
+    rule
+        rule_exec_00_290001;
+        $display ("Rule fired: rule_exec_00_290001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14750,7 +14882,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_291001;
+    rule
+        rule_exec_00_291001;
+        $display ("Rule fired: rule_exec_00_291001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14832,7 +14966,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren00(x_21);
     endrule
 
-    rule rule_exec_00_210001;
+    rule
+        rule_exec_00_210001;
+        $display ("Rule fired: rule_exec_00_210001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -14916,7 +15052,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_211001;
+    rule
+        rule_exec_00_211001;
+        $display ("Rule fired: rule_exec_00_211001 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15009,7 +15147,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_25 <- makeEnq_parentChildren00(x_24);
     endrule
 
-    rule rule_exec_00_020;
+    rule
+        rule_exec_00_020;
+        $display ("Rule fired: rule_exec_00_020 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15115,7 +15255,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren00(x_27);
     endrule
 
-    rule rule_exec_00_021;
+    rule
+        rule_exec_00_021;
+        $display ("Rule fired: rule_exec_00_021 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15213,7 +15355,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren00(x_27);
     endrule
 
-    rule rule_exec_00_041;
+    rule
+        rule_exec_00_041;
+        $display ("Rule fired: rule_exec_00_041 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15320,7 +15464,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren00(x_27);
     endrule
 
-    rule rule_exec_00_05;
+    rule
+        rule_exec_00_05;
+        $display ("Rule fired: rule_exec_00_05 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15389,7 +15535,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_06;
+    rule
+        rule_exec_00_06;
+        $display ("Rule fired: rule_exec_00_06 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15446,7 +15594,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren00(x_20);
     endrule
 
-    rule rule_exec_00_071;
+    rule
+        rule_exec_00_071;
+        $display ("Rule fired: rule_exec_00_071 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15551,7 +15701,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren00(x_27);
     endrule
 
-    rule rule_exec_00_12;
+    rule
+        rule_exec_00_12;
+        $display ("Rule fired: rule_exec_00_12 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15646,7 +15798,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_27 <- makeEnq_parentChildren00(x_26);
     endrule
 
-    rule rule_exec_00_13;
+    rule
+        rule_exec_00_13;
+        $display ("Rule fired: rule_exec_00_13 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15717,7 +15871,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_00_161;
+    rule
+        rule_exec_00_161;
+        $display ("Rule fired: rule_exec_00_161 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15803,7 +15959,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren00(x_25);
     endrule
 
-    rule rule_exec_00_170;
+    rule
+        rule_exec_00_170;
+        $display ("Rule fired: rule_exec_00_170 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15871,7 +16029,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_171;
+    rule
+        rule_exec_00_171;
+        $display ("Rule fired: rule_exec_00_171 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15940,7 +16100,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren00(x_22);
     endrule
 
-    rule rule_exec_00_190;
+    rule
+        rule_exec_00_190;
+        $display ("Rule fired: rule_exec_00_190 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -15989,7 +16151,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         (Bool)'(False), addr : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_00_191;
+    rule
+        rule_exec_00_191;
+        $display ("Rule fired: rule_exec_00_191 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16045,7 +16209,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren00(x_20);
     endrule
 
-    rule rule_exec_00_192;
+    rule
+        rule_exec_00_192;
+        $display ("Rule fired: rule_exec_00_192 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16094,7 +16260,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         (Bool)'(False), addr : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_00_11010;
+    rule
+        rule_exec_00_11010;
+        $display ("Rule fired: rule_exec_00_11010 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16180,7 +16348,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren00(x_25);
     endrule
 
-    rule rule_exec_00_11011;
+    rule
+        rule_exec_00_11011;
+        $display ("Rule fired: rule_exec_00_11011 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16266,7 +16436,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren00(x_25);
     endrule
 
-    rule rule_exec_00_20;
+    rule
+        rule_exec_00_20;
+        $display ("Rule fired: rule_exec_00_20 at %t", $time);
         let x_0 <- victims__00__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -16302,7 +16474,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_13 <- makeEnq_parentChildren00(x_12);
     endrule
 
-    rule rule_exec_00_21;
+    rule
+        rule_exec_00_21;
+        $display ("Rule fired: rule_exec_00_21 at %t", $time);
         let x_0 <- victims__00__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -16339,7 +16513,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_13 <- makeEnq_parentChildren00(x_12);
     endrule
 
-    rule rule_exec_00_22;
+    rule
+        rule_exec_00_22;
+        $display ("Rule fired: rule_exec_00_22 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16404,7 +16580,9 @@ module mkModule201#(function Action victims__00__setVictimRq(Struct27 _),
         let x_22 <- releaseMSHR_00(x_4);
     endrule
 
-    rule rule_exec_00_23;
+    rule
+        rule_exec_00_23;
+        $display ("Rule fired: rule_exec_00_23 at %t", $time);
         let x_0 <- deq_fifoL2E00();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16497,7 +16675,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
     function ActionValue#(Struct3) deq_fifoInput000())
     (Module202);
 
-    rule rule_in_prq_000;
+    rule
+        rule_in_prq_000;
+        $display ("Rule fired: rule_in_prq_000 at %t", $time);
         let x_0 <- deq_fifoInput000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -16519,7 +16699,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         end
     endrule
 
-    rule rule_in_prs_000;
+    rule
+        rule_in_prs_000;
+        $display ("Rule fired: rule_in_prs_000 at %t", $time);
         let x_0 <- deq_fifoInput000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -16535,7 +16717,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_6 <- enq_fifoN2I000(x_5);
     endrule
 
-    rule rule_in_crq_000;
+    rule
+        rule_in_crq_000;
+        $display ("Rule fired: rule_in_crq_000 at %t", $time);
         let x_0 <- deq_fifoInput000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -16556,7 +16740,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         end
     endrule
 
-    rule rule_in_crs_000;
+    rule
+        rule_in_crs_000;
+        $display ("Rule fired: rule_in_crs_000 at %t", $time);
         let x_0 <- deq_fifoInput000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -16570,7 +16756,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_6 <- enq_fifoN2I000(x_5);
     endrule
 
-    rule rule_in_retry_000;
+    rule
+        rule_in_retry_000;
+        $display ("Rule fired: rule_in_retry_000 at %t", $time);
         let x_0 <- getWait_000();
         when ((x_0).valid, noAction);
         Struct4 x_1 = ((x_0).data);
@@ -16582,7 +16770,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_5 <- enq_fifoN2I000(x_4);
     endrule
 
-    rule rule_in_invrs_000;
+    rule
+        rule_in_invrs_000;
+        $display ("Rule fired: rule_in_invrs_000 at %t", $time);
         let x_0 <- deq_fifoInput000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -16594,7 +16784,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_4 <- releaseMSHR_000(x_3);
     endrule
 
-    rule rule_in_rsrel_000;
+    rule
+        rule_in_rsrel_000;
+        $display ("Rule fired: rule_in_rsrel_000 at %t", $time);
         let x_0 <- getRsReady_000();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -16605,7 +16797,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_4 <- enq_fifoN2I000(x_3);
     endrule
 
-    rule rule_ir_cache_000;
+    rule
+        rule_ir_cache_000;
+        $display ("Rule fired: rule_ir_cache_000 at %t", $time);
         let x_0 <- deq_fifoN2I000();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -16614,21 +16808,27 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_3 <- enq_fifoI2L000(x_0);
     endrule
 
-    rule rule_ir_victims_000;
+    rule
+        rule_ir_victims_000;
+        $display ("Rule fired: rule_ir_victims_000 at %t", $time);
         let x_0 <- deq_fifoN2I000();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L000(x_0);
     endrule
 
-    rule rule_ir_rs_acc_000;
+    rule
+        rule_ir_rs_acc_000;
+        $display ("Rule fired: rule_ir_rs_acc_000 at %t", $time);
         let x_0 <- deq_fifoN2I000();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_000(Struct10 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_000;
+    rule
+        rule_lr_cache_000;
+        $display ("Rule fired: rule_lr_cache_000 at %t", $time);
         let x_0 <- deq_fifoI2L000();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__000__infoRsValueRq();
@@ -16637,7 +16837,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_3 <- enq_fifoL2E000(x_2);
     endrule
 
-    rule rule_lr_victims_000;
+    rule
+        rule_lr_victims_000;
+        $display ("Rule fired: rule_lr_victims_000 at %t", $time);
         let x_0 <- deq_fifoI2L000();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__000__getVictim((Bit#(1))'(1'h0));
@@ -16649,7 +16851,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_4 <- enq_fifoL2E000(x_3);
     endrule
 
-    rule rule_exec_000_0000000;
+    rule
+        rule_exec_000_0000000;
+        $display ("Rule fired: rule_exec_000_0000000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16725,7 +16929,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_0010000;
+    rule
+        rule_exec_000_0010000;
+        $display ("Rule fired: rule_exec_000_0010000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16801,7 +17007,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_010000;
+    rule
+        rule_exec_000_010000;
+        $display ("Rule fired: rule_exec_000_010000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16857,7 +17065,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_030000;
+    rule
+        rule_exec_000_030000;
+        $display ("Rule fired: rule_exec_000_030000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -16914,7 +17124,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren000(x_20);
     endrule
 
-    rule rule_exec_000_100000;
+    rule
+        rule_exec_000_100000;
+        $display ("Rule fired: rule_exec_000_100000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17000,7 +17212,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_24 <- makeEnq_parentChildren000(x_23);
     endrule
 
-    rule rule_exec_000_110000;
+    rule
+        rule_exec_000_110000;
+        $display ("Rule fired: rule_exec_000_110000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17056,7 +17270,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_140000;
+    rule
+        rule_exec_000_140000;
+        $display ("Rule fired: rule_exec_000_140000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17113,7 +17329,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren000(x_20);
     endrule
 
-    rule rule_exec_000_150000;
+    rule
+        rule_exec_000_150000;
+        $display ("Rule fired: rule_exec_000_150000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17166,7 +17384,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_000_250000;
+    rule
+        rule_exec_000_250000;
+        $display ("Rule fired: rule_exec_000_250000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17221,7 +17441,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren000(x_19);
     endrule
 
-    rule rule_exec_000_26000000;
+    rule
+        rule_exec_000_26000000;
+        $display ("Rule fired: rule_exec_000_26000000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17295,7 +17517,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_26010000;
+    rule
+        rule_exec_000_26010000;
+        $display ("Rule fired: rule_exec_000_26010000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17379,7 +17603,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_2610000;
+    rule
+        rule_exec_000_2610000;
+        $display ("Rule fired: rule_exec_000_2610000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17461,7 +17687,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_270000;
+    rule
+        rule_exec_000_270000;
+        $display ("Rule fired: rule_exec_000_270000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17542,7 +17770,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_280000;
+    rule
+        rule_exec_000_280000;
+        $display ("Rule fired: rule_exec_000_280000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17597,7 +17827,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren000(x_19);
     endrule
 
-    rule rule_exec_000_2900000;
+    rule
+        rule_exec_000_2900000;
+        $display ("Rule fired: rule_exec_000_2900000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17671,7 +17903,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_2910000;
+    rule
+        rule_exec_000_2910000;
+        $display ("Rule fired: rule_exec_000_2910000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17753,7 +17987,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_2100000;
+    rule
+        rule_exec_000_2100000;
+        $display ("Rule fired: rule_exec_000_2100000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17837,7 +18073,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_2110000;
+    rule
+        rule_exec_000_2110000;
+        $display ("Rule fired: rule_exec_000_2110000 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -17930,7 +18168,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_25 <- makeEnq_parentChildren000(x_24);
     endrule
 
-    rule rule_exec_000_0000001;
+    rule
+        rule_exec_000_0000001;
+        $display ("Rule fired: rule_exec_000_0000001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18006,7 +18246,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_0010001;
+    rule
+        rule_exec_000_0010001;
+        $display ("Rule fired: rule_exec_000_0010001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18082,7 +18324,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_010001;
+    rule
+        rule_exec_000_010001;
+        $display ("Rule fired: rule_exec_000_010001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18138,7 +18382,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_030001;
+    rule
+        rule_exec_000_030001;
+        $display ("Rule fired: rule_exec_000_030001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18195,7 +18441,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren000(x_20);
     endrule
 
-    rule rule_exec_000_100001;
+    rule
+        rule_exec_000_100001;
+        $display ("Rule fired: rule_exec_000_100001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18281,7 +18529,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_24 <- makeEnq_parentChildren000(x_23);
     endrule
 
-    rule rule_exec_000_110001;
+    rule
+        rule_exec_000_110001;
+        $display ("Rule fired: rule_exec_000_110001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18337,7 +18587,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_140001;
+    rule
+        rule_exec_000_140001;
+        $display ("Rule fired: rule_exec_000_140001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18394,7 +18646,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren000(x_20);
     endrule
 
-    rule rule_exec_000_150001;
+    rule
+        rule_exec_000_150001;
+        $display ("Rule fired: rule_exec_000_150001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18447,7 +18701,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_000_250001;
+    rule
+        rule_exec_000_250001;
+        $display ("Rule fired: rule_exec_000_250001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18502,7 +18758,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren000(x_19);
     endrule
 
-    rule rule_exec_000_26000001;
+    rule
+        rule_exec_000_26000001;
+        $display ("Rule fired: rule_exec_000_26000001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18576,7 +18834,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_26010001;
+    rule
+        rule_exec_000_26010001;
+        $display ("Rule fired: rule_exec_000_26010001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18660,7 +18920,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_2610001;
+    rule
+        rule_exec_000_2610001;
+        $display ("Rule fired: rule_exec_000_2610001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18742,7 +19004,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_270001;
+    rule
+        rule_exec_000_270001;
+        $display ("Rule fired: rule_exec_000_270001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18823,7 +19087,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_280001;
+    rule
+        rule_exec_000_280001;
+        $display ("Rule fired: rule_exec_000_280001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18878,7 +19144,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren000(x_19);
     endrule
 
-    rule rule_exec_000_2900001;
+    rule
+        rule_exec_000_2900001;
+        $display ("Rule fired: rule_exec_000_2900001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -18952,7 +19220,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_2910001;
+    rule
+        rule_exec_000_2910001;
+        $display ("Rule fired: rule_exec_000_2910001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19034,7 +19304,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren000(x_21);
     endrule
 
-    rule rule_exec_000_2100001;
+    rule
+        rule_exec_000_2100001;
+        $display ("Rule fired: rule_exec_000_2100001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19118,7 +19390,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_2110001;
+    rule
+        rule_exec_000_2110001;
+        $display ("Rule fired: rule_exec_000_2110001 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19211,7 +19485,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_25 <- makeEnq_parentChildren000(x_24);
     endrule
 
-    rule rule_exec_000_020;
+    rule
+        rule_exec_000_020;
+        $display ("Rule fired: rule_exec_000_020 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19317,7 +19593,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren000(x_27);
     endrule
 
-    rule rule_exec_000_021;
+    rule
+        rule_exec_000_021;
+        $display ("Rule fired: rule_exec_000_021 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19415,7 +19693,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren000(x_27);
     endrule
 
-    rule rule_exec_000_041;
+    rule
+        rule_exec_000_041;
+        $display ("Rule fired: rule_exec_000_041 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19522,7 +19802,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren000(x_27);
     endrule
 
-    rule rule_exec_000_05;
+    rule
+        rule_exec_000_05;
+        $display ("Rule fired: rule_exec_000_05 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19591,7 +19873,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_06;
+    rule
+        rule_exec_000_06;
+        $display ("Rule fired: rule_exec_000_06 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19648,7 +19932,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren000(x_20);
     endrule
 
-    rule rule_exec_000_071;
+    rule
+        rule_exec_000_071;
+        $display ("Rule fired: rule_exec_000_071 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19753,7 +20039,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren000(x_27);
     endrule
 
-    rule rule_exec_000_12;
+    rule
+        rule_exec_000_12;
+        $display ("Rule fired: rule_exec_000_12 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19848,7 +20136,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_27 <- makeEnq_parentChildren000(x_26);
     endrule
 
-    rule rule_exec_000_13;
+    rule
+        rule_exec_000_13;
+        $display ("Rule fired: rule_exec_000_13 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -19919,7 +20209,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_000_161;
+    rule
+        rule_exec_000_161;
+        $display ("Rule fired: rule_exec_000_161 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20005,7 +20297,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren000(x_25);
     endrule
 
-    rule rule_exec_000_170;
+    rule
+        rule_exec_000_170;
+        $display ("Rule fired: rule_exec_000_170 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20073,7 +20367,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_171;
+    rule
+        rule_exec_000_171;
+        $display ("Rule fired: rule_exec_000_171 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20142,7 +20438,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren000(x_22);
     endrule
 
-    rule rule_exec_000_190;
+    rule
+        rule_exec_000_190;
+        $display ("Rule fired: rule_exec_000_190 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20191,7 +20489,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         (Bool)'(False), addr : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_000_191;
+    rule
+        rule_exec_000_191;
+        $display ("Rule fired: rule_exec_000_191 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20247,7 +20547,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren000(x_20);
     endrule
 
-    rule rule_exec_000_192;
+    rule
+        rule_exec_000_192;
+        $display ("Rule fired: rule_exec_000_192 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20296,7 +20598,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         (Bool)'(False), addr : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_000_11010;
+    rule
+        rule_exec_000_11010;
+        $display ("Rule fired: rule_exec_000_11010 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20382,7 +20686,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren000(x_25);
     endrule
 
-    rule rule_exec_000_11011;
+    rule
+        rule_exec_000_11011;
+        $display ("Rule fired: rule_exec_000_11011 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20468,7 +20774,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren000(x_25);
     endrule
 
-    rule rule_exec_000_20;
+    rule
+        rule_exec_000_20;
+        $display ("Rule fired: rule_exec_000_20 at %t", $time);
         let x_0 <- victims__000__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -20504,7 +20812,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_13 <- makeEnq_parentChildren000(x_12);
     endrule
 
-    rule rule_exec_000_21;
+    rule
+        rule_exec_000_21;
+        $display ("Rule fired: rule_exec_000_21 at %t", $time);
         let x_0 <- victims__000__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -20541,7 +20851,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_13 <- makeEnq_parentChildren000(x_12);
     endrule
 
-    rule rule_exec_000_22;
+    rule
+        rule_exec_000_22;
+        $display ("Rule fired: rule_exec_000_22 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20606,7 +20918,9 @@ module mkModule202#(function Action victims__000__setVictimRq(Struct27 _),
         let x_22 <- releaseMSHR_000(x_4);
     endrule
 
-    rule rule_exec_000_23;
+    rule
+        rule_exec_000_23;
+        $display ("Rule fired: rule_exec_000_23 at %t", $time);
         let x_0 <- deq_fifoL2E000();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20696,7 +21010,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
     function ActionValue#(Struct3) deq_fifoInput0000())
     (Module203);
 
-    rule rule_in_prq_0000;
+    rule
+        rule_in_prq_0000;
+        $display ("Rule fired: rule_in_prq_0000 at %t", $time);
         let x_0 <- deq_fifoInput0000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -20718,7 +21034,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_prs_0000;
+    rule
+        rule_in_prs_0000;
+        $display ("Rule fired: rule_in_prs_0000 at %t", $time);
         let x_0 <- deq_fifoInput0000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -20734,7 +21052,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0000(x_5);
     endrule
 
-    rule rule_in_crq_0000;
+    rule
+        rule_in_crq_0000;
+        $display ("Rule fired: rule_in_crq_0000 at %t", $time);
         let x_0 <- deq_fifoInput0000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -20755,7 +21075,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_crs_0000;
+    rule
+        rule_in_crs_0000;
+        $display ("Rule fired: rule_in_crs_0000 at %t", $time);
         let x_0 <- deq_fifoInput0000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -20769,7 +21091,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0000(x_5);
     endrule
 
-    rule rule_in_retry_0000;
+    rule
+        rule_in_retry_0000;
+        $display ("Rule fired: rule_in_retry_0000 at %t", $time);
         let x_0 <- getWait_0000();
         when ((x_0).valid, noAction);
         Struct57 x_1 = ((x_0).data);
@@ -20781,7 +21105,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_5 <- enq_fifoN2I0000(x_4);
     endrule
 
-    rule rule_in_invrs_0000;
+    rule
+        rule_in_invrs_0000;
+        $display ("Rule fired: rule_in_invrs_0000 at %t", $time);
         let x_0 <- deq_fifoInput0000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -20793,7 +21119,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_4 <- releaseMSHR_0000(x_3);
     endrule
 
-    rule rule_in_rsrel_0000;
+    rule
+        rule_in_rsrel_0000;
+        $display ("Rule fired: rule_in_rsrel_0000 at %t", $time);
         let x_0 <- getRsReady_0000();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -20804,7 +21132,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoN2I0000(x_3);
     endrule
 
-    rule rule_ir_cache_0000;
+    rule
+        rule_ir_cache_0000;
+        $display ("Rule fired: rule_ir_cache_0000 at %t", $time);
         let x_0 <- deq_fifoN2I0000();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -20813,21 +21143,27 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoI2L0000(x_0);
     endrule
 
-    rule rule_ir_victims_0000;
+    rule
+        rule_ir_victims_0000;
+        $display ("Rule fired: rule_ir_victims_0000 at %t", $time);
         let x_0 <- deq_fifoN2I0000();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L0000(x_0);
     endrule
 
-    rule rule_ir_rs_acc_0000;
+    rule
+        rule_ir_rs_acc_0000;
+        $display ("Rule fired: rule_ir_rs_acc_0000 at %t", $time);
         let x_0 <- deq_fifoN2I0000();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_0000(Struct62 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_0000;
+    rule
+        rule_lr_cache_0000;
+        $display ("Rule fired: rule_lr_cache_0000 at %t", $time);
         let x_0 <- deq_fifoI2L0000();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__0000__infoRsValueRq();
@@ -20836,7 +21172,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoL2E0000(x_2);
     endrule
 
-    rule rule_lr_victims_0000;
+    rule
+        rule_lr_victims_0000;
+        $display ("Rule fired: rule_lr_victims_0000 at %t", $time);
         let x_0 <- deq_fifoI2L0000();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__0000__getVictim((Bit#(1))'(1'h0));
@@ -20848,7 +21186,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoL2E0000(x_3);
     endrule
 
-    rule rule_exec_0000_00;
+    rule
+        rule_exec_0000_00;
+        $display ("Rule fired: rule_exec_0000_00 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20897,7 +21237,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_20 <- makeEnq_parentChildren0000(x_19);
     endrule
 
-    rule rule_exec_0000_01;
+    rule
+        rule_exec_0000_01;
+        $display ("Rule fired: rule_exec_0000_01 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -20951,7 +21293,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0000(x_22);
     endrule
 
-    rule rule_exec_0000_020;
+    rule
+        rule_exec_0000_020;
+        $display ("Rule fired: rule_exec_0000_020 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21026,7 +21370,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0000(x_25);
     endrule
 
-    rule rule_exec_0000_021;
+    rule
+        rule_exec_0000_021;
+        $display ("Rule fired: rule_exec_0000_021 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21101,7 +21447,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0000(x_25);
     endrule
 
-    rule rule_exec_0000_03;
+    rule
+        rule_exec_0000_03;
+        $display ("Rule fired: rule_exec_0000_03 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21169,7 +21517,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0000(x_22);
     endrule
 
-    rule rule_exec_0000_100;
+    rule
+        rule_exec_0000_100;
+        $display ("Rule fired: rule_exec_0000_100 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21242,7 +21592,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_24 <- makeEnq_parentChildren0000(x_23);
     endrule
 
-    rule rule_exec_0000_101;
+    rule
+        rule_exec_0000_101;
+        $display ("Rule fired: rule_exec_0000_101 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21300,7 +21652,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_22 <- makeEnq_parentChildren0000(x_21);
     endrule
 
-    rule rule_exec_0000_11;
+    rule
+        rule_exec_0000_11;
+        $display ("Rule fired: rule_exec_0000_11 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21354,7 +21708,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0000(x_22);
     endrule
 
-    rule rule_exec_0000_12;
+    rule
+        rule_exec_0000_12;
+        $display ("Rule fired: rule_exec_0000_12 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21436,7 +21792,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_27 <- makeEnq_parentChildren0000(x_26);
     endrule
 
-    rule rule_exec_0000_130;
+    rule
+        rule_exec_0000_130;
+        $display ("Rule fired: rule_exec_0000_130 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21504,7 +21862,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0000(x_22);
     endrule
 
-    rule rule_exec_0000_131;
+    rule
+        rule_exec_0000_131;
+        $display ("Rule fired: rule_exec_0000_131 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21572,7 +21932,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0000(x_22);
     endrule
 
-    rule rule_exec_0000_20;
+    rule
+        rule_exec_0000_20;
+        $display ("Rule fired: rule_exec_0000_20 at %t", $time);
         let x_0 <- victims__0000__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -21607,7 +21969,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0000(x_12);
     endrule
 
-    rule rule_exec_0000_21;
+    rule
+        rule_exec_0000_21;
+        $display ("Rule fired: rule_exec_0000_21 at %t", $time);
         let x_0 <- victims__0000__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -21641,7 +22005,9 @@ module mkModule203#(function Action victims__0000__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0000(x_12);
     endrule
 
-    rule rule_exec_0000_22;
+    rule
+        rule_exec_0000_22;
+        $display ("Rule fired: rule_exec_0000_22 at %t", $time);
         let x_0 <- deq_fifoL2E0000();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21745,7 +22111,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
     function ActionValue#(Struct3) deq_fifoInput0001())
     (Module204);
 
-    rule rule_in_prq_0001;
+    rule
+        rule_in_prq_0001;
+        $display ("Rule fired: rule_in_prq_0001 at %t", $time);
         let x_0 <- deq_fifoInput0001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -21767,7 +22135,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_prs_0001;
+    rule
+        rule_in_prs_0001;
+        $display ("Rule fired: rule_in_prs_0001 at %t", $time);
         let x_0 <- deq_fifoInput0001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -21783,7 +22153,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0001(x_5);
     endrule
 
-    rule rule_in_crq_0001;
+    rule
+        rule_in_crq_0001;
+        $display ("Rule fired: rule_in_crq_0001 at %t", $time);
         let x_0 <- deq_fifoInput0001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -21804,7 +22176,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_crs_0001;
+    rule
+        rule_in_crs_0001;
+        $display ("Rule fired: rule_in_crs_0001 at %t", $time);
         let x_0 <- deq_fifoInput0001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -21818,7 +22192,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0001(x_5);
     endrule
 
-    rule rule_in_retry_0001;
+    rule
+        rule_in_retry_0001;
+        $display ("Rule fired: rule_in_retry_0001 at %t", $time);
         let x_0 <- getWait_0001();
         when ((x_0).valid, noAction);
         Struct57 x_1 = ((x_0).data);
@@ -21830,7 +22206,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_5 <- enq_fifoN2I0001(x_4);
     endrule
 
-    rule rule_in_invrs_0001;
+    rule
+        rule_in_invrs_0001;
+        $display ("Rule fired: rule_in_invrs_0001 at %t", $time);
         let x_0 <- deq_fifoInput0001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -21842,7 +22220,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_4 <- releaseMSHR_0001(x_3);
     endrule
 
-    rule rule_in_rsrel_0001;
+    rule
+        rule_in_rsrel_0001;
+        $display ("Rule fired: rule_in_rsrel_0001 at %t", $time);
         let x_0 <- getRsReady_0001();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -21853,7 +22233,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoN2I0001(x_3);
     endrule
 
-    rule rule_ir_cache_0001;
+    rule
+        rule_ir_cache_0001;
+        $display ("Rule fired: rule_ir_cache_0001 at %t", $time);
         let x_0 <- deq_fifoN2I0001();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -21862,21 +22244,27 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoI2L0001(x_0);
     endrule
 
-    rule rule_ir_victims_0001;
+    rule
+        rule_ir_victims_0001;
+        $display ("Rule fired: rule_ir_victims_0001 at %t", $time);
         let x_0 <- deq_fifoN2I0001();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L0001(x_0);
     endrule
 
-    rule rule_ir_rs_acc_0001;
+    rule
+        rule_ir_rs_acc_0001;
+        $display ("Rule fired: rule_ir_rs_acc_0001 at %t", $time);
         let x_0 <- deq_fifoN2I0001();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_0001(Struct62 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_0001;
+    rule
+        rule_lr_cache_0001;
+        $display ("Rule fired: rule_lr_cache_0001 at %t", $time);
         let x_0 <- deq_fifoI2L0001();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__0001__infoRsValueRq();
@@ -21885,7 +22273,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoL2E0001(x_2);
     endrule
 
-    rule rule_lr_victims_0001;
+    rule
+        rule_lr_victims_0001;
+        $display ("Rule fired: rule_lr_victims_0001 at %t", $time);
         let x_0 <- deq_fifoI2L0001();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__0001__getVictim((Bit#(1))'(1'h0));
@@ -21897,7 +22287,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoL2E0001(x_3);
     endrule
 
-    rule rule_exec_0001_00;
+    rule
+        rule_exec_0001_00;
+        $display ("Rule fired: rule_exec_0001_00 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -21946,7 +22338,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_20 <- makeEnq_parentChildren0001(x_19);
     endrule
 
-    rule rule_exec_0001_01;
+    rule
+        rule_exec_0001_01;
+        $display ("Rule fired: rule_exec_0001_01 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22000,7 +22394,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0001(x_22);
     endrule
 
-    rule rule_exec_0001_020;
+    rule
+        rule_exec_0001_020;
+        $display ("Rule fired: rule_exec_0001_020 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22075,7 +22471,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0001(x_25);
     endrule
 
-    rule rule_exec_0001_021;
+    rule
+        rule_exec_0001_021;
+        $display ("Rule fired: rule_exec_0001_021 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22150,7 +22548,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0001(x_25);
     endrule
 
-    rule rule_exec_0001_03;
+    rule
+        rule_exec_0001_03;
+        $display ("Rule fired: rule_exec_0001_03 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22218,7 +22618,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0001(x_22);
     endrule
 
-    rule rule_exec_0001_100;
+    rule
+        rule_exec_0001_100;
+        $display ("Rule fired: rule_exec_0001_100 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22291,7 +22693,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_24 <- makeEnq_parentChildren0001(x_23);
     endrule
 
-    rule rule_exec_0001_101;
+    rule
+        rule_exec_0001_101;
+        $display ("Rule fired: rule_exec_0001_101 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22349,7 +22753,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_22 <- makeEnq_parentChildren0001(x_21);
     endrule
 
-    rule rule_exec_0001_11;
+    rule
+        rule_exec_0001_11;
+        $display ("Rule fired: rule_exec_0001_11 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22403,7 +22809,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0001(x_22);
     endrule
 
-    rule rule_exec_0001_12;
+    rule
+        rule_exec_0001_12;
+        $display ("Rule fired: rule_exec_0001_12 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22485,7 +22893,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_27 <- makeEnq_parentChildren0001(x_26);
     endrule
 
-    rule rule_exec_0001_130;
+    rule
+        rule_exec_0001_130;
+        $display ("Rule fired: rule_exec_0001_130 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22553,7 +22963,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0001(x_22);
     endrule
 
-    rule rule_exec_0001_131;
+    rule
+        rule_exec_0001_131;
+        $display ("Rule fired: rule_exec_0001_131 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22621,7 +23033,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0001(x_22);
     endrule
 
-    rule rule_exec_0001_20;
+    rule
+        rule_exec_0001_20;
+        $display ("Rule fired: rule_exec_0001_20 at %t", $time);
         let x_0 <- victims__0001__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -22656,7 +23070,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0001(x_12);
     endrule
 
-    rule rule_exec_0001_21;
+    rule
+        rule_exec_0001_21;
+        $display ("Rule fired: rule_exec_0001_21 at %t", $time);
         let x_0 <- victims__0001__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -22690,7 +23106,9 @@ module mkModule204#(function Action victims__0001__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0001(x_12);
     endrule
 
-    rule rule_exec_0001_22;
+    rule
+        rule_exec_0001_22;
+        $display ("Rule fired: rule_exec_0001_22 at %t", $time);
         let x_0 <- deq_fifoL2E0001();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -22797,7 +23215,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
     function ActionValue#(Struct3) deq_fifoInput001())
     (Module205);
 
-    rule rule_in_prq_001;
+    rule
+        rule_in_prq_001;
+        $display ("Rule fired: rule_in_prq_001 at %t", $time);
         let x_0 <- deq_fifoInput001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -22819,7 +23239,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         end
     endrule
 
-    rule rule_in_prs_001;
+    rule
+        rule_in_prs_001;
+        $display ("Rule fired: rule_in_prs_001 at %t", $time);
         let x_0 <- deq_fifoInput001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -22835,7 +23257,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_6 <- enq_fifoN2I001(x_5);
     endrule
 
-    rule rule_in_crq_001;
+    rule
+        rule_in_crq_001;
+        $display ("Rule fired: rule_in_crq_001 at %t", $time);
         let x_0 <- deq_fifoInput001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -22856,7 +23280,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         end
     endrule
 
-    rule rule_in_crs_001;
+    rule
+        rule_in_crs_001;
+        $display ("Rule fired: rule_in_crs_001 at %t", $time);
         let x_0 <- deq_fifoInput001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -22870,7 +23296,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_6 <- enq_fifoN2I001(x_5);
     endrule
 
-    rule rule_in_retry_001;
+    rule
+        rule_in_retry_001;
+        $display ("Rule fired: rule_in_retry_001 at %t", $time);
         let x_0 <- getWait_001();
         when ((x_0).valid, noAction);
         Struct4 x_1 = ((x_0).data);
@@ -22882,7 +23310,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_5 <- enq_fifoN2I001(x_4);
     endrule
 
-    rule rule_in_invrs_001;
+    rule
+        rule_in_invrs_001;
+        $display ("Rule fired: rule_in_invrs_001 at %t", $time);
         let x_0 <- deq_fifoInput001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -22894,7 +23324,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_4 <- releaseMSHR_001(x_3);
     endrule
 
-    rule rule_in_rsrel_001;
+    rule
+        rule_in_rsrel_001;
+        $display ("Rule fired: rule_in_rsrel_001 at %t", $time);
         let x_0 <- getRsReady_001();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -22905,7 +23337,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_4 <- enq_fifoN2I001(x_3);
     endrule
 
-    rule rule_ir_cache_001;
+    rule
+        rule_ir_cache_001;
+        $display ("Rule fired: rule_ir_cache_001 at %t", $time);
         let x_0 <- deq_fifoN2I001();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -22914,21 +23348,27 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_3 <- enq_fifoI2L001(x_0);
     endrule
 
-    rule rule_ir_victims_001;
+    rule
+        rule_ir_victims_001;
+        $display ("Rule fired: rule_ir_victims_001 at %t", $time);
         let x_0 <- deq_fifoN2I001();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L001(x_0);
     endrule
 
-    rule rule_ir_rs_acc_001;
+    rule
+        rule_ir_rs_acc_001;
+        $display ("Rule fired: rule_ir_rs_acc_001 at %t", $time);
         let x_0 <- deq_fifoN2I001();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_001(Struct10 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_001;
+    rule
+        rule_lr_cache_001;
+        $display ("Rule fired: rule_lr_cache_001 at %t", $time);
         let x_0 <- deq_fifoI2L001();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__001__infoRsValueRq();
@@ -22937,7 +23377,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_3 <- enq_fifoL2E001(x_2);
     endrule
 
-    rule rule_lr_victims_001;
+    rule
+        rule_lr_victims_001;
+        $display ("Rule fired: rule_lr_victims_001 at %t", $time);
         let x_0 <- deq_fifoI2L001();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__001__getVictim((Bit#(1))'(1'h0));
@@ -22949,7 +23391,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_4 <- enq_fifoL2E001(x_3);
     endrule
 
-    rule rule_exec_001_0000010;
+    rule
+        rule_exec_001_0000010;
+        $display ("Rule fired: rule_exec_001_0000010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23025,7 +23469,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_0010010;
+    rule
+        rule_exec_001_0010010;
+        $display ("Rule fired: rule_exec_001_0010010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23101,7 +23547,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_010010;
+    rule
+        rule_exec_001_010010;
+        $display ("Rule fired: rule_exec_001_010010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23157,7 +23605,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_030010;
+    rule
+        rule_exec_001_030010;
+        $display ("Rule fired: rule_exec_001_030010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23214,7 +23664,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren001(x_20);
     endrule
 
-    rule rule_exec_001_100010;
+    rule
+        rule_exec_001_100010;
+        $display ("Rule fired: rule_exec_001_100010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23300,7 +23752,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_24 <- makeEnq_parentChildren001(x_23);
     endrule
 
-    rule rule_exec_001_110010;
+    rule
+        rule_exec_001_110010;
+        $display ("Rule fired: rule_exec_001_110010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23356,7 +23810,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_140010;
+    rule
+        rule_exec_001_140010;
+        $display ("Rule fired: rule_exec_001_140010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23413,7 +23869,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren001(x_20);
     endrule
 
-    rule rule_exec_001_150010;
+    rule
+        rule_exec_001_150010;
+        $display ("Rule fired: rule_exec_001_150010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23466,7 +23924,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_001_250010;
+    rule
+        rule_exec_001_250010;
+        $display ("Rule fired: rule_exec_001_250010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23521,7 +23981,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren001(x_19);
     endrule
 
-    rule rule_exec_001_26000010;
+    rule
+        rule_exec_001_26000010;
+        $display ("Rule fired: rule_exec_001_26000010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23595,7 +24057,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_26010010;
+    rule
+        rule_exec_001_26010010;
+        $display ("Rule fired: rule_exec_001_26010010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23679,7 +24143,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_2610010;
+    rule
+        rule_exec_001_2610010;
+        $display ("Rule fired: rule_exec_001_2610010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23761,7 +24227,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_270010;
+    rule
+        rule_exec_001_270010;
+        $display ("Rule fired: rule_exec_001_270010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23842,7 +24310,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_280010;
+    rule
+        rule_exec_001_280010;
+        $display ("Rule fired: rule_exec_001_280010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23897,7 +24367,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren001(x_19);
     endrule
 
-    rule rule_exec_001_2900010;
+    rule
+        rule_exec_001_2900010;
+        $display ("Rule fired: rule_exec_001_2900010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -23971,7 +24443,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_2910010;
+    rule
+        rule_exec_001_2910010;
+        $display ("Rule fired: rule_exec_001_2910010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24053,7 +24527,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_2100010;
+    rule
+        rule_exec_001_2100010;
+        $display ("Rule fired: rule_exec_001_2100010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24137,7 +24613,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_2110010;
+    rule
+        rule_exec_001_2110010;
+        $display ("Rule fired: rule_exec_001_2110010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24230,7 +24708,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_25 <- makeEnq_parentChildren001(x_24);
     endrule
 
-    rule rule_exec_001_0000011;
+    rule
+        rule_exec_001_0000011;
+        $display ("Rule fired: rule_exec_001_0000011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24306,7 +24786,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_0010011;
+    rule
+        rule_exec_001_0010011;
+        $display ("Rule fired: rule_exec_001_0010011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24382,7 +24864,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_010011;
+    rule
+        rule_exec_001_010011;
+        $display ("Rule fired: rule_exec_001_010011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24438,7 +24922,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_030011;
+    rule
+        rule_exec_001_030011;
+        $display ("Rule fired: rule_exec_001_030011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24495,7 +24981,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren001(x_20);
     endrule
 
-    rule rule_exec_001_100011;
+    rule
+        rule_exec_001_100011;
+        $display ("Rule fired: rule_exec_001_100011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24581,7 +25069,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_24 <- makeEnq_parentChildren001(x_23);
     endrule
 
-    rule rule_exec_001_110011;
+    rule
+        rule_exec_001_110011;
+        $display ("Rule fired: rule_exec_001_110011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24637,7 +25127,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_140011;
+    rule
+        rule_exec_001_140011;
+        $display ("Rule fired: rule_exec_001_140011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24694,7 +25186,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren001(x_20);
     endrule
 
-    rule rule_exec_001_150011;
+    rule
+        rule_exec_001_150011;
+        $display ("Rule fired: rule_exec_001_150011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24747,7 +25241,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_001_250011;
+    rule
+        rule_exec_001_250011;
+        $display ("Rule fired: rule_exec_001_250011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24802,7 +25298,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren001(x_19);
     endrule
 
-    rule rule_exec_001_26000011;
+    rule
+        rule_exec_001_26000011;
+        $display ("Rule fired: rule_exec_001_26000011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24876,7 +25374,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_26010011;
+    rule
+        rule_exec_001_26010011;
+        $display ("Rule fired: rule_exec_001_26010011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -24960,7 +25460,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_2610011;
+    rule
+        rule_exec_001_2610011;
+        $display ("Rule fired: rule_exec_001_2610011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25042,7 +25544,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_270011;
+    rule
+        rule_exec_001_270011;
+        $display ("Rule fired: rule_exec_001_270011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25123,7 +25627,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_280011;
+    rule
+        rule_exec_001_280011;
+        $display ("Rule fired: rule_exec_001_280011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25178,7 +25684,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_20 <- makeEnq_parentChildren001(x_19);
     endrule
 
-    rule rule_exec_001_2900011;
+    rule
+        rule_exec_001_2900011;
+        $display ("Rule fired: rule_exec_001_2900011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25252,7 +25760,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_2910011;
+    rule
+        rule_exec_001_2910011;
+        $display ("Rule fired: rule_exec_001_2910011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25334,7 +25844,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- makeEnq_parentChildren001(x_21);
     endrule
 
-    rule rule_exec_001_2100011;
+    rule
+        rule_exec_001_2100011;
+        $display ("Rule fired: rule_exec_001_2100011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25418,7 +25930,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_2110011;
+    rule
+        rule_exec_001_2110011;
+        $display ("Rule fired: rule_exec_001_2110011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25511,7 +26025,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_25 <- makeEnq_parentChildren001(x_24);
     endrule
 
-    rule rule_exec_001_020;
+    rule
+        rule_exec_001_020;
+        $display ("Rule fired: rule_exec_001_020 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25617,7 +26133,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren001(x_27);
     endrule
 
-    rule rule_exec_001_021;
+    rule
+        rule_exec_001_021;
+        $display ("Rule fired: rule_exec_001_021 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25715,7 +26233,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren001(x_27);
     endrule
 
-    rule rule_exec_001_041;
+    rule
+        rule_exec_001_041;
+        $display ("Rule fired: rule_exec_001_041 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25822,7 +26342,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren001(x_27);
     endrule
 
-    rule rule_exec_001_05;
+    rule
+        rule_exec_001_05;
+        $display ("Rule fired: rule_exec_001_05 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25891,7 +26413,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_06;
+    rule
+        rule_exec_001_06;
+        $display ("Rule fired: rule_exec_001_06 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -25948,7 +26472,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren001(x_20);
     endrule
 
-    rule rule_exec_001_071;
+    rule
+        rule_exec_001_071;
+        $display ("Rule fired: rule_exec_001_071 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26053,7 +26579,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_28 <- makeEnq_parentChildren001(x_27);
     endrule
 
-    rule rule_exec_001_12;
+    rule
+        rule_exec_001_12;
+        $display ("Rule fired: rule_exec_001_12 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26148,7 +26676,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_27 <- makeEnq_parentChildren001(x_26);
     endrule
 
-    rule rule_exec_001_13;
+    rule
+        rule_exec_001_13;
+        $display ("Rule fired: rule_exec_001_13 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26219,7 +26749,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_001_161;
+    rule
+        rule_exec_001_161;
+        $display ("Rule fired: rule_exec_001_161 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26305,7 +26837,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren001(x_25);
     endrule
 
-    rule rule_exec_001_170;
+    rule
+        rule_exec_001_170;
+        $display ("Rule fired: rule_exec_001_170 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26373,7 +26907,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_171;
+    rule
+        rule_exec_001_171;
+        $display ("Rule fired: rule_exec_001_171 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26442,7 +26978,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_23 <- makeEnq_parentChildren001(x_22);
     endrule
 
-    rule rule_exec_001_190;
+    rule
+        rule_exec_001_190;
+        $display ("Rule fired: rule_exec_001_190 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26491,7 +27029,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         (Bool)'(False), addr : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_001_191;
+    rule
+        rule_exec_001_191;
+        $display ("Rule fired: rule_exec_001_191 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26547,7 +27087,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_21 <- makeEnq_parentChildren001(x_20);
     endrule
 
-    rule rule_exec_001_192;
+    rule
+        rule_exec_001_192;
+        $display ("Rule fired: rule_exec_001_192 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26596,7 +27138,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         (Bool)'(False), addr : (x_15).addr, value : unpack(0)}});
     endrule
 
-    rule rule_exec_001_11010;
+    rule
+        rule_exec_001_11010;
+        $display ("Rule fired: rule_exec_001_11010 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26682,7 +27226,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren001(x_25);
     endrule
 
-    rule rule_exec_001_11011;
+    rule
+        rule_exec_001_11011;
+        $display ("Rule fired: rule_exec_001_11011 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26768,7 +27314,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_26 <- makeEnq_parentChildren001(x_25);
     endrule
 
-    rule rule_exec_001_20;
+    rule
+        rule_exec_001_20;
+        $display ("Rule fired: rule_exec_001_20 at %t", $time);
         let x_0 <- victims__001__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -26804,7 +27352,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_13 <- makeEnq_parentChildren001(x_12);
     endrule
 
-    rule rule_exec_001_21;
+    rule
+        rule_exec_001_21;
+        $display ("Rule fired: rule_exec_001_21 at %t", $time);
         let x_0 <- victims__001__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -26841,7 +27391,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_13 <- makeEnq_parentChildren001(x_12);
     endrule
 
-    rule rule_exec_001_22;
+    rule
+        rule_exec_001_22;
+        $display ("Rule fired: rule_exec_001_22 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26906,7 +27458,9 @@ module mkModule205#(function Action victims__001__setVictimRq(Struct27 _),
         let x_22 <- releaseMSHR_001(x_4);
     endrule
 
-    rule rule_exec_001_23;
+    rule
+        rule_exec_001_23;
+        $display ("Rule fired: rule_exec_001_23 at %t", $time);
         let x_0 <- deq_fifoL2E001();
         Struct7 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -26996,7 +27550,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
     function ActionValue#(Struct3) deq_fifoInput0010())
     (Module206);
 
-    rule rule_in_prq_0010;
+    rule
+        rule_in_prq_0010;
+        $display ("Rule fired: rule_in_prq_0010 at %t", $time);
         let x_0 <- deq_fifoInput0010();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -27018,7 +27574,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_prs_0010;
+    rule
+        rule_in_prs_0010;
+        $display ("Rule fired: rule_in_prs_0010 at %t", $time);
         let x_0 <- deq_fifoInput0010();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -27034,7 +27592,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0010(x_5);
     endrule
 
-    rule rule_in_crq_0010;
+    rule
+        rule_in_crq_0010;
+        $display ("Rule fired: rule_in_crq_0010 at %t", $time);
         let x_0 <- deq_fifoInput0010();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -27055,7 +27615,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_crs_0010;
+    rule
+        rule_in_crs_0010;
+        $display ("Rule fired: rule_in_crs_0010 at %t", $time);
         let x_0 <- deq_fifoInput0010();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -27069,7 +27631,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0010(x_5);
     endrule
 
-    rule rule_in_retry_0010;
+    rule
+        rule_in_retry_0010;
+        $display ("Rule fired: rule_in_retry_0010 at %t", $time);
         let x_0 <- getWait_0010();
         when ((x_0).valid, noAction);
         Struct57 x_1 = ((x_0).data);
@@ -27081,7 +27645,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_5 <- enq_fifoN2I0010(x_4);
     endrule
 
-    rule rule_in_invrs_0010;
+    rule
+        rule_in_invrs_0010;
+        $display ("Rule fired: rule_in_invrs_0010 at %t", $time);
         let x_0 <- deq_fifoInput0010();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -27093,7 +27659,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_4 <- releaseMSHR_0010(x_3);
     endrule
 
-    rule rule_in_rsrel_0010;
+    rule
+        rule_in_rsrel_0010;
+        $display ("Rule fired: rule_in_rsrel_0010 at %t", $time);
         let x_0 <- getRsReady_0010();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -27104,7 +27672,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoN2I0010(x_3);
     endrule
 
-    rule rule_ir_cache_0010;
+    rule
+        rule_ir_cache_0010;
+        $display ("Rule fired: rule_ir_cache_0010 at %t", $time);
         let x_0 <- deq_fifoN2I0010();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -27113,21 +27683,27 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoI2L0010(x_0);
     endrule
 
-    rule rule_ir_victims_0010;
+    rule
+        rule_ir_victims_0010;
+        $display ("Rule fired: rule_ir_victims_0010 at %t", $time);
         let x_0 <- deq_fifoN2I0010();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L0010(x_0);
     endrule
 
-    rule rule_ir_rs_acc_0010;
+    rule
+        rule_ir_rs_acc_0010;
+        $display ("Rule fired: rule_ir_rs_acc_0010 at %t", $time);
         let x_0 <- deq_fifoN2I0010();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_0010(Struct62 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_0010;
+    rule
+        rule_lr_cache_0010;
+        $display ("Rule fired: rule_lr_cache_0010 at %t", $time);
         let x_0 <- deq_fifoI2L0010();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__0010__infoRsValueRq();
@@ -27136,7 +27712,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoL2E0010(x_2);
     endrule
 
-    rule rule_lr_victims_0010;
+    rule
+        rule_lr_victims_0010;
+        $display ("Rule fired: rule_lr_victims_0010 at %t", $time);
         let x_0 <- deq_fifoI2L0010();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__0010__getVictim((Bit#(1))'(1'h0));
@@ -27148,7 +27726,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoL2E0010(x_3);
     endrule
 
-    rule rule_exec_0010_00;
+    rule
+        rule_exec_0010_00;
+        $display ("Rule fired: rule_exec_0010_00 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27197,7 +27777,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_20 <- makeEnq_parentChildren0010(x_19);
     endrule
 
-    rule rule_exec_0010_01;
+    rule
+        rule_exec_0010_01;
+        $display ("Rule fired: rule_exec_0010_01 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27251,7 +27833,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0010(x_22);
     endrule
 
-    rule rule_exec_0010_020;
+    rule
+        rule_exec_0010_020;
+        $display ("Rule fired: rule_exec_0010_020 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27326,7 +27910,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0010(x_25);
     endrule
 
-    rule rule_exec_0010_021;
+    rule
+        rule_exec_0010_021;
+        $display ("Rule fired: rule_exec_0010_021 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27401,7 +27987,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0010(x_25);
     endrule
 
-    rule rule_exec_0010_03;
+    rule
+        rule_exec_0010_03;
+        $display ("Rule fired: rule_exec_0010_03 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27469,7 +28057,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0010(x_22);
     endrule
 
-    rule rule_exec_0010_100;
+    rule
+        rule_exec_0010_100;
+        $display ("Rule fired: rule_exec_0010_100 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27542,7 +28132,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_24 <- makeEnq_parentChildren0010(x_23);
     endrule
 
-    rule rule_exec_0010_101;
+    rule
+        rule_exec_0010_101;
+        $display ("Rule fired: rule_exec_0010_101 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27600,7 +28192,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_22 <- makeEnq_parentChildren0010(x_21);
     endrule
 
-    rule rule_exec_0010_11;
+    rule
+        rule_exec_0010_11;
+        $display ("Rule fired: rule_exec_0010_11 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27654,7 +28248,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0010(x_22);
     endrule
 
-    rule rule_exec_0010_12;
+    rule
+        rule_exec_0010_12;
+        $display ("Rule fired: rule_exec_0010_12 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27736,7 +28332,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_27 <- makeEnq_parentChildren0010(x_26);
     endrule
 
-    rule rule_exec_0010_130;
+    rule
+        rule_exec_0010_130;
+        $display ("Rule fired: rule_exec_0010_130 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27804,7 +28402,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0010(x_22);
     endrule
 
-    rule rule_exec_0010_131;
+    rule
+        rule_exec_0010_131;
+        $display ("Rule fired: rule_exec_0010_131 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -27872,7 +28472,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0010(x_22);
     endrule
 
-    rule rule_exec_0010_20;
+    rule
+        rule_exec_0010_20;
+        $display ("Rule fired: rule_exec_0010_20 at %t", $time);
         let x_0 <- victims__0010__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -27907,7 +28509,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0010(x_12);
     endrule
 
-    rule rule_exec_0010_21;
+    rule
+        rule_exec_0010_21;
+        $display ("Rule fired: rule_exec_0010_21 at %t", $time);
         let x_0 <- victims__0010__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -27941,7 +28545,9 @@ module mkModule206#(function Action victims__0010__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0010(x_12);
     endrule
 
-    rule rule_exec_0010_22;
+    rule
+        rule_exec_0010_22;
+        $display ("Rule fired: rule_exec_0010_22 at %t", $time);
         let x_0 <- deq_fifoL2E0010();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28045,7 +28651,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
     function ActionValue#(Struct3) deq_fifoInput0011())
     (Module207);
 
-    rule rule_in_prq_0011;
+    rule
+        rule_in_prq_0011;
+        $display ("Rule fired: rule_in_prq_0011 at %t", $time);
         let x_0 <- deq_fifoInput0011();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -28067,7 +28675,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_prs_0011;
+    rule
+        rule_in_prs_0011;
+        $display ("Rule fired: rule_in_prs_0011 at %t", $time);
         let x_0 <- deq_fifoInput0011();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -28083,7 +28693,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0011(x_5);
     endrule
 
-    rule rule_in_crq_0011;
+    rule
+        rule_in_crq_0011;
+        $display ("Rule fired: rule_in_crq_0011 at %t", $time);
         let x_0 <- deq_fifoInput0011();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -28104,7 +28716,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         end
     endrule
 
-    rule rule_in_crs_0011;
+    rule
+        rule_in_crs_0011;
+        $display ("Rule fired: rule_in_crs_0011 at %t", $time);
         let x_0 <- deq_fifoInput0011();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -28118,7 +28732,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_6 <- enq_fifoN2I0011(x_5);
     endrule
 
-    rule rule_in_retry_0011;
+    rule
+        rule_in_retry_0011;
+        $display ("Rule fired: rule_in_retry_0011 at %t", $time);
         let x_0 <- getWait_0011();
         when ((x_0).valid, noAction);
         Struct57 x_1 = ((x_0).data);
@@ -28130,7 +28746,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_5 <- enq_fifoN2I0011(x_4);
     endrule
 
-    rule rule_in_invrs_0011;
+    rule
+        rule_in_invrs_0011;
+        $display ("Rule fired: rule_in_invrs_0011 at %t", $time);
         let x_0 <- deq_fifoInput0011();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -28142,7 +28760,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_4 <- releaseMSHR_0011(x_3);
     endrule
 
-    rule rule_in_rsrel_0011;
+    rule
+        rule_in_rsrel_0011;
+        $display ("Rule fired: rule_in_rsrel_0011 at %t", $time);
         let x_0 <- getRsReady_0011();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
@@ -28153,7 +28773,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoN2I0011(x_3);
     endrule
 
-    rule rule_ir_cache_0011;
+    rule
+        rule_ir_cache_0011;
+        $display ("Rule fired: rule_ir_cache_0011 at %t", $time);
         let x_0 <- deq_fifoN2I0011();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
@@ -28162,21 +28784,27 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoI2L0011(x_0);
     endrule
 
-    rule rule_ir_victims_0011;
+    rule
+        rule_ir_victims_0011;
+        $display ("Rule fired: rule_ir_victims_0011 at %t", $time);
         let x_0 <- deq_fifoN2I0011();
         when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L0011(x_0);
     endrule
 
-    rule rule_ir_rs_acc_0011;
+    rule
+        rule_ir_rs_acc_0011;
+        $display ("Rule fired: rule_ir_rs_acc_0011 at %t", $time);
         let x_0 <- deq_fifoN2I0011();
         when ((x_0).ir_is_rs_acc, noAction);
         let x_1 <- addRs_0011(Struct62 {r_id : (x_0).ir_mshr_id, r_midx :
         ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
-    rule rule_lr_cache_0011;
+    rule
+        rule_lr_cache_0011;
+        $display ("Rule fired: rule_lr_cache_0011 at %t", $time);
         let x_0 <- deq_fifoI2L0011();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__0011__infoRsValueRq();
@@ -28185,7 +28813,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_3 <- enq_fifoL2E0011(x_2);
     endrule
 
-    rule rule_lr_victims_0011;
+    rule
+        rule_lr_victims_0011;
+        $display ("Rule fired: rule_lr_victims_0011 at %t", $time);
         let x_0 <- deq_fifoI2L0011();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- victims__0011__getVictim((Bit#(1))'(1'h0));
@@ -28197,7 +28827,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_4 <- enq_fifoL2E0011(x_3);
     endrule
 
-    rule rule_exec_0011_00;
+    rule
+        rule_exec_0011_00;
+        $display ("Rule fired: rule_exec_0011_00 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28246,7 +28878,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_20 <- makeEnq_parentChildren0011(x_19);
     endrule
 
-    rule rule_exec_0011_01;
+    rule
+        rule_exec_0011_01;
+        $display ("Rule fired: rule_exec_0011_01 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28300,7 +28934,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0011(x_22);
     endrule
 
-    rule rule_exec_0011_020;
+    rule
+        rule_exec_0011_020;
+        $display ("Rule fired: rule_exec_0011_020 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28375,7 +29011,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0011(x_25);
     endrule
 
-    rule rule_exec_0011_021;
+    rule
+        rule_exec_0011_021;
+        $display ("Rule fired: rule_exec_0011_021 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28450,7 +29088,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_26 <- makeEnq_parentChildren0011(x_25);
     endrule
 
-    rule rule_exec_0011_03;
+    rule
+        rule_exec_0011_03;
+        $display ("Rule fired: rule_exec_0011_03 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28518,7 +29158,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0011(x_22);
     endrule
 
-    rule rule_exec_0011_100;
+    rule
+        rule_exec_0011_100;
+        $display ("Rule fired: rule_exec_0011_100 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28591,7 +29233,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_24 <- makeEnq_parentChildren0011(x_23);
     endrule
 
-    rule rule_exec_0011_101;
+    rule
+        rule_exec_0011_101;
+        $display ("Rule fired: rule_exec_0011_101 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28649,7 +29293,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_22 <- makeEnq_parentChildren0011(x_21);
     endrule
 
-    rule rule_exec_0011_11;
+    rule
+        rule_exec_0011_11;
+        $display ("Rule fired: rule_exec_0011_11 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28703,7 +29349,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0011(x_22);
     endrule
 
-    rule rule_exec_0011_12;
+    rule
+        rule_exec_0011_12;
+        $display ("Rule fired: rule_exec_0011_12 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28785,7 +29433,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_27 <- makeEnq_parentChildren0011(x_26);
     endrule
 
-    rule rule_exec_0011_130;
+    rule
+        rule_exec_0011_130;
+        $display ("Rule fired: rule_exec_0011_130 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28853,7 +29503,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0011(x_22);
     endrule
 
-    rule rule_exec_0011_131;
+    rule
+        rule_exec_0011_131;
+        $display ("Rule fired: rule_exec_0011_131 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -28921,7 +29573,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_23 <- makeEnq_parentChildren0011(x_22);
     endrule
 
-    rule rule_exec_0011_20;
+    rule
+        rule_exec_0011_20;
+        $display ("Rule fired: rule_exec_0011_20 at %t", $time);
         let x_0 <- victims__0011__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -28956,7 +29610,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0011(x_12);
     endrule
 
-    rule rule_exec_0011_21;
+    rule
+        rule_exec_0011_21;
+        $display ("Rule fired: rule_exec_0011_21 at %t", $time);
         let x_0 <- victims__0011__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct13 x_2 = ((x_0).victim_info);
@@ -28990,7 +29646,9 @@ module mkModule207#(function Action victims__0011__setVictimRq(Struct70 _),
         let x_13 <- makeEnq_parentChildren0011(x_12);
     endrule
 
-    rule rule_exec_0011_22;
+    rule
+        rule_exec_0011_22;
+        $display ("Rule fired: rule_exec_0011_22 at %t", $time);
         let x_0 <- deq_fifoL2E0011();
         Struct59 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);

@@ -6,6 +6,7 @@ import FIFOF::*;
 import LFSR::*;
 
 import HCC::*;
+import HCCIfc::*;
 import HCCWrapper::*;
 import HCCTypes::*;
 import HMemBank::*;

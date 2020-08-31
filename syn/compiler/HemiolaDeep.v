@@ -770,7 +770,7 @@ Ltac renote_MsgOuts :=
         instantiate (1:= HMsgsOutDown _ _); simpl;
         instantiate (1:= HEExp _ _); simpl; renote_eexp
       end
-    | _ => idtac "FIXME: [renote_MsgOuts]"
+    | _ => idtac "Error: [renote_MsgOuts] not defined for:"; idtac t
     end
   end.
 
