@@ -25,18 +25,12 @@ module mkIgnoreDeq(IgnoreDeq#(CCMsg));
     endmethod
 endmodule
 
-interface CCMem;
-    interface CC cc;
-    interface DMA memDma;
-endinterface
-
 // CC + BRAM memory
 (* synthesize *)
-module mkCCBramMem(CCMem);
+module mkCCBramMem(CC);
     MemBank mb <- mkMemBankBram();
     IgnoreEnq#(CCMsg) ige <- mkIgnoreEnq();
     IgnoreDeq#(CCMsg) igd <- mkIgnoreDeq();
     CC mem <- mkCC(mb.getMemRs, ige.ignore_enq, mb.putMemRq);
-    interface cc = mem;
-    interface memDma = mb.memDma;
+    return mem;
 endmodule

@@ -92,7 +92,7 @@ module mkStoreBuffer(StoreBuffer);
     endmethod
 endmodule
 
-module mkCCTestCheck#(CCMem mem)(CCTest);
+module mkCCTestCheck#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -124,7 +124,8 @@ module mkCCTestCheck#(CCMem mem)(CCTest);
         return truncate(addr >> valueOf(AddrOffset));
     endfunction
 
-    rule mem_init_done (!memInit && mem.cc.isInit);
+    // FIXME: may have to wait for a while, for caches to be initialized
+    rule mem_init_done (!memInit);
         memInit <= True;
     endrule
 
@@ -161,23 +162,23 @@ module mkCCTestCheck#(CCMem mem)(CCTest);
     let getRsId = 6'b000001;
     let setRsId = 6'b001001;
 
-    function Struct2 ldReq(Integer i);
-        return Struct2 { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
+    function CCMsg ldReq(Integer i);
+        return CCMsg { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
     endfunction
-    function Struct2 stReq(Integer i);
-        return Struct2 { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
+    function CCMsg stReq(Integer i);
+        return CCMsg { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
     endfunction
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
             // $display ("Load request %d", i);
-            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
             // $display ("Store request %d", i);
-            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.l1Ifc[i].mem_enq_rq(stReq(i));
             sb[i].set(getChkAddr(rq_addr[i]), rq_value);
         endrule
     end
@@ -185,7 +186,7 @@ module mkCCTestCheck#(CCMem mem)(CCTest);
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
             numResps[i] <= numResps[i] + 1;
-            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
+            let rs <- mem.l1Ifc[i].mem_deq_rs ();
             if (rs.id == 6'b000001) begin
                 let caddr = getChkAddr(rs.addr);
                 let rvalue = refMem.sub(caddr);
@@ -244,7 +245,7 @@ endmodule
 // Access ratio between read and write, used throughout all testers
 typedef 2 LgRWRatio; // 1/4 (=1/2^2) accesses of writes
 
-module mkCCTestRandom#(CCMem mem)(CCTest);
+module mkCCTestRandom#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -270,7 +271,8 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
         return addr;
     endfunction
 
-    rule mem_init_done (!memInit && mem.cc.isInit);
+    // FIXME: may have to wait for a while, for caches to be initialized
+    rule mem_init_done (!memInit);
         memInit <= True;
     endrule
 
@@ -313,11 +315,11 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
     let getRsId = 6'b000001;
     let setRsId = 6'b001001;
 
-    function Struct2 ldReq(Integer i);
-        return Struct2 { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
+    function CCMsg ldReq(Integer i);
+        return CCMsg { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
     endfunction
-    function Struct2 stReq(Integer i);
-        return Struct2 { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
+    function CCMsg stReq(Integer i);
+        return CCMsg { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
     endfunction
 
     function Action addResp(Integer i);
@@ -329,17 +331,17 @@ module mkCCTestRandom#(CCMem mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.l1Ifc[i].mem_enq_rq(stReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
-            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
+            let rs <- mem.l1Ifc[i].mem_deq_rs ();
             addResp(i);
             marks[i] <= marks[i] + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3];
         endrule
@@ -379,7 +381,7 @@ endmodule
 typedef TLog#(L1Num) LgL1Num;
 typedef 10 LgL1DSz;
 
-module mkCCTestIsolated#(CCMem mem)(CCTest);
+module mkCCTestIsolated#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -405,7 +407,8 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
         return addr;
     endfunction
 
-    rule mem_init_done (!memInit && mem.cc.isInit);
+    // FIXME: may have to wait for a while, for caches to be initialized
+    rule mem_init_done (!memInit);
         memInit <= True;
     endrule
 
@@ -449,11 +452,11 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
     let getRsId = 6'b000001;
     let setRsId = 6'b001001;
 
-    function Struct2 ldReq(Integer i);
-        return Struct2 { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
+    function CCMsg ldReq(Integer i);
+        return CCMsg { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
     endfunction
-    function Struct2 stReq(Integer i);
-        return Struct2 { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
+    function CCMsg stReq(Integer i);
+        return CCMsg { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
     endfunction
 
     function Action addResp(Integer i);
@@ -465,17 +468,17 @@ module mkCCTestIsolated#(CCMem mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.l1Ifc[i].mem_enq_rq(stReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
-            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
+            let rs <- mem.l1Ifc[i].mem_deq_rs ();
             addResp(i);
             marks[i] <= marks[i] + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3];
         endrule
@@ -525,7 +528,7 @@ typedef 5 LgShRange;
 typedef 3 LgExShRatio;
 typedef 32 NumTlCycles;
 
-module mkCCTestShared#(CCMem mem)(CCTest);
+module mkCCTestShared#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
@@ -555,7 +558,8 @@ module mkCCTestShared#(CCMem mem)(CCTest);
         return addr;
     endfunction
 
-    rule mem_init_done (!memInit && mem.cc.isInit);
+    // FIXME: may have to wait for a while, for caches to be initialized
+    rule mem_init_done (!memInit);
         memInit <= True;
     endrule
 
@@ -616,11 +620,11 @@ module mkCCTestShared#(CCMem mem)(CCTest);
     let getRsId = 6'b000001;
     let setRsId = 6'b001001;
 
-    function Struct2 ldReq(Integer i);
-        return Struct2 { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
+    function CCMsg ldReq(Integer i);
+        return CCMsg { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
     endfunction
-    function Struct2 stReq(Integer i);
-        return Struct2 { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
+    function CCMsg stReq(Integer i);
+        return CCMsg { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
     endfunction
 
     function Action addResp(Integer i);
@@ -632,19 +636,19 @@ module mkCCTestShared#(CCMem mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            mem.cc.l1Ifc[i].mem_enq_rq(ldReq(i));
+            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
             rq_tl_cycles[i] <= rq_tl_cycles[i] + 1;
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            mem.cc.l1Ifc[i].mem_enq_rq(stReq(i));
+            mem.l1Ifc[i].mem_enq_rq(stReq(i));
             rq_tl_cycles[i] <= rq_tl_cycles[i] + 1;
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule response;
-            let rs <- mem.cc.l1Ifc[i].mem_deq_rs ();
+            let rs <- mem.l1Ifc[i].mem_deq_rs ();
             addResp(i);
             marks[i] <= marks[i] + rs.value[0] + rs.value[1] + rs.value[2] + rs.value[3];
         endrule

@@ -12,8 +12,8 @@ typedef `TEST_CYCLE_CNT TestCycleCnt;
 
 (* synthesize *)
 module mkTop(Empty);
-    // CCMem mem <- mkCCRegFileMem();
-    CCMem mem <- mkCCBramMem();
+    // CC mem <- mkCCRegFileMem();
+    CC mem <- mkCCBramMem();
 
     // CCTest tester <- mkCCTestIsolated(mem);
     // CCTest tester <- mkCCTestShared(mem);
