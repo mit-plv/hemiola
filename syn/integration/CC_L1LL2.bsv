@@ -3630,25 +3630,25 @@ module mkModule63#(function ActionValue#(Struct1) deq_fifo0010(),
     function Action enq_fifoCRqInput00(Struct2 _),
     function ActionValue#(Struct1) deq_fifo0000())
     (Module63);
-    Reg#(Bit#(1)) rr_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) rr_cRq2_00 <- mkReg(unpack(0));
 
-    rule inc_rr_00;
-        let x_0 = (rr_00);
-        rr_00 <= (x_0) + ((Bit#(1))'(1'h1));
+    rule inc_rr_cRq2_00;
+        let x_0 = (rr_cRq2_00);
+        rr_cRq2_00 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
-    rule accept0_00;
-        $display ("Rule fired: accept0_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept0_cRq2_00;
+        $display ("Rule fired: accept0_cRq2_00 at %t", $time);
+        let x_0 = (rr_cRq2_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0000();
         Struct2 x_2 = (Struct2 {ch_idx : (Bit#(1))'(1'h0), ch_msg : x_1});
         let x_3 <- enq_fifoCRqInput00(x_2);
     endrule
 
-    rule accept1_00;
-        $display ("Rule fired: accept1_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept1_cRq2_00;
+        $display ("Rule fired: accept1_cRq2_00 at %t", $time);
+        let x_0 = (rr_cRq2_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo0010();
         Struct2 x_2 = (Struct2 {ch_idx : (Bit#(1))'(1'h1), ch_msg : x_1});
@@ -3666,25 +3666,25 @@ module mkModule64#(function ActionValue#(Struct1) deq_fifo0010(),
     function Action enq_fifoCRsInput00(Struct2 _),
     function ActionValue#(Struct1) deq_fifo0000())
     (Module64);
-    Reg#(Bit#(1)) rr_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) rr_cRs2_00 <- mkReg(unpack(0));
 
-    rule inc_rr_00;
-        let x_0 = (rr_00);
-        rr_00 <= (x_0) + ((Bit#(1))'(1'h1));
+    rule inc_rr_cRs2_00;
+        let x_0 = (rr_cRs2_00);
+        rr_cRs2_00 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
-    rule accept0_00;
-        $display ("Rule fired: accept0_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept0_cRs2_00;
+        $display ("Rule fired: accept0_cRs2_00 at %t", $time);
+        let x_0 = (rr_cRs2_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0000();
         Struct2 x_2 = (Struct2 {ch_idx : (Bit#(1))'(1'h0), ch_msg : x_1});
         let x_3 <- enq_fifoCRsInput00(x_2);
     endrule
 
-    rule accept1_00;
-        $display ("Rule fired: accept1_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept1_cRs2_00;
+        $display ("Rule fired: accept1_cRs2_00 at %t", $time);
+        let x_0 = (rr_cRs2_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo0010();
         Struct2 x_2 = (Struct2 {ch_idx : (Bit#(1))'(1'h1), ch_msg : x_1});
@@ -3703,17 +3703,17 @@ module mkModule65#(function ActionValue#(Struct2) deq_fifoCRsInput00(),
     function Action enq_fifoInput00(Struct3 _),
     function ActionValue#(Struct1) deq_fifo002())
     (Module65);
-    Reg#(Bit#(2)) rr_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) rr_inputs_00 <- mkReg(unpack(0));
 
-    rule inc_rr_00;
-        let x_0 = (rr_00);
-        rr_00 <= ((x_0) == ((Bit#(2))'(2'h2)) ? ((Bit#(2))'(2'h0)) : ((x_0) +
-        ((Bit#(2))'(2'h1))));
+    rule inc_rr_inputs_00;
+        let x_0 = (rr_inputs_00);
+        rr_inputs_00 <= ((x_0) == ((Bit#(2))'(2'h2)) ? ((Bit#(2))'(2'h0)) :
+        ((x_0) + ((Bit#(2))'(2'h1))));
     endrule
 
-    rule accept0_00;
-        $display ("Rule fired: accept0_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept0_inputs_00;
+        $display ("Rule fired: accept0_inputs_00 at %t", $time);
+        let x_0 = (rr_inputs_00);
         when ((x_0) == ((Bit#(2))'(2'h0)), noAction);
         let x_1 <- deq_fifo002();
         Struct3 x_2 = (Struct3 {in_msg : x_1, in_msg_from :
@@ -3721,9 +3721,9 @@ module mkModule65#(function ActionValue#(Struct2) deq_fifoCRsInput00(),
         let x_3 <- enq_fifoInput00(x_2);
     endrule
 
-    rule accept1_00;
-        $display ("Rule fired: accept1_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept1_inputs_00;
+        $display ("Rule fired: accept1_inputs_00 at %t", $time);
+        let x_0 = (rr_inputs_00);
         when ((x_0) == ((Bit#(2))'(2'h1)), noAction);
         let x_1 <- deq_fifoCRqInput00();
         Struct3 x_2 = (Struct3 {in_msg : (x_1).ch_msg, in_msg_from :
@@ -3731,9 +3731,9 @@ module mkModule65#(function ActionValue#(Struct2) deq_fifoCRsInput00(),
         let x_3 <- enq_fifoInput00(x_2);
     endrule
 
-    rule accept2_00;
-        $display ("Rule fired: accept2_00 at %t", $time);
-        let x_0 = (rr_00);
+    rule accept2_inputs_00;
+        $display ("Rule fired: accept2_inputs_00 at %t", $time);
+        let x_0 = (rr_inputs_00);
         when ((x_0) == ((Bit#(2))'(2'h2)), noAction);
         let x_1 <- deq_fifoCRsInput00();
         Struct3 x_2 = (Struct3 {in_msg : (x_1).ch_msg, in_msg_from :
@@ -3897,16 +3897,16 @@ module mkModule68#(function ActionValue#(Struct1) deq_fifo00000(),
     function Action enq_fifoInput000(Struct3 _),
     function ActionValue#(Struct1) deq_fifo0002())
     (Module68);
-    Reg#(Bit#(1)) rr_000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) rr_inputs_000 <- mkReg(unpack(0));
 
-    rule inc_rr_000;
-        let x_0 = (rr_000);
-        rr_000 <= (x_0) + ((Bit#(1))'(1'h1));
+    rule inc_rr_inputs_000;
+        let x_0 = (rr_inputs_000);
+        rr_inputs_000 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
-    rule accept0_000;
-        $display ("Rule fired: accept0_000 at %t", $time);
-        let x_0 = (rr_000);
+    rule accept0_inputs_000;
+        $display ("Rule fired: accept0_inputs_000 at %t", $time);
+        let x_0 = (rr_inputs_000);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0002();
         Struct3 x_2 = (Struct3 {in_msg : x_1, in_msg_from :
@@ -3914,9 +3914,9 @@ module mkModule68#(function ActionValue#(Struct1) deq_fifo00000(),
         let x_3 <- enq_fifoInput000(x_2);
     endrule
 
-    rule accept1_000;
-        $display ("Rule fired: accept1_000 at %t", $time);
-        let x_0 = (rr_000);
+    rule accept1_inputs_000;
+        $display ("Rule fired: accept1_inputs_000 at %t", $time);
+        let x_0 = (rr_inputs_000);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo00000();
         Struct3 x_2 = (Struct3 {in_msg : x_1, in_msg_from :
@@ -4025,16 +4025,16 @@ module mkModule71#(function ActionValue#(Struct1) deq_fifo00100(),
     function Action enq_fifoInput001(Struct3 _),
     function ActionValue#(Struct1) deq_fifo0012())
     (Module71);
-    Reg#(Bit#(1)) rr_001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) rr_inputs_001 <- mkReg(unpack(0));
 
-    rule inc_rr_001;
-        let x_0 = (rr_001);
-        rr_001 <= (x_0) + ((Bit#(1))'(1'h1));
+    rule inc_rr_inputs_001;
+        let x_0 = (rr_inputs_001);
+        rr_inputs_001 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
-    rule accept0_001;
-        $display ("Rule fired: accept0_001 at %t", $time);
-        let x_0 = (rr_001);
+    rule accept0_inputs_001;
+        $display ("Rule fired: accept0_inputs_001 at %t", $time);
+        let x_0 = (rr_inputs_001);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0012();
         Struct3 x_2 = (Struct3 {in_msg : x_1, in_msg_from :
@@ -4042,9 +4042,9 @@ module mkModule71#(function ActionValue#(Struct1) deq_fifo00100(),
         let x_3 <- enq_fifoInput001(x_2);
     endrule
 
-    rule accept1_001;
-        $display ("Rule fired: accept1_001 at %t", $time);
-        let x_0 = (rr_001);
+    rule accept1_inputs_001;
+        $display ("Rule fired: accept1_inputs_001 at %t", $time);
+        let x_0 = (rr_inputs_001);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo00100();
         Struct3 x_2 = (Struct3 {in_msg : x_1, in_msg_from :

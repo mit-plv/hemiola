@@ -53,13 +53,13 @@ Definition MaybeSome {var k} (v: Expr var (SyntaxKind k)): Expr var (SyntaxKind 
   (STRUCT { "valid" ::= $$true; "data" ::= v })%kami_expr.
 
 Section Acceptor2.
-  Variable oidx: IdxT.
+  Variable acceptorName: string.
   Variables (peltT0 peltT1 eltT: Kind).
   Variables (eltF0: forall {var}, var peltT0 -> Expr var (SyntaxKind eltT))
             (eltF1: forall {var}, var peltT1 -> Expr var (SyntaxKind eltT)).
   Variables (acceptN0 acceptN1 forwardN: string).
 
-  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+  Local Notation "s '+o'" := (s ++ "_" ++ acceptorName)%string (at level 60).
 
   Local Notation acceptF0 := (MethodSig acceptN0(): peltT0).
   Local Notation acceptF1 := (MethodSig acceptN1(): peltT1).
@@ -87,14 +87,14 @@ Section Acceptor2.
 End Acceptor2.
 
 Section Acceptor3.
-  Variable oidx: IdxT.
+  Variable acceptorName: string.
   Variables (peltT0 peltT1 peltT2 eltT: Kind).
   Variables (eltF0: forall {var}, var peltT0 -> Expr var (SyntaxKind eltT))
             (eltF1: forall {var}, var peltT1 -> Expr var (SyntaxKind eltT))
             (eltF2: forall {var}, var peltT2 -> Expr var (SyntaxKind eltT)).
   Variables (acceptN0 acceptN1 acceptN2 forwardN: string).
 
-  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+  Local Notation "s '+o'" := (s ++ "_" ++ acceptorName)%string (at level 60).
 
   Local Notation acceptF0 := (MethodSig acceptN0(): peltT0).
   Local Notation acceptF1 := (MethodSig acceptN1(): peltT1).
@@ -127,7 +127,7 @@ Section Acceptor3.
 End Acceptor3.
 
 Section Acceptor4.
-  Variable oidx: IdxT.
+  Variable acceptorName: string.
   Variables (peltT0 peltT1 peltT2 peltT3 eltT: Kind).
   Variables (eltF0: forall {var}, var peltT0 -> Expr var (SyntaxKind eltT))
             (eltF1: forall {var}, var peltT1 -> Expr var (SyntaxKind eltT))
@@ -135,7 +135,7 @@ Section Acceptor4.
             (eltF3: forall {var}, var peltT3 -> Expr var (SyntaxKind eltT)).
   Variables (acceptN0 acceptN1 acceptN2 acceptN3 forwardN: string).
 
-  Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
+  Local Notation "s '+o'" := (s ++ "_" ++ acceptorName)%string (at level 60).
 
   Local Notation acceptF0 := (MethodSig acceptN0(): peltT0).
   Local Notation acceptF1 := (MethodSig acceptN1(): peltT1).

@@ -204,21 +204,21 @@ Section Compile.
 
     Definition cRqAcceptor2 (cidx0 cidx1: IdxT): Modules :=
       acceptor2
-        oidx (eltT:= ChildInputK)
+        ("cRq2_" ++ idx_to_string oidx) (eltT:= ChildInputK)
         (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
         (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1)) enqCRqN.
 
     Definition cRsAcceptor2 (cidx0 cidx1: IdxT): Modules :=
       acceptor2
-        oidx (eltT:= ChildInputK)
+        ("cRs2_" ++ idx_to_string oidx) (eltT:= ChildInputK)
         (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
         (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1)) enqCRsN.
 
     Definition cRqAcceptor4 (cidx0 cidx1 cidx2 cidx3: IdxT): Modules :=
       acceptor4
-        oidx (eltT:= ChildInputK)
+        ("cRq4_" ++ idx_to_string oidx) (eltT:= ChildInputK)
         (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $2; "ch_msg" ::= #msg })%kami_expr
@@ -228,7 +228,7 @@ Section Compile.
 
     Definition cRsAcceptor4 (cidx0 cidx1 cidx2 cidx3: IdxT): Modules :=
       acceptor4
-        oidx (eltT:= ChildInputK)
+        ("cRs4_" ++ idx_to_string oidx) (eltT:= ChildInputK)
         (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $2; "ch_msg" ::= #msg })%kami_expr
@@ -240,7 +240,8 @@ Section Compile.
 
     Definition inputAcceptorL1: Modules :=
       acceptor2
-        oidx (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= InputK)
+        ("inputs_" ++ idx_to_string oidx)
+        (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= InputK)
         (fun _ msg => STRUCT { "in_msg" ::= #msg;
                                "in_msg_from" ::=
                                  {$downIdx, compile_oidx_to_cidx oidx} })%kami_expr
@@ -251,7 +252,8 @@ Section Compile.
 
     Definition inputAcceptorLi: Modules :=
       acceptor3
-        oidx (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= InputK)
+        ("inputs_" ++ idx_to_string oidx)
+        (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= InputK)
         (fun _ msg => STRUCT { "in_msg" ::= #msg;
                                "in_msg_from" ::=
                                  {$downIdx, compile_oidx_to_cidx oidx} })%kami_expr
