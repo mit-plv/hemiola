@@ -254,11 +254,12 @@ Section MSHR.
   Context `{ReifyConfig} `{TopoConfig}.
   Variable oidx: IdxT.
 
-  Definition MSHRStatus := Bit 2.
+  Definition MSHRStatus := Bit 3.
   Definition mshrInvalid {var}: Expr var (SyntaxKind MSHRStatus) := ($0)%kami_expr.
   Definition mshrWaiting {var}: Expr var (SyntaxKind MSHRStatus) := ($1)%kami_expr.
-  Definition mshrReady {var}: Expr var (SyntaxKind MSHRStatus) := ($2)%kami_expr.
-  Definition mshrValid {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr.
+  Definition mshrFirstWait {var}: Expr var (SyntaxKind MSHRStatus) := ($2)%kami_expr.
+  Definition mshrOwned {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr.
+  Definition mshrValid {var}: Expr var (SyntaxKind MSHRStatus) := ($4)%kami_expr.
 
   Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
@@ -275,7 +276,7 @@ Section MSHR.
              "m_is_ul" :: Bool;
              "m_msg" :: Struct KMsg;
              (** Heads-up: when [m_status == mshrValid] then the index refers to the
-              * response queue; if [m_status == mshrWaiting || m_status == mshrReady] then
+              * response queue; if [m_status == mshrWaiting || m_status == mshrFirstWait] then
               * it refers to the input queue. *)
              "m_qidx" :: KQIdx;
              "m_rsb" :: Bool;
@@ -444,27 +445,33 @@ Section MSHR.
                                         "s_conflict" ::= #conflict;
                                         "s_id" ::= #mid };
           If (#hasSlot)
-          then (LET pslot <- #rqs#[#pmid];
-               Write "rqs"+o <-
-               #rqs#[#mid <- STRUCT { "m_status" ::= IF #conflict then mshrWaiting else mshrValid;
-                                      "m_next" ::= MaybeNone;
-                                      "m_is_ul" ::= $$Default;
-                                      "m_msg" ::= #pmshr!PreMSHR@."r_msg";
-                                      "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
-                                      "m_rsb" ::= $$Default;
-                                      "m_dl_rss_from" ::= $$Default;
-                                      "m_dl_rss_recv" ::= $$Default;
-                                      "m_dl_rss" ::= $$Default }]
-                #[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
-                                    "m_next" ::=
-                                      IF #conflict then MaybeSome #mid else #pslot!MSHR@."m_next";
-                                    "m_is_ul" ::= #pslot!MSHR@."m_is_ul";
-                                    "m_msg" ::= #pslot!MSHR@."m_msg";
-                                    "m_qidx" ::= #pslot!MSHR@."m_qidx";
-                                    "m_rsb" ::= #pslot!MSHR@."m_rsb";
-                                    "m_dl_rss_from" ::= #pslot!MSHR@."m_dl_rss_from";
-                                    "m_dl_rss_recv" ::= #pslot!MSHR@."m_dl_rss_recv";
-                                    "m_dl_rss" ::= #pslot!MSHR@."m_dl_rss" }];
+          then (LET nrqs <-
+                #rqs#[#mid <- STRUCT { "m_status" ::= IF #conflict then mshrWaiting else mshrOwned;
+                                       "m_next" ::= MaybeNone;
+                                       "m_is_ul" ::= $$Default;
+                                       "m_msg" ::= #pmshr!PreMSHR@."r_msg";
+                                       "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
+                                       "m_rsb" ::= $$Default;
+                                       "m_dl_rss_from" ::= $$Default;
+                                       "m_dl_rss_recv" ::= $$Default;
+                                       "m_dl_rss" ::= $$Default }];
+               If (#conflict)
+               then (LET pslot <- #rqs#[#pmid];
+                    LET urqs <-
+                    #nrqs#[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
+                                             "m_next" ::=
+                                               (IF #conflict
+                                                then MaybeSome #mid
+                                                else #pslot!MSHR@."m_next");
+                                             "m_is_ul" ::= #pslot!MSHR@."m_is_ul";
+                                             "m_msg" ::= #pslot!MSHR@."m_msg";
+                                             "m_qidx" ::= #pslot!MSHR@."m_qidx";
+                                             "m_rsb" ::= #pslot!MSHR@."m_rsb";
+                                             "m_dl_rss_from" ::= #pslot!MSHR@."m_dl_rss_from";
+                                             "m_dl_rss_recv" ::= #pslot!MSHR@."m_dl_rss_recv";
+                                             "m_dl_rss" ::= #pslot!MSHR@."m_dl_rss" }];
+                    Ret #urqs) else (Ret #nrqs) as urqs;
+               Write "rqs"+o <- #urqs;
                Retv);
           Ret #ret
 
@@ -490,27 +497,33 @@ Section MSHR.
                                         "s_conflict" ::= #conflict;
                                         "s_id" ::= #mid };
           If (#hasSlot)
-          then (LET pslot <- #rqs#[#pmid];
-               Write "rqs"+o <-
-               #rqs#[#mid <- STRUCT { "m_status" ::= IF #conflict then mshrWaiting else mshrValid;
-                                      "m_next" ::= MaybeNone;
-                                      "m_is_ul" ::= $$Default;
-                                      "m_msg" ::= #pmshr!PreMSHR@."r_msg";
-                                      "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
-                                      "m_rsb" ::= $$Default;
-                                      "m_dl_rss_from" ::= $$Default;
-                                      "m_dl_rss_recv" ::= $$Default;
-                                      "m_dl_rss" ::= $$Default }]
-                #[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
-                                    "m_next" ::=
-                                      IF #conflict then MaybeSome #mid else #pslot!MSHR@."m_next";
-                                    "m_is_ul" ::= #pslot!MSHR@."m_is_ul";
-                                    "m_msg" ::= #pslot!MSHR@."m_msg";
-                                    "m_qidx" ::= #pslot!MSHR@."m_qidx";
-                                    "m_rsb" ::= #pslot!MSHR@."m_rsb";
-                                    "m_dl_rss_from" ::= #pslot!MSHR@."m_dl_rss_from";
-                                    "m_dl_rss_recv" ::= #pslot!MSHR@."m_dl_rss_recv";
-                                    "m_dl_rss" ::= #pslot!MSHR@."m_dl_rss" }];
+          then (LET nrqs <-
+                #rqs#[#mid <- STRUCT { "m_status" ::= IF #conflict then mshrWaiting else mshrOwned;
+                                       "m_next" ::= MaybeNone;
+                                       "m_is_ul" ::= $$Default;
+                                       "m_msg" ::= #pmshr!PreMSHR@."r_msg";
+                                       "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
+                                       "m_rsb" ::= $$Default;
+                                       "m_dl_rss_from" ::= $$Default;
+                                       "m_dl_rss_recv" ::= $$Default;
+                                       "m_dl_rss" ::= $$Default }];
+               If (#conflict)
+               then (LET pslot <- #rqs#[#pmid];
+                    LET urqs <-
+                    #nrqs#[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
+                                             "m_next" ::=
+                                               (IF #conflict
+                                                then MaybeSome #mid
+                                                else #pslot!MSHR@."m_next");
+                                             "m_is_ul" ::= #pslot!MSHR@."m_is_ul";
+                                             "m_msg" ::= #pslot!MSHR@."m_msg";
+                                             "m_qidx" ::= #pslot!MSHR@."m_qidx";
+                                             "m_rsb" ::= #pslot!MSHR@."m_rsb";
+                                             "m_dl_rss_from" ::= #pslot!MSHR@."m_dl_rss_from";
+                                             "m_dl_rss_recv" ::= #pslot!MSHR@."m_dl_rss_recv";
+                                             "m_dl_rss" ::= #pslot!MSHR@."m_dl_rss" }];
+                    Ret #urqs) else (Ret #nrqs) as urqs;
+               Write "rqs"+o <- #urqs;
                Retv);
           Ret #ret
 
@@ -518,7 +531,7 @@ Section MSHR.
           Read rqs <- "rqs"+o;
           LET mwait <- (rqIter MaybeNone
                                (fun i _ => MaybeSome $i)
-                               (fun m => m!MSHR@."m_status" == mshrReady)
+                               (fun m => m!MSHR@."m_status" == mshrFirstWait)
                                #rqs);
           If (#mwait!(MaybeStr MshrId)@."valid")
           then (LET mid <- #mwait!(MaybeStr MshrId)@."data";
@@ -639,7 +652,7 @@ Section MSHR.
           If (#mshr!MSHR@."m_next"!(MaybeStr MshrId)@."valid")
           then (LET cmid <- #mshr!MSHR@."m_next"!(MaybeStr MshrId)@."data";
                LET cmshr <- #rqs#[#cmid];
-               LET nrqs <- #rrqs#[#cmid <- STRUCT { "m_status" ::= mshrReady;
+               LET nrqs <- #rrqs#[#cmid <- STRUCT { "m_status" ::= mshrFirstWait;
                                                     "m_next" ::= #cmshr!MSHR@."m_next";
                                                     "m_is_ul" ::= #cmshr!MSHR@."m_is_ul";
                                                     "m_msg" ::= #cmshr!MSHR@."m_msg";
@@ -675,13 +688,15 @@ Section MSHR.
 
         with Method ("getRsReady"+o)(): RsReadyK :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
-          LET mid: MshrId <- (rqIter $$Default
-                                     (fun n _ => $n)
-                                     (fun m =>
-                                        m!MSHR@."m_status" == mshrValid &&
-                                        (!(m!MSHR@."m_is_ul")) &&
-                                        m!MSHR@."m_dl_rss_from" == m!MSHR@."m_dl_rss_recv")
-                                     #rqs);
+          LET mmid <- (rqIter MaybeNone
+                              (fun n _ => MaybeSome $n)
+                              (fun m =>
+                                 (m!MSHR@."m_status" == mshrValid) &&
+                                 (!(m!MSHR@."m_is_ul")) &&
+                                 m!MSHR@."m_dl_rss_from" == m!MSHR@."m_dl_rss_recv")
+                              #rqs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid");
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
           LET pmshr <- #rqs#[#mid];
           LET ret: RsReadyK <- STRUCT { "r_id" ::= #mid;
                                         "r_addr" ::= #pmshr!MSHR@."m_msg"!KMsg@."addr" };
