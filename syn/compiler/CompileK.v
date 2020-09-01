@@ -714,21 +714,14 @@ Section Compile.
         Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
         Local Notation transferUpDown := (transferUpDown oidx mshrNumPRqs mshrNumCRqs).
 
-        Local Notation getULCount := (getULCount oidx mshrNumPRqs mshrNumCRqs).
-        Local Notation getVictimCount := (getVictimCount oidx predNumVictims).
-
         Definition compile_ORq_trs (horq: HORq (hvar_of var))
                    (cont: ActionT var Void): ActionT var Void :=
           (match horq with
            | HORqI _ => cont
            | HUpdUpLock rq _ rsb =>
-             (** TODO: is here the best spot to check the counts? *)
-             (Call ulCnt <- getULCount();
-             Call vcCnt <- getVictimCount();
-             Assert (#ulCnt < _zeroExtend_ (UniBit (Neg _) #vcCnt));
-             Call registerUL(STRUCT { "r_id" ::= #mshrId;
-                                      "r_ul_rsb" ::= $$true;
-                                      "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
+             (Call registerUL(STRUCT { "r_id" ::= #mshrId;
+                                       "r_ul_rsb" ::= $$true;
+                                       "r_ul_rsbTo" ::= _truncate_ (compile_exp rsb) }); cont)
            | HUpdUpLockS _ =>
              (Call registerUL(STRUCT { "r_id" ::= #mshrId;
                                        "r_ul_rsb" ::= $$false;

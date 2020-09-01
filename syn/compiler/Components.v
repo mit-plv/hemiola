@@ -318,7 +318,6 @@ Section MSHR.
   Definition registerDL: Attribute SignatureT := MethodSig ("registerDL"+o)(RegDLK): Void.
 
   Definition getULImm: Attribute SignatureT := MethodSig ("getULImm"+o)(Struct KMsg): MshrId.
-  Definition getULCount: Attribute SignatureT := MethodSig ("getULCount"+o)(): Bit slotSz.
 
   Definition TrsfUpDown :=
     STRUCT { "r_id" :: MshrId; "r_dl_rss_from" :: KCBv }.
@@ -398,22 +397,6 @@ Section MSHR.
              (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
              (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots))) :=
     crqFix lc tc cond rqs numCRqs.
-
-  Fixpoint crqCountFix {var}
-           (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
-           (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots)))
-           (n: nat): Expr var (SyntaxKind (Bit slotSz)) :=
-    (match n with
-     | O => $0
-     | S n' =>
-       let ul := rqs#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
-       (IF (cond ul) then $1 else $0) + crqCountFix cond rqs n'
-     end)%kami_expr.
-
-  Definition crqCount {var}
-             (cond: Expr var (SyntaxKind (Struct MSHR)) -> Expr var (SyntaxKind Bool))
-             (rqs: Expr var (SyntaxKind (Array (Struct MSHR) numSlots))) :=
-    crqCountFix cond rqs numCRqs.
 
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
@@ -603,11 +586,6 @@ Section MSHR.
                                                   "m_dl_rss_recv" ::= $$Default;
                                                   "m_dl_rss" ::= $$Default }];
           Ret #mid
-
-        with Method ("getULCount"+o)(): Bit slotSz :=
-          Read rqs <- "rqs"+o;
-          LET cnt <- (crqCount (fun m => m!MSHR@."m_is_ul") #rqs);
-          Ret #cnt
 
         with Method ("transferUpDown"+o)(trsf: TrsfUpDownK): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
@@ -856,23 +834,6 @@ Section Victims.
              (cont: ActionT var Void): ActionT var Void :=
     setVictimRqFix addr victims mid cont (numVictims - 1).
 
-  Fixpoint getVictimCountFix (var: Kind -> Type)
-           (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-           (n: nat): Expr var (SyntaxKind (Bit victimIdxSz)) :=
-    (match n with
-     | O => $0
-     | S n' =>
-       (IF ((victims#[$v$n]!Victim@."victim_valid") &&
-            (!(victims#[$v$n]!Victim@."victim_req"!(MaybeStr MshrId)@."valid")))
-        then $1
-        else $0) + getVictimCountFix victims n'
-     end)%kami_expr.
-
-  Definition getVictimCountF (var: Kind -> Type)
-             (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-    : Expr var (SyntaxKind (Bit victimIdxSz)) :=
-    getVictimCountFix victims (numVictims - 1).
-
   Definition victimsIfc :=
     MODULE {
       Register victimRegsN: Array VictimK numVictims <- Default
@@ -929,11 +890,6 @@ Section Victims.
              LET vmid <- victim!Victim@."victim_req"!(MaybeStr MshrId)@."data";
              Ret #vmid))
           (Ret $$Default)
-
-      with Method getVictimCountN (): Bit victimIdxSz :=
-        Read victims <- victimRegsN;
-        LET cnt <- getVictimCountF #victims;
-        Ret #cnt
     }.
 
 End Victims.
