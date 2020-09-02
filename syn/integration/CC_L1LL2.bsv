@@ -3662,9 +3662,9 @@ interface Module64;
 
 endinterface
 
-module mkModule64#(function ActionValue#(Struct1) deq_fifo0010(),
+module mkModule64#(function ActionValue#(Struct1) deq_fifo0011(),
     function Action enq_fifoCRsInput00(Struct2 _),
-    function ActionValue#(Struct1) deq_fifo0000())
+    function ActionValue#(Struct1) deq_fifo0001())
     (Module64);
     Reg#(Bit#(1)) rr_cRs2_00 <- mkReg(unpack(0));
 
@@ -3677,7 +3677,7 @@ module mkModule64#(function ActionValue#(Struct1) deq_fifo0010(),
         $display ("Rule fired: accept0_cRs2_00 at %t", $time);
         let x_0 = (rr_cRs2_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
-        let x_1 <- deq_fifo0000();
+        let x_1 <- deq_fifo0001();
         Struct2 x_2 = (Struct2 {ch_idx : (Bit#(1))'(1'h0), ch_msg : x_1});
         let x_3 <- enq_fifoCRsInput00(x_2);
     endrule
@@ -3686,7 +3686,7 @@ module mkModule64#(function ActionValue#(Struct1) deq_fifo0010(),
         $display ("Rule fired: accept1_cRs2_00 at %t", $time);
         let x_0 = (rr_cRs2_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
-        let x_1 <- deq_fifo0010();
+        let x_1 <- deq_fifo0011();
         Struct2 x_2 = (Struct2 {ch_idx : (Bit#(1))'(1'h1), ch_msg : x_1});
         let x_3 <- enq_fifoCRsInput00(x_2);
     endrule
@@ -11314,8 +11314,8 @@ function Action enq_fifo000(Struct1 _)) (CC);
     Module62 m62 <- mkModule62 ();
     Module63 m63 <- mkModule63 (m48.deq_fifo0010, m1.enq_fifoCRqInput00,
     m29.deq_fifo0000);
-    Module64 m64 <- mkModule64 (m48.deq_fifo0010, m2.enq_fifoCRsInput00,
-    m29.deq_fifo0000);
+    Module64 m64 <- mkModule64 (m49.deq_fifo0011, m2.enq_fifoCRsInput00,
+    m30.deq_fifo0001);
     Module65 m65 <- mkModule65 (m2.deq_fifoCRsInput00, m1.deq_fifoCRqInput00,
     m3.enq_fifoInput00, deq_fifo002);
     Module66 m66 <- mkModule66 (m31.enq_fifo0002, m50.enq_fifo0012,

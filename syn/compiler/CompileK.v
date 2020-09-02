@@ -214,7 +214,7 @@ Section Compile.
         ("cRs2_" ++ idx_to_string oidx) (eltT:= ChildInputK)
         (fun _ msg => STRUCT { "ch_idx" ::= $0; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
-        (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1)) enqCRsN.
+        (deqFn (rsUpFrom cidx0)) (deqFn (rsUpFrom cidx1)) enqCRsN.
 
     Definition cRqAcceptor4 (cidx0 cidx1 cidx2 cidx3: IdxT): Modules :=
       acceptor4
@@ -233,8 +233,8 @@ Section Compile.
         (fun _ msg => STRUCT { "ch_idx" ::= $1; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $2; "ch_msg" ::= #msg })%kami_expr
         (fun _ msg => STRUCT { "ch_idx" ::= $3; "ch_msg" ::= #msg })%kami_expr
-        (deqFn (rqUpFrom cidx0)) (deqFn (rqUpFrom cidx1))
-        (deqFn (rqUpFrom cidx2)) (deqFn (rqUpFrom cidx3)) enqCRsN.
+        (deqFn (rsUpFrom cidx0)) (deqFn (rsUpFrom cidx1))
+        (deqFn (rsUpFrom cidx2)) (deqFn (rsUpFrom cidx3)) enqCRsN.
 
     Variables deqCRqN deqCRsN enqInputN: string.
 
