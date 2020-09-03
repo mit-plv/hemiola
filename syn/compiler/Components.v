@@ -1134,15 +1134,6 @@ Section Cache.
 
   Definition rep := (repLRU ++ repRam)%kami.
 
-  (** Pipe from the first stage *)
-  Definition cp1 :=
-    STRUCT { "tag" :: Bit tagSz; "index" :: Bit indexSz }.
-  Let cpK1 := Struct cp1.
-  Definition cpN1 := "cp_1"+o.
-  Definition cpipe1 := fifo primPipelineFifoName cpN1 cpK1.
-  Definition cpEnq1 := MethodSig (cpN1 -- "enq") (cpK1): Void.
-  Definition cpDeq1 := MethodSig (cpN1 -- "deq") (): cpK1.
-
   (** Pipe from the second stage *)
   Definition MayVictim :=
     STRUCT { "mv_addr" :: Bit addrSz;
@@ -1177,7 +1168,7 @@ Section Cache.
 
   (** Stage 2: get the information response and request to read the value *)
   Definition infoRsValueRqN: string := cacheN _++ "infoRsValueRq".
-  Definition infoRsValueRq := MethodSig infoRsValueRqN (): InfoReadK.
+  Definition infoRsValueRq := MethodSig infoRsValueRqN (Bit addrSz): InfoReadK.
 
   (** Stage 3: get the value response and request to write information/value. *)
   Definition LineWrite :=
@@ -1262,14 +1253,11 @@ Section Cache.
         LET index <- getIndex addr;
         NCall makeInfoRdReqs index;
         Call repGetRq(#index);
-        Call cpEnq1(STRUCT { "tag" ::= getTag addr;
-                             "index" ::= getIndex addr });
         Retv
 
-      with Method infoRsValueRqN (): InfoReadK :=
-        Call cpipe <- cpDeq1();
-        LET tag <- #cpipe!cp1@."tag";
-        LET index <- #cpipe!cp1@."index";
+      with Method infoRsValueRqN (addr: Bit addrSz): InfoReadK :=
+        LET tag <- getTag addr;
+        LET index <- getIndex addr;
         LET tis: Vector TagInfoK lgWay <- $$Default;
         NCall ntis <- makeInfoRdResps tis;
         LET itm <- doTagMatch _ tag ntis (Nat.pow 2 lgWay);
@@ -1351,13 +1339,11 @@ Section Cache.
         NCall makeInfoRdReqs index;
         NCall makeEDirRdReqs index;
         Call repGetRq(#index);
-        Call cpEnq1(STRUCT { "tag" ::= getTag addr; "index" ::= getIndex addr });
         Retv
 
-      with Method infoRsValueRqN (): InfoReadK :=
-        Call cpipe <- cpDeq1();
-        LET tag <- #cpipe!cp1@."tag";
-        LET index <- #cpipe!cp1@."index";
+      with Method infoRsValueRqN (addr: Bit addrSz): InfoReadK :=
+        LET tag <- getTag addr;
+        LET index <- getIndex addr;
         LET tis: Vector TagInfoK lgWay <- $$Default;
         NCall ntis <- makeInfoRdResps tis;
         LET itm <- doTagMatch _ tag ntis (Nat.pow 2 lgWay);
@@ -1500,7 +1486,7 @@ Section Cache.
   Definition cache :=
     (cacheIfc
        ++ victimsIfc
-       ++ (cpipe1 ++ cpipe2)
+       ++ (cpipe2)
        ++ infoRams (Nat.pow 2 lgWay - 1)
        ++ dataRam
        ++ rep)%kami.
@@ -1508,7 +1494,7 @@ Section Cache.
   Definition ncid :=
     (ncidIfc
        ++ victimsIfc
-       ++ (cpipe1 ++ cpipe2)
+       ++ (cpipe2)
        ++ infoRams (Nat.pow 2 lgWay - 1)
        ++ edirRams (Nat.pow 2 edirLgWay - 1)
        ++ dataRam

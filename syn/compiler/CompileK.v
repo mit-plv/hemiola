@@ -468,7 +468,8 @@ Section Compile.
 
       Definition deqIR2LR := MethodSig deqIR2LRN(): IREltK.
       Definition enqLR2EX := MethodSig enqLR2EXN(LREltK): Void.
-      Local Notation infoRsValueRq := (infoRsValueRq oidx infoK indexSz lgWay edirLgWay).
+      Local Notation infoRsValueRq :=
+        (infoRsValueRq oidx infoK indexSz hcfg_addr_sz lgWay edirLgWay).
       Local Notation getVictim :=
         (getVictim oidx hcfg_addr_sz predNumVictims infoK KValue mshrSlotSz).
       Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
@@ -476,7 +477,7 @@ Section Compile.
       Definition lrCache: ActionT var Void :=
         (Call ir <- deqIR2LR();
         Assert !(#ir!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
-        Call rinfo <- infoRsValueRq();
+        Call rinfo <- infoRsValueRq(#ir!IRElt@."ir_msg"!KMsg@."addr");
         LET lr <- STRUCT { "lr_ir_pp" ::= #ir;
                            "lr_ir" ::= #rinfo;
                            "lr_value" ::= $$Default };
