@@ -136,7 +136,7 @@ Section Instances.
 
   Variables indexSz lgWay edirLgWay: nat.
 
-  Definition MesiInfoRead := InfoRead MesiInfoK indexSz lgWay edirLgWay.
+  Definition MesiInfoRead := InfoRead MesiInfoK indexSz hcfg_addr_sz lgWay edirLgWay.
   Let MesiInfoReadK := Struct MesiInfoRead.
 
   Definition mesi_compile_info_to_ostVars
@@ -181,7 +181,9 @@ Section Instances.
                       "edir_slot" ::= #line!MesiLineWrite@."edir_slot";
                       "info" ::= #line!MesiLineWrite@."info";
                       "value_write" ::= $$true;
-                      "value" ::= ve })%kami_expr.
+                      "value" ::= ve;
+                      "may_victim" ::= #line!MesiLineWrite@."may_victim";
+                      "reps" ::= #line!MesiLineWrite@."reps" })%kami_expr.
     - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
                       "info_write" ::= $$true;
                       "info_hit" ::= #line!MesiLineWrite@."info_hit";
@@ -193,7 +195,9 @@ Section Instances.
                                            (MesiInfo!!"mesi_owned")
                                            ve;
                       "value_write" ::= #line!MesiLineWrite@."value_write";
-                      "value" ::= #line!MesiLineWrite@."value" })%kami_expr.
+                      "value" ::= #line!MesiLineWrite@."value";
+                      "may_victim" ::= #line!MesiLineWrite@."may_victim";
+                      "reps" ::= #line!MesiLineWrite@."reps" })%kami_expr.
     - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
                       "info_write" ::= $$true;
                       "info_hit" ::= #line!MesiLineWrite@."info_hit";
@@ -205,7 +209,9 @@ Section Instances.
                                            (MesiInfo!!"mesi_status")
                                            ve;
                       "value_write" ::= #line!MesiLineWrite@."value_write";
-                      "value" ::= #line!MesiLineWrite@."value" })%kami_expr.
+                      "value" ::= #line!MesiLineWrite@."value";
+                      "may_victim" ::= #line!MesiLineWrite@."may_victim";
+                      "reps" ::= #line!MesiLineWrite@."reps" })%kami_expr.
     - exact (STRUCT { "addr" ::= #line!MesiLineWrite@."addr";
                       "info_write" ::= $$true;
                       "info_hit" ::= #line!MesiLineWrite@."info_hit";
@@ -222,7 +228,9 @@ Section Instances.
                                     then (ve!KDir@."dir_sharers")
                                     else (bvSingleton _ (ve!KDir@."dir_excl"))) };
                       "value_write" ::= #line!MesiLineWrite@."value_write";
-                      "value" ::= #line!MesiLineWrite@."value" })%kami_expr.
+                      "value" ::= #line!MesiLineWrite@."value";
+                      "may_victim" ::= #line!MesiLineWrite@."may_victim";
+                      "reps" ::= #line!MesiLineWrite@."reps" })%kami_expr.
   Defined.
 
   Instance MesiCompLineRW: CompLineRW lgWay edirLgWay :=

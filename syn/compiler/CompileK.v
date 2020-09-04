@@ -11,6 +11,16 @@ Set Implicit Arguments.
 
 Import MonadNotations.
 
+(* function Action enq_fifoCInput00(Struct3 _), *)
+(* function ActionValue#(Struct3) deq_fifoCInput00(), *)
+(* function ActionValue#(Struct3) deq_fifo002(), *)
+(* function Action enq_fifo001(Struct1 _), *)
+(* function Action enq_fifo000(Struct1 _), *)
+(* function ActionValue#(Struct3) deq_fifo00000(), *)
+(* function ActionValue#(Struct3) deq_fifo0002(), *)
+(* function ActionValue#(Struct3) deq_fifo00100(), *)
+(* function ActionValue#(Struct3) deq_fifo0012()) (CC); *)
+
 Section Compile.
   Context `{rcfg: ReifyConfig} `{tcfg: TopoConfig}
           `{dv: DecValue} `{hdv: @HDecValue dv}
@@ -155,7 +165,7 @@ Section Compile.
   Definition hvar_of (var: Kind -> Type): htype -> Type :=
     fun ht => var (kind_of ht).
 
-  Section Pipeline.
+  Section PipelineStages.
     Context {var: Kind -> Type}.
     Variable oidx: IdxT.
 
@@ -238,30 +248,15 @@ Section Compile.
 
     Variables deqCRqN deqCRsN enqInputN: string.
 
-    Definition inputAcceptorL1: Modules :=
+    Definition childInputAcceptor: Modules :=
       acceptor2
-        ("inputs_" ++ idx_to_string oidx)
-        (peltT0:= Struct KMsg) (peltT1:= Struct KMsg) (eltT:= InputK)
-        (fun _ msg => STRUCT { "in_msg" ::= #msg;
-                               "in_msg_from" ::=
-                                 {$downIdx, compile_oidx_to_cidx oidx} })%kami_expr
-        (fun _ msg => STRUCT { "in_msg" ::= #msg;
-                               "in_msg_from" ::=
-                                 {$rqUpIdx, compile_oidx_to_cidx (l1ExtOf oidx)} })%kami_expr
-        (deqFn (downTo oidx)) (deqFn (rqUpFrom (l1ExtOf oidx))) enqInputN.
-
-    Definition inputAcceptorLi: Modules :=
-      acceptor3
-        ("inputs_" ++ idx_to_string oidx)
-        (peltT0:= Struct KMsg) (peltT1:= ChildInputK) (peltT2:= ChildInputK) (eltT:= InputK)
-        (fun _ msg => STRUCT { "in_msg" ::= #msg;
-                               "in_msg_from" ::=
-                                 {$downIdx, compile_oidx_to_cidx oidx} })%kami_expr
+        ("child_inputs_" ++ idx_to_string oidx)
+        (peltT0:= ChildInputK) (peltT1:= ChildInputK) (eltT:= InputK)
         (fun _ ci => STRUCT { "in_msg" ::= #ci!ChildInput@."ch_msg";
                               "in_msg_from" ::= {$rqUpIdx, #ci!ChildInput@."ch_idx"} })%kami_expr
         (fun _ ci => STRUCT { "in_msg" ::= #ci!ChildInput@."ch_msg";
                               "in_msg_from" ::= {$rsUpIdx, #ci!ChildInput@."ch_idx"} })%kami_expr
-        (deqFn (downTo oidx)) deqCRqN deqCRsN enqInputN.
+        deqCRqN deqCRsN enqInputN.
 
     (*! Pipeline Stages *)
 
@@ -985,11 +980,11 @@ Section Compile.
 
     End ExecStage.
 
-  End Pipeline.
+  End PipelineStages.
 
   Context `{CompExtExp} `{CompLineRW}.
 
-  Section WithObj.
+  Section Pipeline.
     Variable (oidx: IdxT).
     Variables (deqInputN enqIN2IRN deqIN2IRN
                          enqIR2LRN deqIR2LRN
@@ -1069,11 +1064,10 @@ Section Compile.
       list (Attribute (Action Void)) :=
       ListSupport.oll (map compile_rule_exec rules).
 
-    Definition compile_rules_pipeline (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
-      list (Attribute (Action Void)) :=
-      compile_rules_in ++ compile_rules_ir ++ compile_rules_lr ++ compile_rules_exec rules.
+    Definition compile_rules_pipeline_no_exec: list (Attribute (Action Void)) :=
+      compile_rules_in ++ compile_rules_ir ++ compile_rules_lr.
 
-  End WithObj.
+  End Pipeline.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
@@ -1098,37 +1092,65 @@ Section Compile.
   Section Inputs.
     Variable oidx: IdxT.
 
-    Definition ppCRqInputFifoN: string := ("fifoCRqInput" ++ idx_to_string oidx).
+    Definition ppPInputFifoN: string := ("fifoPInput" ++ idx_to_string oidx).
+    Definition enqPInputN := ppPInputFifoN -- enqN.
+    Definition deqPInputN := ppPInputFifoN -- deqN.
+
+    Let deqPMsgN := (fifoBaseName ++ idx_to_string (downTo oidx)) -- deqN.
+    Definition pInputConverter: Modules :=
+      MODULE {
+        Rule ("convert_" ++ idx_to_string oidx) :=
+          Call msg <- (MethodSig deqPMsgN(): Struct KMsg)();
+          LET input <- STRUCT { "in_msg" ::= #msg;
+                                "in_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx} };
+          Call (MethodSig enqPInputN(Struct Input): Void)(#input);
+          Retv
+        }.
+
+    Definition build_parent_inputs: Modules :=
+      (pInputConverter ++ (fifo primNormalFifoName ppPInputFifoN (Struct Input)))%kami.
+
+    Definition ppCRqInputFifoN: string := ("fifoCRqInput_" ++ idx_to_string oidx).
     Definition enqCRqInputN := ppCRqInputFifoN -- enqN.
     Definition deqCRqInputN := ppCRqInputFifoN -- deqN.
 
-    Definition ppCRsInputFifoN: string := ("fifoCRsInput" ++ idx_to_string oidx).
+    Definition ppCRsInputFifoN: string := ("fifoCRsInput_" ++ idx_to_string oidx).
     Definition enqCRsInputN := ppCRsInputFifoN -- enqN.
     Definition deqCRsInputN := ppCRsInputFifoN -- deqN.
 
-    Definition ppInputFifoN: string := ("fifoInput" ++ idx_to_string oidx).
-    Definition enqInputN := ppInputFifoN -- enqN.
-    Definition deqInputN := ppInputFifoN -- deqN.
+    Definition ppCInputFifoN: string := ("fifoCInput_" ++ idx_to_string oidx).
+    Definition enqCInputN := ppCInputFifoN -- enqN.
+    Definition deqCInputN := ppCInputFifoN -- deqN.
 
-    Definition build_inputs_l1: Modules :=
-      ((inputAcceptorL1 oidx enqInputN)
-         ++ (fifo primNormalFifoName ppInputFifoN (Struct Input)))%kami.
+    Let deqCRqN := (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))) -- deqN.
+    Definition cInputConverter: Modules :=
+      MODULE {
+        Rule ("convert_" ++ idx_to_string oidx) :=
+          Call msg <- (MethodSig deqCRqN(): Struct KMsg)();
+          LET input <- STRUCT { "in_msg" ::= #msg;
+                                "in_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx} };
+          Call (MethodSig enqCInputN(Struct Input): Void)(#input);
+          Retv
+      }.
 
-    Definition build_inputs_li_2: Modules :=
+    Definition build_child_inputs_l1: Modules :=
+      (cInputConverter ++ (fifo primNormalFifoName ppCInputFifoN (Struct Input)))%kami.
+
+    Definition build_child_inputs_li_2: Modules :=
       ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
          ++ (fifo primNormalFifoName ppCRqInputFifoN (Struct ChildInput))
          ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
          ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
-         ++ (inputAcceptorLi oidx deqCRqInputN deqCRsInputN enqInputN)
-         ++ (fifo primNormalFifoName ppInputFifoN (Struct Input)))%kami.
+         ++ (childInputAcceptor oidx deqCRqInputN deqCRsInputN enqCInputN)
+         ++ (fifo primNormalFifoName ppCInputFifoN (Struct Input)))%kami.
 
-    Definition build_inputs_li_4: Modules :=
+    Definition build_child_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
          ++ (fifo primNormalFifoName ppCRqInputFifoN (Struct ChildInput))
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
          ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
-         ++ (inputAcceptorLi oidx deqCRqInputN deqCRsInputN enqInputN)
-         ++ (fifo primNormalFifoName ppInputFifoN (Struct Input)))%kami.
+         ++ (childInputAcceptor oidx deqCRqInputN deqCRsInputN enqCInputN)
+         ++ (fifo primNormalFifoName ppCInputFifoN (Struct Input)))%kami.
 
   End Inputs.
 
@@ -1278,59 +1300,83 @@ Section Compile.
 
   End Outputs.
 
-  Let ppIN2IRN (oidx: IdxT): string := ("fifoN2I" ++ idx_to_string oidx).
-  Let enqIN2IRN (oidx: IdxT) := (ppIN2IRN oidx) -- enqN.
-  Let deqIN2IRN (oidx: IdxT) := (ppIN2IRN oidx) -- deqN.
+  Let ppIN2IRN (ppName: string): string := ("fifoN2I_" ++ ppName).
+  Let enqIN2IRN (ppName: string) := (ppIN2IRN ppName) -- enqN.
+  Let deqIN2IRN (ppName: string) := (ppIN2IRN ppName) -- deqN.
 
-  Let ppIR2LRN (oidx: IdxT): string := ("fifoI2L" ++ idx_to_string oidx).
-  Let enqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- enqN.
-  Let deqIR2LRN (oidx: IdxT) := (ppIR2LRN oidx) -- deqN.
+  Let ppIR2LRN (ppName: string): string := ("fifoI2L_" ++ ppName).
+  Let enqIR2LRN (ppName: string) := (ppIR2LRN ppName) -- enqN.
+  Let deqIR2LRN (ppName: string) := (ppIR2LRN ppName) -- deqN.
 
-  Let ppLR2EXN (oidx: IdxT): string := ("fifoL2E" ++ idx_to_string oidx).
-  Let enqLR2EXN (oidx: IdxT) := (ppLR2EXN oidx) -- enqN.
-  Let deqLR2EXN (oidx: IdxT) := (ppLR2EXN oidx) -- deqN.
+  Let ppLR2EXN (ppName: string): string := ("fifoL2E_" ++ ppName).
+  Let enqLR2EXN (ppName: string) := (ppLR2EXN ppName) -- enqN.
+  Let deqLR2EXN (ppName: string) := (ppLR2EXN ppName) -- deqN.
 
-  Definition build_pipeline (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+  Let pppN (oidx: IdxT): string := ("parent_" ++ idx_to_string oidx).
+  Let cppN (oidx: IdxT): string := ("child_" ++ idx_to_string oidx).
+
+  (** NOTE: it builds the "two" pipelines: one for the messages from the parent,
+   * and the other for the messages from children. If just a single pipeline is used,
+   * then a deadlock happens at the pipelines between a child and the parent.
+   *)
+  Definition build_pipeline (deqPInputN deqCInputN: string)
+             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    let crules := compile_rules_pipeline
-                    oidx (deqInputN oidx)
-                    (enqIN2IRN oidx) (deqIN2IRN oidx)
-                    (enqIR2LRN oidx) (deqIR2LRN oidx)
-                    (enqLR2EXN oidx) (deqLR2EXN oidx)
-                    (hobj_rules (projT2 obj)) in
-    Mod cregs crules nil.
+    let ppp := compile_rules_pipeline_no_exec
+                 oidx deqPInputN
+                 (enqIN2IRN (pppN oidx)) (deqIN2IRN (pppN oidx))
+                 (enqIR2LRN (pppN oidx)) (deqIR2LRN (pppN oidx))
+                 (enqLR2EXN (idx_to_string oidx)) in
+    let cpp := compile_rules_pipeline_no_exec
+                 oidx deqCInputN
+                 (enqIN2IRN (cppN oidx)) (deqIN2IRN (cppN oidx))
+                 (enqIR2LRN (cppN oidx)) (deqIR2LRN (cppN oidx))
+                 (enqLR2EXN (idx_to_string oidx)) in
+    let execRules := compile_rules_exec
+                       oidx (deqLR2EXN (idx_to_string oidx)) (hobj_rules (projT2 obj)) in
+    Mod cregs (ppp ++ cpp ++ execRules) nil.
 
   Definition build_controller_l1
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    (((build_inputs_l1 oidx)
-        ++ ((build_pipeline obj)
-              ++ (fifo primNormalFifoName (ppIN2IRN oidx) (Struct IRElt))
-              ++ (fifo primPipelineFifoName (ppIR2LRN oidx) (Struct IRElt))
-              ++ (fifo primPipelineFifoName (ppLR2EXN oidx) (Struct LRElt)))
-        ++ build_outputs_l1 oidx)
-       ++ build_int_fifos oidx ++ build_ext_fifos oidx)%kami.
+    ((build_parent_inputs oidx)
+       ++ (build_child_inputs_l1 oidx)
+       ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
+       ++ (fifo primNormalFifoName (ppIN2IRN (pppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppIR2LRN (pppN oidx)) (Struct IRElt))
+       ++ (fifo primNormalFifoName (ppIN2IRN (cppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppIR2LRN (cppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ build_outputs_l1 oidx
+       ++ build_int_fifos oidx
+       ++ build_ext_fifos oidx)%kami.
 
   Definition build_controller_li_2_no_ints
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    (((build_inputs_li_2 oidx)
-        ++ ((build_pipeline obj)
-              ++ (fifo primNormalFifoName (ppIN2IRN oidx) (Struct IRElt))
-              ++ (fifo primPipelineFifoName (ppIR2LRN oidx) (Struct IRElt))
-              ++ (fifo primPipelineFifoName (ppLR2EXN oidx) (Struct LRElt)))
-        ++ build_outputs_li oidx))%kami.
+    ((build_parent_inputs oidx)
+       ++ (build_child_inputs_li_2 oidx)
+       ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
+       ++ (fifo primNormalFifoName (ppIN2IRN (pppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppIR2LRN (pppN oidx)) (Struct IRElt))
+       ++ (fifo primNormalFifoName (ppIN2IRN (cppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppIR2LRN (cppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_4_no_ints
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    (((build_inputs_li_4 oidx)
-        ++ ((build_pipeline obj)
-              ++ (fifo primNormalFifoName (ppIN2IRN oidx) (Struct IRElt))
-              ++ (fifo primPipelineFifoName (ppIR2LRN oidx) (Struct IRElt))
-              ++ (fifo primPipelineFifoName (ppLR2EXN oidx) (Struct LRElt)))
-        ++ build_outputs_li oidx))%kami.
+    ((build_parent_inputs oidx)
+       ++ (build_child_inputs_li_4 oidx)
+       ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
+       ++ (fifo primNormalFifoName (ppIN2IRN (pppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppIR2LRN (pppN oidx)) (Struct IRElt))
+       ++ (fifo primNormalFifoName (ppIN2IRN (cppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppIR2LRN (cppN oidx)) (Struct IRElt))
+       ++ (fifo primPipelineFifoName (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_2
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
@@ -1341,10 +1387,5 @@ Section Compile.
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     (build_controller_li_4_no_ints obj ++ build_int_fifos oidx)%kami.
-
-  Definition build_controller_mem
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
-    let oidx := obj_idx (projT1 obj) in
-    (build_pipeline obj ++ build_outputs_mem oidx)%kami.
 
 End Compile.
