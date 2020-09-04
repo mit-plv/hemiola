@@ -1134,20 +1134,12 @@ Section Cache.
 
   Definition rep := (repLRU ++ repRam)%kami.
 
-  (** Pipe from the second stage *)
+  (*! Public interface for the info/value caches *)
+
   Definition MayVictim :=
     STRUCT { "mv_addr" :: Bit addrSz;
              "mv_info" :: infoK }.
   Let MayVictimK := Struct MayVictim.
-  Definition cp2 :=
-    STRUCT { "may_victim" :: MayVictimK; "reps" :: repK }.
-  Let cpK2 := Struct cp2.
-  Definition cpN2 := "cp_2"+o.
-  Definition cpipe2 := fifo primPipelineFifoName cpN2 cpK2.
-  Definition cpEnq2 := MethodSig (cpN2 -- "enq") (cpK2): Void.
-  Definition cpDeq2 := MethodSig (cpN2 -- "deq") (): cpK2.
-
-  (*! Public interface for the info/value caches *)
 
   Definition InfoRead :=
     STRUCT { "info_index" :: Bit indexSz;
@@ -1156,7 +1148,9 @@ Section Cache.
              "edir_hit" :: Bool;
              "edir_way" :: Bit edirLgWay;
              "edir_slot" :: Maybe (Bit edirLgWay);
-             "info" :: infoK
+             "info" :: infoK;
+             "may_victim" :: MayVictimK;
+             "reps" :: repK
            }.
   Let InfoReadK := Struct InfoRead.
 
@@ -1181,7 +1175,9 @@ Section Cache.
              "edir_slot" :: Maybe (Bit edirLgWay);
              "info" :: infoK;
              "value_write" :: Bool;
-             "value" :: valueK
+             "value" :: valueK;
+             "may_victim" :: MayVictimK;
+             "reps" :: repK
            }.
   Let LineWriteK := Struct LineWrite.
 
@@ -1267,6 +1263,10 @@ Section Cache.
         LET maxAge: RepCntK <- $$Default;
         NCall2 repWay, _ <- getRepWay maxWay maxAge reps;
 
+        LET repTagInfo <- #ntis@[#repWay];
+        LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
+        LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
+
         LET linfo: InfoReadK <-
                    STRUCT { "info_index" ::= #index;
                             "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
@@ -1274,15 +1274,11 @@ Section Cache.
                             "edir_hit" ::= $$Default;
                             "edir_way" ::= $$Default;
                             "edir_slot" ::= $$Default;
-                            "info" ::= #itm!(TagMatch infoK lgWay)@."tm_value" };
-
-        LET repTagInfo <- #ntis@[#repWay];
-        LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
-        LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
-        Call cpEnq2(STRUCT { "may_victim" ::=
-                               STRUCT { "mv_addr" ::= buildAddr repTag index;
-                                        "mv_info" ::= #repInfo };
-                             "reps" ::= #reps });
+                            "info" ::= #itm!(TagMatch infoK lgWay)@."tm_value";
+                            "may_victim" ::=
+                              STRUCT { "mv_addr" ::= buildAddr repTag index;
+                                       "mv_info" ::= #repInfo };
+                            "reps" ::= #reps };
         (** On cache hit, request the line value; otherwise, request the victim line value. *)
         Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
                          then (#itm!(TagMatch infoK lgWay)@."tm_way")
@@ -1290,7 +1286,6 @@ Section Cache.
         Ret #linfo
 
       with Method valueRsLineRqN (lw: LineWriteK): valueK :=
-        Call cpipe <- cpDeq2();
         Call value <- dataRdResp();
         LET addr <- #lw!LineWrite@."addr";
         LET index <- getIndex addr;
@@ -1311,7 +1306,7 @@ Section Cache.
 
              (** may need to register a new victim line *)
              If (!(#lw!LineWrite@."info_hit"))
-             then (LET mv <- #cpipe!cp2@."may_victim";
+             then (LET mv <- #lw!LineWrite@."may_victim";
                   LET nv <- STRUCT { "victim_valid" ::= $$true;
                                      "victim_addr" ::= #mv!MayVictim@."mv_addr";
                                      "victim_info" ::= #mv!MayVictim@."mv_info";
@@ -1324,7 +1319,7 @@ Section Cache.
              Call repAccess(STRUCT { "acc_type" ::=
                                        (IF (isDirInvalid ninfo)
                                         then accInvalid else accTouch);
-                                     "acc_reps" ::= #cpipe!cp2@."reps";
+                                     "acc_reps" ::= #lw!LineWrite@."reps";
                                      "acc_index" ::= #index;
                                      "acc_way" ::= #info_way });
              Retv);
@@ -1359,6 +1354,10 @@ Section Cache.
         LET maxAge: RepCntK <- $$Default;
         NCall2 repWay, _ <- getRepWay maxWay maxAge reps;
 
+        LET repTagInfo <- #ntis@[#repWay];
+        LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
+        LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
+
         LET linfo: InfoReadK <-
                    STRUCT { "info_index" ::= #index;
                             "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
@@ -1369,15 +1368,12 @@ Section Cache.
                             "info" ::=
                               (IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
                                then (#itm!(TagMatch infoK lgWay)@."tm_value")
-                               else (edirToInfo edirV)) };
+                               else (edirToInfo edirV));
+                            "may_victim" ::=
+                              STRUCT { "mv_addr" ::= buildAddr repTag index;
+                                       "mv_info" ::= #repInfo };
+                            "reps" ::= #reps };
 
-        LET repTagInfo <- #ntis@[#repWay];
-        LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
-        LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
-        Call cpEnq2(STRUCT { "may_victim" ::=
-                               STRUCT { "mv_addr" ::= buildAddr repTag index;
-                                        "mv_info" ::= #repInfo };
-                             "reps" ::= #reps });
         (** On cache hit, request the line value; otherwise, request the victim line value. *)
         Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
                          then (#itm!(TagMatch infoK lgWay)@."tm_way")
@@ -1395,7 +1391,6 @@ Section Cache.
        * 3-2) edir write: write to edir if there's an empty slot, otherwise to the info cache.
        *)
       with Method valueRsLineRqN (lw: LineWriteK): valueK :=
-        Call cpipe <- cpDeq2();
         Call value <- dataRdResp();
         LET addr <- #lw!LineWrite@."addr";
         LET index <- getIndex addr;
@@ -1416,7 +1411,7 @@ Section Cache.
 
                    (** may need to register a new victim line *)
                    If (!(#lw!LineWrite@."info_hit"))
-                   then (LET mv <- #cpipe!cp2@."may_victim";
+                   then (LET mv <- #lw!LineWrite@."may_victim";
                         LET nv <- STRUCT { "victim_valid" ::= $$true;
                                            "victim_addr" ::= #mv!MayVictim@."mv_addr";
                                            "victim_info" ::= #mv!MayVictim@."mv_info";
@@ -1429,7 +1424,7 @@ Section Cache.
                    Call repAccess(STRUCT { "acc_type" ::=
                                              (IF (isDirInvalid ninfo)
                                               then accInvalid else accTouch);
-                                           "acc_reps" ::= #cpipe!cp2@."reps";
+                                           "acc_reps" ::= #lw!LineWrite@."reps";
                                            "acc_index" ::= #index;
                                            "acc_way" ::= #info_way });
                    Retv);
@@ -1486,7 +1481,6 @@ Section Cache.
   Definition cache :=
     (cacheIfc
        ++ victimsIfc
-       ++ (cpipe2)
        ++ infoRams (Nat.pow 2 lgWay - 1)
        ++ dataRam
        ++ rep)%kami.
@@ -1494,7 +1488,6 @@ Section Cache.
   Definition ncid :=
     (ncidIfc
        ++ victimsIfc
-       ++ (cpipe2)
        ++ infoRams (Nat.pow 2 lgWay - 1)
        ++ edirRams (Nat.pow 2 edirLgWay - 1)
        ++ dataRam

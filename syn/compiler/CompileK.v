@@ -455,7 +455,7 @@ Section Compile.
     End InfoReadStage.
 
     Variables deqIR2LRN enqLR2EXN: string.
-    Local Notation InfoRead := (InfoRead infoK indexSz lgWay edirLgWay).
+    Local Notation InfoRead := (InfoRead infoK indexSz hcfg_addr_sz lgWay edirLgWay).
 
     Section LineReadStage.
 
@@ -494,7 +494,9 @@ Section Compile.
                               "edir_hit" ::= $$Default;
                               "edir_way" ::= $$Default;
                               "edir_slot" ::= $$Default;
-                              "info" ::= #victim!Victim@."victim_info" };
+                              "info" ::= #victim!Victim@."victim_info";
+                              "may_victim" ::= $$Default;
+                              "reps" ::= $$Default };
         LET lr <- STRUCT { "lr_ir_pp" ::= #ir;
                            "lr_ir" ::= #rinfo;
                            "lr_value" ::= #victim!Victim@."victim_value" };
@@ -796,7 +798,9 @@ Section Compile.
                                                    (* The previous value is not used for
                                                     * local state updates; it may be used for
                                                     * [OTrs] updates or output messages. *)
-                                                   "value" ::= $$Default };
+                                                   "value" ::= $$Default;
+                                                   "may_victim" ::= #pir!InfoRead@."may_victim";
+                                                   "reps" ::= #pir!InfoRead@."reps" };
         compile_OState_request_write
           ostVars host pline
           mvi victimVal
