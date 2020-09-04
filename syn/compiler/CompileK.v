@@ -985,41 +985,46 @@ Section Compile.
   Context `{CompExtExp} `{CompLineRW}.
 
   Section Pipeline.
-    Variable (oidx: IdxT).
+    Variables (oidx: IdxT) (ppN: string).
     Variables (deqInputN enqIN2IRN deqIN2IRN
                          enqIR2LRN deqIR2LRN
                          enqLR2EXN deqLR2EXN: string).
 
-    Definition compile_rules_in: list (Attribute (Action Void)) :=
-      {| attrName := "rule_in_prq_" ++ idx_to_string oidx;
+    Let ppIdxN := (ppN ++ "_" ++ idx_to_string oidx)%string.
+
+    Definition compile_rules_in_parent: list (Attribute (Action Void)) :=
+      {| attrName := "rule_in_prq_" ++ ppIdxN;
          attrType := fun var => inputPRq oidx deqInputN enqIN2IRN |}
-        :: {| attrName := "rule_in_prs_" ++ idx_to_string oidx;
+        :: {| attrName := "rule_in_prs_" ++ ppIdxN;
               attrType := fun var => inputPRs oidx deqInputN enqIN2IRN |}
-        :: {| attrName := "rule_in_crq_" ++ idx_to_string oidx;
-              attrType := fun var => inputCRq oidx deqInputN enqIN2IRN |}
-        :: {| attrName := "rule_in_crs_" ++ idx_to_string oidx;
-              attrType := fun var => inputCRs oidx deqInputN enqIN2IRN |}
-        :: {| attrName := "rule_in_retry_" ++ idx_to_string oidx;
-              attrType := fun var => inputRetry oidx enqIN2IRN |}
-        :: {| attrName := "rule_in_invrs_" ++ idx_to_string oidx;
+        :: {| attrName := "rule_in_invrs_" ++ ppIdxN;
               attrType := fun var => inputInvRs oidx deqInputN |}
-        :: {| attrName := "rule_in_rsrel_" ++ idx_to_string oidx;
+        :: {| attrName := "rule_in_rsrel_" ++ ppIdxN;
               attrType := fun var => inputRsRel oidx enqIN2IRN |}
         :: nil.
 
+    Definition compile_rules_in_child: list (Attribute (Action Void)) :=
+      {| attrName := "rule_in_crq_" ++ ppIdxN;
+         attrType := fun var => inputCRq oidx deqInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_crs_" ++ ppIdxN;
+              attrType := fun var => inputCRs oidx deqInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_retry_" ++ ppIdxN;
+              attrType := fun var => inputRetry oidx enqIN2IRN |}
+        :: nil.
+
     Definition compile_rules_ir: list (Attribute (Action Void)) :=
-      {| attrName := "rule_ir_cache_" ++ idx_to_string oidx;
+      {| attrName := "rule_ir_cache_" ++ ppIdxN;
          attrType := fun var => irCache oidx deqIN2IRN enqIR2LRN |}
-        :: {| attrName := "rule_ir_victims_" ++ idx_to_string oidx;
+        :: {| attrName := "rule_ir_victims_" ++ ppIdxN;
               attrType := fun var => irVictims deqIN2IRN enqIR2LRN |}
-        :: {| attrName := "rule_ir_rs_acc_" ++ idx_to_string oidx;
+        :: {| attrName := "rule_ir_rs_acc_" ++ ppIdxN;
               attrType := fun var => irRsAcc oidx deqIN2IRN |}
         :: nil.
 
     Definition compile_rules_lr: list (Attribute (Action Void)) :=
-      {| attrName := "rule_lr_cache_" ++ idx_to_string oidx;
+      {| attrName := "rule_lr_cache_" ++ ppIdxN;
          attrType := fun var => lrCache oidx deqIR2LRN enqLR2EXN |}
-        :: {| attrName := "rule_lr_victims_" ++ idx_to_string oidx;
+        :: {| attrName := "rule_lr_victims_" ++ ppIdxN;
               attrType := fun var => lrVictims oidx deqIR2LRN enqLR2EXN |}
         :: nil.
 
@@ -1064,8 +1069,11 @@ Section Compile.
       list (Attribute (Action Void)) :=
       ListSupport.oll (map compile_rule_exec rules).
 
-    Definition compile_rules_pipeline_no_exec: list (Attribute (Action Void)) :=
-      compile_rules_in ++ compile_rules_ir ++ compile_rules_lr.
+    Definition compile_rules_pipeline_parent: list (Attribute (Action Void)) :=
+      compile_rules_in_parent ++ compile_rules_ir ++ compile_rules_lr.
+
+    Definition compile_rules_pipeline_child: list (Attribute (Action Void)) :=
+      compile_rules_in_child ++ compile_rules_ir ++ compile_rules_lr.
 
   End Pipeline.
 
@@ -1099,7 +1107,7 @@ Section Compile.
     Let deqPMsgN := (fifoBaseName ++ idx_to_string (downTo oidx)) -- deqN.
     Definition pInputConverter: Modules :=
       MODULE {
-        Rule ("convert_" ++ idx_to_string oidx) :=
+        Rule ("parent_convert_" ++ idx_to_string oidx) :=
           Call msg <- (MethodSig deqPMsgN(): Struct KMsg)();
           LET input <- STRUCT { "in_msg" ::= #msg;
                                 "in_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx} };
@@ -1125,10 +1133,10 @@ Section Compile.
     Let deqCRqN := (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))) -- deqN.
     Definition cInputConverter: Modules :=
       MODULE {
-        Rule ("convert_" ++ idx_to_string oidx) :=
+        Rule ("child_convert_" ++ idx_to_string oidx) :=
           Call msg <- (MethodSig deqCRqN(): Struct KMsg)();
           LET input <- STRUCT { "in_msg" ::= #msg;
-                                "in_msg_from" ::= {$downIdx, compile_oidx_to_cidx oidx} };
+                                "in_msg_from" ::= {$rqUpIdx, compile_oidx_to_cidx (l1ExtOf oidx)} };
           Call (MethodSig enqCInputN(Struct Input): Void)(#input);
           Retv
       }.
@@ -1323,13 +1331,13 @@ Section Compile.
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    let ppp := compile_rules_pipeline_no_exec
-                 oidx deqPInputN
+    let ppp := compile_rules_pipeline_parent
+                 oidx "parent" deqPInputN
                  (enqIN2IRN (pppN oidx)) (deqIN2IRN (pppN oidx))
                  (enqIR2LRN (pppN oidx)) (deqIR2LRN (pppN oidx))
                  (enqLR2EXN (idx_to_string oidx)) in
-    let cpp := compile_rules_pipeline_no_exec
-                 oidx deqCInputN
+    let cpp := compile_rules_pipeline_child
+                 oidx "child" deqCInputN
                  (enqIN2IRN (cppN oidx)) (deqIN2IRN (cppN oidx))
                  (enqIR2LRN (cppN oidx)) (deqIR2LRN (cppN oidx))
                  (enqLR2EXN (idx_to_string oidx)) in
