@@ -4,22 +4,15 @@ Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
 Require Import Hemiola.Ex.TopoTemplate.
 
 Require Import Compiler.HemiolaDeep. (* source *)
-Require Import Kami.Lib.Struct Kami Kami.PrimFifo Kami.PrimBram. (* target *)
+Require Import Kami.Lib.Struct Kami Kami.Ex.Fifo Kami.PrimFifo Kami.PrimBram. (* target *)
 Require Export Compiler.Components.
 
 Set Implicit Arguments.
 
 Import MonadNotations.
 
-(* function Action enq_fifoCInput00(Struct3 _), *)
-(* function ActionValue#(Struct3) deq_fifoCInput00(), *)
-(* function ActionValue#(Struct3) deq_fifo002(), *)
-(* function Action enq_fifo001(Struct1 _), *)
-(* function Action enq_fifo000(Struct1 _), *)
-(* function ActionValue#(Struct3) deq_fifo00000(), *)
-(* function ActionValue#(Struct3) deq_fifo0002(), *)
-(* function ActionValue#(Struct3) deq_fifo00100(), *)
-(* function ActionValue#(Struct3) deq_fifo0012()) (CC); *)
+Definition nfifo (fifoName: string) (dType: Kind) := fifo primNormalFifoName fifoName dType.
+Definition ppfifo (fifoName: string) (dType: Kind) := fifo primPipelineFifoName fifoName dType.
 
 Section Compile.
   Context `{rcfg: ReifyConfig} `{tcfg: TopoConfig}
@@ -28,6 +21,19 @@ Section Compile.
           `{het: ExtType}
           `{hoifc: @HOStateIfc dv oifc}
           `{hoifcf: @HOStateIfcFull dv oifc hoifc het}.
+
+  Definition dfifo (fifoName: string) :=
+    debugFifo (dType:= Struct KMsg) fifoName 1
+              (fifoName ++ ".enq:")%string
+              (fun _ elt =>
+                 (DispBit (0, Hex) (#elt!KMsg@."id")%kami_expr)
+                   :: (DispBit (0, Hex) (#elt!KMsg@."addr")%kami_expr)
+                   :: nil)
+              (fifoName ++ ".deq:")%string
+              (fun _ elt =>
+                 (DispBit (0, Hex) (#elt!KMsg@."id")%kami_expr)
+                   :: (DispBit (0, Hex) (#elt!KMsg@."addr")%kami_expr)
+                   :: nil).
 
   Definition KCIdm :=
     STRUCT { "cidx" :: KQIdx; "msg" :: Struct KMsg }.
@@ -1080,21 +1086,14 @@ Section Compile.
   Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
-    ((fifo primNormalFifoName
-           (fifoBaseName ++ idx_to_string (rqUpFrom oidx)) (Struct KMsg))
-       ++ (fifo primNormalFifoName
-                (fifoBaseName ++ idx_to_string (rsUpFrom oidx)) (Struct KMsg))
-       ++ (fifo primNormalFifoName
-                (fifoBaseName ++ idx_to_string (downTo oidx)) (Struct KMsg))
+    ((dfifo (fifoBaseName ++ idx_to_string (rqUpFrom oidx)))
+       ++ (dfifo (fifoBaseName ++ idx_to_string (rsUpFrom oidx)))
+       ++ (dfifo (fifoBaseName ++ idx_to_string (downTo oidx)))
     )%kami.
 
   Definition build_ext_fifos (oidx: IdxT): Modules :=
-    ((fifo primNormalFifoName
-           (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx)))
-           (Struct KMsg))
-       ++ (fifo primNormalFifoName
-                (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx)))
-                (Struct KMsg))
+    ((dfifo (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))))
+       ++ (dfifo (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx))))
     )%kami.
 
   Section Inputs.
@@ -1116,7 +1115,7 @@ Section Compile.
         }.
 
     Definition build_parent_inputs: Modules :=
-      (pInputConverter ++ (fifo primNormalFifoName ppPInputFifoN (Struct Input)))%kami.
+      (pInputConverter ++ (nfifo ppPInputFifoN (Struct Input)))%kami.
 
     Definition ppCRqInputFifoN: string := ("fifoCRqInput_" ++ idx_to_string oidx).
     Definition enqCRqInputN := ppCRqInputFifoN -- enqN.
@@ -1142,23 +1141,23 @@ Section Compile.
       }.
 
     Definition build_child_inputs_l1: Modules :=
-      (cInputConverter ++ (fifo primNormalFifoName ppCInputFifoN (Struct Input)))%kami.
+      (cInputConverter ++ (nfifo ppCInputFifoN (Struct Input)))%kami.
 
     Definition build_child_inputs_li_2: Modules :=
       ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
-         ++ (fifo primNormalFifoName ppCRqInputFifoN (Struct ChildInput))
+         ++ (nfifo ppCRqInputFifoN (Struct ChildInput))
          ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
-         ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
+         ++ (nfifo ppCRsInputFifoN (Struct ChildInput))
          ++ (childInputAcceptor oidx deqCRqInputN deqCRsInputN enqCInputN)
-         ++ (fifo primNormalFifoName ppCInputFifoN (Struct Input)))%kami.
+         ++ (nfifo ppCInputFifoN (Struct Input)))%kami.
 
     Definition build_child_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (fifo primNormalFifoName ppCRqInputFifoN (Struct ChildInput))
+         ++ (nfifo ppCRqInputFifoN (Struct ChildInput))
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (fifo primNormalFifoName ppCRsInputFifoN (Struct ChildInput))
+         ++ (nfifo ppCRsInputFifoN (Struct ChildInput))
          ++ (childInputAcceptor oidx deqCRqInputN deqCRsInputN enqCInputN)
-         ++ (fifo primNormalFifoName ppCInputFifoN (Struct Input)))%kami.
+         ++ (nfifo ppCInputFifoN (Struct Input)))%kami.
 
   End Inputs.
 
@@ -1351,11 +1350,11 @@ Section Compile.
     ((build_parent_inputs oidx)
        ++ (build_child_inputs_l1 oidx)
        ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (fifo primNormalFifoName (ppIN2IRN (pppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppIR2LRN (pppN oidx)) (Struct IRElt))
-       ++ (fifo primNormalFifoName (ppIN2IRN (cppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppIR2LRN (cppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ (nfifo (ppIN2IRN (pppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIR2LRN (pppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIN2IRN (cppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIR2LRN (cppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
        ++ build_outputs_l1 oidx
        ++ build_int_fifos oidx
        ++ build_ext_fifos oidx)%kami.
@@ -1366,11 +1365,11 @@ Section Compile.
     ((build_parent_inputs oidx)
        ++ (build_child_inputs_li_2 oidx)
        ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (fifo primNormalFifoName (ppIN2IRN (pppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppIR2LRN (pppN oidx)) (Struct IRElt))
-       ++ (fifo primNormalFifoName (ppIN2IRN (cppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppIR2LRN (cppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ (nfifo (ppIN2IRN (pppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIR2LRN (pppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIN2IRN (cppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIR2LRN (cppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_4_no_ints
@@ -1379,11 +1378,11 @@ Section Compile.
     ((build_parent_inputs oidx)
        ++ (build_child_inputs_li_4 oidx)
        ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (fifo primNormalFifoName (ppIN2IRN (pppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppIR2LRN (pppN oidx)) (Struct IRElt))
-       ++ (fifo primNormalFifoName (ppIN2IRN (cppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppIR2LRN (cppN oidx)) (Struct IRElt))
-       ++ (fifo primPipelineFifoName (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ (nfifo (ppIN2IRN (pppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIR2LRN (pppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIN2IRN (cppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppIR2LRN (cppN oidx)) (Struct IRElt))
+       ++ (nfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_2
