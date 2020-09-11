@@ -22,19 +22,6 @@ Section Compile.
           `{hoifc: @HOStateIfc dv oifc}
           `{hoifcf: @HOStateIfcFull dv oifc hoifc het}.
 
-  Definition dfifo (fifoName: string) :=
-    debugFifo (dType:= Struct KMsg) fifoName 1
-              (fifoName ++ ".enq:")%string
-              (fun _ elt =>
-                 (DispBit (0, Hex) (#elt!KMsg@."id")%kami_expr)
-                   :: (DispBit (0, Hex) (#elt!KMsg@."addr")%kami_expr)
-                   :: nil)
-              (fifoName ++ ".deq:")%string
-              (fun _ elt =>
-                 (DispBit (0, Hex) (#elt!KMsg@."id")%kami_expr)
-                   :: (DispBit (0, Hex) (#elt!KMsg@."addr")%kami_expr)
-                   :: nil).
-
   Definition KCIdm :=
     STRUCT { "cidx" :: KQIdx; "msg" :: Struct KMsg }.
 
@@ -1085,15 +1072,43 @@ Section Compile.
 
   Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
+  Section DebugFifos.
+    Definition dMsgFifo (fifoName: string) :=
+      debugFifo (dType:= Struct KMsg) fifoName 18
+                ("-- MSG " ++ fifoName ++ ":")%string
+                (fun _ elt =>
+                   (DispBit (0, Hex) (#elt!KMsg@."id")%kami_expr)
+                     :: (DispBit (0, Hex) (#elt!KMsg@."addr")%kami_expr)
+                     :: nil).
+
+    Definition dChildInputFifo (fifoName: string) :=
+      debugFifo (dType:= Struct ChildInput) fifoName 18
+                ("-- CINPUT " ++ fifoName ++ ":")%string
+                (fun _ elt =>
+                   (DispBit (0, Hex) (#elt!ChildInput@."ch_idx")%kami_expr)
+                     :: (DispBit (0, Hex) (#elt!ChildInput@."ch_msg"!KMsg@."id")%kami_expr)
+                     :: (DispBit (0, Hex) (#elt!ChildInput@."ch_msg"!KMsg@."addr")%kami_expr)
+                     :: nil).
+
+    Definition dInputFifo (fifoName: string) :=
+      debugFifo (dType:= Struct Input) fifoName 18
+                ("-- INPUT " ++ fifoName ++ ":")%string
+                (fun _ elt =>
+                   (DispBit (0, Hex) (#elt!Input@."in_msg_from")%kami_expr)
+                     :: (DispBit (0, Hex) (#elt!Input@."in_msg"!KMsg@."id")%kami_expr)
+                     :: (DispBit (0, Hex) (#elt!Input@."in_msg"!KMsg@."addr")%kami_expr)
+                     :: nil).
+  End DebugFifos.
+
   Definition build_int_fifos (oidx: IdxT): Modules :=
-    ((dfifo (fifoBaseName ++ idx_to_string (rqUpFrom oidx)))
-       ++ (dfifo (fifoBaseName ++ idx_to_string (rsUpFrom oidx)))
-       ++ (dfifo (fifoBaseName ++ idx_to_string (downTo oidx)))
+    ((dMsgFifo (fifoBaseName ++ idx_to_string (rqUpFrom oidx)))
+       ++ (dMsgFifo (fifoBaseName ++ idx_to_string (rsUpFrom oidx)))
+       ++ (dMsgFifo (fifoBaseName ++ idx_to_string (downTo oidx)))
     )%kami.
 
   Definition build_ext_fifos (oidx: IdxT): Modules :=
-    ((dfifo (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))))
-       ++ (dfifo (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx))))
+    ((dMsgFifo (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))))
+       ++ (dMsgFifo (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx))))
     )%kami.
 
   Section Inputs.
@@ -1115,7 +1130,7 @@ Section Compile.
         }.
 
     Definition build_parent_inputs: Modules :=
-      (pInputConverter ++ (nfifo ppPInputFifoN (Struct Input)))%kami.
+      (pInputConverter ++ dInputFifo ppPInputFifoN)%kami.
 
     Definition ppCRqInputFifoN: string := ("fifoCRqInput_" ++ idx_to_string oidx).
     Definition enqCRqInputN := ppCRqInputFifoN -- enqN.
@@ -1141,23 +1156,23 @@ Section Compile.
       }.
 
     Definition build_child_inputs_l1: Modules :=
-      (cInputConverter ++ (nfifo ppCInputFifoN (Struct Input)))%kami.
+      (cInputConverter ++ dInputFifo ppCInputFifoN)%kami.
 
     Definition build_child_inputs_li_2: Modules :=
       ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
-         ++ (nfifo ppCRqInputFifoN (Struct ChildInput))
+         ++ (dChildInputFifo ppCRqInputFifoN)
          ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
-         ++ (nfifo ppCRsInputFifoN (Struct ChildInput))
+         ++ (dChildInputFifo ppCRsInputFifoN)
          ++ (childInputAcceptor oidx deqCRqInputN deqCRsInputN enqCInputN)
-         ++ (nfifo ppCInputFifoN (Struct Input)))%kami.
+         ++ (dInputFifo ppCInputFifoN))%kami.
 
     Definition build_child_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (nfifo ppCRqInputFifoN (Struct ChildInput))
+         ++ (dChildInputFifo ppCRqInputFifoN)
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (nfifo ppCRsInputFifoN (Struct ChildInput))
+         ++ (dChildInputFifo ppCRsInputFifoN)
          ++ (childInputAcceptor oidx deqCRqInputN deqCRsInputN enqCInputN)
-         ++ (nfifo ppCInputFifoN (Struct Input)))%kami.
+         ++ (dInputFifo ppCInputFifoN))%kami.
 
   End Inputs.
 
