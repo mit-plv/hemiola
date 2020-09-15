@@ -1297,39 +1297,39 @@ Section Cache.
         LET info_way <- #lw!LineWrite@."info_way";
         LET ninfo <- #lw!LineWrite@."info";
 
-        (** traditional cache-line write *)
         If (#lw!LineWrite@."info_write")
         then (LET irq <- STRUCT { "addr" ::= #index;
-                                  "datain" ::= STRUCT { "tag" ::= getTag addr;
-                                                        "value" ::= #ninfo } };
+                                  "datain" ::=
+                                    STRUCT { "tag" ::= getTag addr;
+                                             "value" ::= #ninfo } };
              NCall makeInfoWrReqs info_way irq;
 
-             If (#lw!LineWrite@."value_write")
-             then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
-                                       "datain" ::= #lw!LineWrite@."value" };
-                  Call dataWrReq(#drq); Retv);
-
-             (** may need to register a new victim line *)
+             (** Should register a new victim line if not hit *)
              If (!(#lw!LineWrite@."info_hit"))
-             then (LET mv <- #lw!LineWrite@."may_victim";
-                  LET nv <- STRUCT { "victim_valid" ::= $$true;
-                                     "victim_addr" ::= #mv!MayVictim@."mv_addr";
-                                     "victim_info" ::= #mv!MayVictim@."mv_info";
-                                     "victim_value" ::= #value;
-                                     "victim_req" ::= MaybeNone };
-                  Call registerVictim(#nv);
-                  Retv);
+              then (LET mv <- #lw!LineWrite@."may_victim";
+                   LET nv <- STRUCT { "victim_valid" ::= $$true;
+                                      "victim_addr" ::= #mv!MayVictim@."mv_addr";
+                                      "victim_info" ::= #mv!MayVictim@."mv_info";
+                                      "victim_value" ::= #value;
+                                      "victim_req" ::= MaybeNone };
+                   Call registerVictim(#nv);
+                   Retv);
 
-             (** update replacement information *)
-             Call repAccess(STRUCT { "acc_type" ::=
-                                       (IF (isDirInvalid ninfo)
-                                        then accInvalid else accTouch);
-                                     "acc_reps" ::= #lw!LineWrite@."reps";
-                                     "acc_index" ::= #index;
-                                     "acc_way" ::= #info_way });
-             Retv);
+              (** Update replacement information *)
+              Call repAccess(STRUCT { "acc_type" ::=
+                                        (IF (isDirInvalid ninfo)
+                                         then accInvalid else accTouch);
+                                      "acc_reps" ::= #lw!LineWrite@."reps";
+                                      "acc_index" ::= #index;
+                                      "acc_way" ::= #info_way });
+
+              (** Update the value if necessary *)
+              If (#lw!LineWrite@."value_write")
+              then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
+                                        "datain" ::= #lw!LineWrite@."value" };
+                   Call dataWrReq(#drq); Retv);
+              Retv);
         Ret #value
-
     }.
 
   Definition ncidIfc :=
@@ -1386,13 +1386,13 @@ Section Cache.
         Ret #linfo
 
       (** Cache-write cases:
-       * 1) info-hit and info-write: trivial
+       * 1) info-hit and info-write: trivial. Write to the appropriate info line.
        * 2) info-miss and edir-hit
-       * 2-1) info write: just write it (the victim line is already fetched)
-       *          and invalidate the edir line.
-       * 2-2) edir write: just write it (BUT this case may never happen).
+       * 2-1) info write (!justDir): write to info (the victim line is already fetched)
+       *      and invalidate the edir line.
+       * 2-2) edir write (justDir): write to edir (this case may never happen).
        * 3) info miss and edir miss
-       * 3-1) info write: just write it
+       * 3-1) info write: write to info
        * 3-2) edir write: write to edir if there's an empty slot, otherwise to the info cache.
        *)
       with Method valueRsLineRqN (lw: LineWriteK): valueK :=
@@ -1402,68 +1402,68 @@ Section Cache.
         LET info_way <- #lw!LineWrite@."info_way";
         LET ninfo <- #lw!LineWrite@."info";
         LET justDir <- isJustDir ninfo;
+        LET mes <- #lw!LineWrite@."edir_slot";
+        LET hasEDirSlot <- #mes!(MaybeStr (Bit edirLgWay))@."valid";
+        LET edirSlot <- #mes!(MaybeStr (Bit edirLgWay))@."data";
 
-        (** traditional cache-line write *)
-        If ((#lw!LineWrite@."info_hit") ||
-            (!#justDir) ||
-            ((!(#lw!LineWrite@."edir_hit")) && #justDir))
-        then (If (#lw!LineWrite@."info_write")
-              then (LET irq <- STRUCT { "addr" ::= #index;
-                                        "datain" ::=
-                                          STRUCT { "tag" ::= getTag addr;
-                                                   "value" ::= #ninfo } };
-                   NCall makeInfoWrReqs info_way irq;
+        If (#lw!LineWrite@."info_write")
+        then
+          ((** 1) Cases (according to the above note) that directly write to the info cache *)
+           If ((#lw!LineWrite@."info_hit") ||
+               (!#justDir) ||
+               ((!(#lw!LineWrite@."edir_hit")) && #justDir && !#hasEDirSlot))
+           then (LET irq <- STRUCT { "addr" ::= #index;
+                                     "datain" ::=
+                                       STRUCT { "tag" ::= getTag addr;
+                                                "value" ::= #ninfo } };
+                NCall makeInfoWrReqs info_way irq;
 
-                   (** may need to register a new victim line *)
-                   If (!(#lw!LineWrite@."info_hit"))
-                   then (LET mv <- #lw!LineWrite@."may_victim";
-                        LET nv <- STRUCT { "victim_valid" ::= $$true;
-                                           "victim_addr" ::= #mv!MayVictim@."mv_addr";
-                                           "victim_info" ::= #mv!MayVictim@."mv_info";
-                                           "victim_value" ::= #value;
-                                           "victim_req" ::= MaybeNone };
-                        Call registerVictim(#nv);
-                        Retv);
+                (** Should register a new victim line if not hit *)
+                If (!(#lw!LineWrite@."info_hit"))
+                 then (LET mv <- #lw!LineWrite@."may_victim";
+                      LET nv <- STRUCT { "victim_valid" ::= $$true;
+                                         "victim_addr" ::= #mv!MayVictim@."mv_addr";
+                                         "victim_info" ::= #mv!MayVictim@."mv_info";
+                                         "victim_value" ::= #value;
+                                         "victim_req" ::= MaybeNone };
+                      Call registerVictim(#nv);
+                      Retv);
 
-                   (** update replacement information *)
-                   Call repAccess(STRUCT { "acc_type" ::=
-                                             (IF (isDirInvalid ninfo)
-                                              then accInvalid else accTouch);
-                                           "acc_reps" ::= #lw!LineWrite@."reps";
-                                           "acc_index" ::= #index;
-                                           "acc_way" ::= #info_way });
-                   Retv);
-              If (#lw!LineWrite@."value_write")
-              then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
-                                        "datain" ::= #lw!LineWrite@."value" };
-                   Call dataWrReq(#drq); Retv);
-              Retv);
+                 (** Update replacement information *)
+                 Call repAccess(STRUCT { "acc_type" ::=
+                                           (IF (isDirInvalid ninfo)
+                                            then accInvalid else accTouch);
+                                         "acc_reps" ::= #lw!LineWrite@."reps";
+                                         "acc_index" ::= #index;
+                                         "acc_way" ::= #info_way });
 
-              If (#lw!LineWrite@."info_write" && #lw!LineWrite@."edir_hit")
-              then (LET edir_way <- #lw!LineWrite@."edir_way";
-                   (** When writing new information and extended-directory hit:
-                    * 1) update the line if the new information is just about directory, or
-                    * 2) invalidate the line if the new information is updating something more;
-                    *    the new information is updated in the traditional cache (i.e., migration). *)
-                   LET erq <- STRUCT { "addr" ::= getIndex addr;
-                                       "datain" ::=
-                                         STRUCT { "tag" ::= getTag addr;
-                                                  "value" ::= (IF #justDir
-                                                               then (edirFromInfo ninfo)
-                                                               else $$Default) } };
-                   NCall makeEDirWrReqs edir_way erq; Retv)
-              else (** If the information is just about directory and an empty slot exists,
-                    * register the line to the extended directory. *)
-                (LET mes <- #lw!LineWrite@."edir_slot";
-                If ((!(#lw!LineWrite@."edir_hit")) &&
-                    (#mes!(MaybeStr (Bit edirLgWay))@."valid") &&
-                    #justDir)
-                then (LET edir_way <- #mes!(MaybeStr (Bit edirLgWay))@."data";
-                     LET erq <- STRUCT { "addr" ::= getIndex addr;
-                                         "datain" ::=
-                                           STRUCT { "tag" ::= getTag addr;
-                                                    "value" ::= edirFromInfo ninfo } };
-                     NCall makeEDirWrReqs edir_way erq; Retv); Retv);
+                 (** Update the value if necessary *)
+                 If (#lw!LineWrite@."value_write")
+                 then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
+                                           "datain" ::= #lw!LineWrite@."value" };
+                      Call dataWrReq(#drq); Retv);
+                 Retv);
+
+           (** 2) Cases that write to the edir cache, either an update or an invalidation *)
+           If ((!(#lw!LineWrite@."info_hit")) &&
+               #justDir &&
+               ((#lw!LineWrite@."edir_hit") || #hasEDirSlot))
+           then (LET edir_way <- (IF (#lw!LineWrite@."edir_hit")
+                                  then #lw!LineWrite@."edir_way" else #edirSlot);
+                LET erq <- STRUCT { "addr" ::= getIndex addr;
+                                    "datain" ::= STRUCT { "tag" ::= getTag addr;
+                                                          "value" ::= edirFromInfo ninfo } };
+                NCall makeEDirWrReqs edir_way erq;
+                Retv)
+           else (If (#lw!LineWrite@."edir_hit")
+                 then (LET edir_way <- #lw!LineWrite@."edir_way";
+                      LET erq <- STRUCT { "addr" ::= getIndex addr;
+                                          "datain" ::= STRUCT { "tag" ::= getTag addr;
+                                                                "value" ::= edirFromInfo ninfo } };
+                      NCall makeEDirWrReqs edir_way erq;
+                      Retv);
+                 Retv);
+           Retv);
         Ret #value
     }.
 

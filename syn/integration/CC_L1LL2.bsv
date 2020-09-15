@@ -65,9 +65,9 @@ typedef struct { Bit#(64) victim_addr; Bit#(3) victim_req;  } Struct55 deriving(
 typedef struct { Bit#(51) tag; Struct11 value;  } Struct56 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(2) tm_way; Struct11 tm_value;  } Struct57 deriving(Eq, Bits);
 typedef struct { Bit#(8) addr; Struct56 datain;  } Struct58 deriving(Eq, Bits);
-typedef struct { Bit#(10) addr; Vector#(4, Bit#(64)) datain;  } Struct59 deriving(Eq, Bits);
+typedef struct { Bit#(1) acc_type; Vector#(4, Bit#(8)) acc_reps; Bit#(8) acc_index; Bit#(2) acc_way;  } Struct59 deriving(Eq, Bits);
 typedef struct { Bool valid; Bit#(2) data;  } Struct6 deriving(Eq, Bits);
-typedef struct { Bit#(1) acc_type; Vector#(4, Bit#(8)) acc_reps; Bit#(8) acc_index; Bit#(2) acc_way;  } Struct60 deriving(Eq, Bits);
+typedef struct { Bit#(10) addr; Vector#(4, Bit#(64)) datain;  } Struct60 deriving(Eq, Bits);
 typedef struct { Bool valid; Struct48 data;  } Struct61 deriving(Eq, Bits);
 typedef struct { Bit#(8) addr; Vector#(4, Bit#(8)) datain;  } Struct62 deriving(Eq, Bits);
 typedef struct { Bit#(3) r_id; Bit#(2) r_dl_rss_from; Bool r_dl_rsb; Bit#(3) r_dl_rsbTo;  } Struct63 deriving(Eq, Bits);
@@ -2772,7 +2772,7 @@ endmodule
 
 interface Module43;
     method Action rdReq_dataRam__000 (Bit#(10) x_0);
-    method Action wrReq_dataRam__000 (Struct59 x_0);
+    method Action wrReq_dataRam__000 (Struct60 x_0);
     method ActionValue#(Vector#(4, Bit#(64))) rdResp_dataRam__000 ();
 endinterface
 
@@ -2792,7 +2792,7 @@ module mkModule43 (Module43);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_dataRam__000 (Struct59 x_0) if(initDone);
+    method Action wrReq_dataRam__000 (Struct60 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -4116,7 +4116,7 @@ endmodule
 
 interface Module63;
     method Action rdReq_dataRam__001 (Bit#(10) x_0);
-    method Action wrReq_dataRam__001 (Struct59 x_0);
+    method Action wrReq_dataRam__001 (Struct60 x_0);
     method ActionValue#(Vector#(4, Bit#(64))) rdResp_dataRam__001 ();
 endinterface
 
@@ -4136,7 +4136,7 @@ module mkModule63 (Module63);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_dataRam__001 (Struct59 x_0) if(initDone);
+    method Action wrReq_dataRam__001 (Struct60 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -4907,7 +4907,7 @@ endmodule
 interface Module75;
     method Action repGetRq__000 (Bit#(8) x_0);
     method ActionValue#(Vector#(4, Bit#(8))) repGetRs__000 ();
-    method Action repAccess__000 (Struct60 x_0);
+    method Action repAccess__000 (Struct59 x_0);
 endinterface
 
 module mkModule75#(function Action wrReq_repRam__000(Struct62 _),
@@ -4926,7 +4926,7 @@ module mkModule75#(function Action wrReq_repRam__000(Struct62 _),
         return x_1;
     endmethod
 
-    method Action repAccess__000 (Struct60 x_0);
+    method Action repAccess__000 (Struct59 x_0);
         Vector#(4, Bit#(8)) x_1 = ((x_0).acc_reps);
         Bit#(8) x_2 = (((x_1)[(Bit#(2))'(2'h3)]) +
         (((((x_1)[(Bit#(2))'(2'h3)]) == ((Bit#(8))'(8'h0))) ||
@@ -5035,7 +5035,7 @@ endmodule
 interface Module79;
     method Action repGetRq__001 (Bit#(8) x_0);
     method ActionValue#(Vector#(4, Bit#(8))) repGetRs__001 ();
-    method Action repAccess__001 (Struct60 x_0);
+    method Action repAccess__001 (Struct59 x_0);
 endinterface
 
 module mkModule79#(function Action wrReq_repRam__001(Struct62 _),
@@ -5054,7 +5054,7 @@ module mkModule79#(function Action wrReq_repRam__001(Struct62 _),
         return x_1;
     endmethod
 
-    method Action repAccess__001 (Struct60 x_0);
+    method Action repAccess__001 (Struct59 x_0);
         Vector#(4, Bit#(8)) x_1 = ((x_0).acc_reps);
         Bit#(8) x_2 = (((x_1)[(Bit#(2))'(2'h3)]) +
         (((((x_1)[(Bit#(2))'(2'h3)]) == ((Bit#(8))'(8'h0))) ||
@@ -5324,140 +5324,145 @@ module mkModule80#(function Action wrReq_edirRam__00__3(Struct36 _),
         Struct11 x_5 = ((x_0).info);
         Bool x_6 = ((! ((x_5).mesi_owned)) && (((x_5).mesi_status) ==
         ((Bit#(3))'(3'h1))));
-        if ((((x_0).info_hit) || (! (x_6))) || ((! ((x_0).edir_hit)) &&
-            (x_6)))
+        Struct6 x_7 = ((x_0).edir_slot);
+        Bool x_8 = ((x_7).valid);
+        Bit#(2) x_9 =
+        ((x_7).data);
+        if ((x_0).info_write)
             begin
-            if ((x_0).info_write) begin
-                Struct33 x_7 = (Struct33 {addr : x_3, datain : Struct28 {tag
+            if ((((x_0).info_hit) || (! (x_6))) || (((! ((x_0).edir_hit)) &&
+                (x_6)) && (! (x_8)))) begin
+                Struct33 x_10 = (Struct33 {addr : x_3, datain : Struct28 {tag
                 : (x_2)[63:14], value :
                 x_5}});
                 if ((x_4) == ((Bit#(3))'(3'h0))) begin
-                    let x_8 <- wrReq_infoRam__00__0(x_7);
+                    let x_11 <- wrReq_infoRam__00__0(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h1))) begin
-                    let x_10 <- wrReq_infoRam__00__1(x_7);
+                    let x_13 <- wrReq_infoRam__00__1(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h2))) begin
-                    let x_12 <- wrReq_infoRam__00__2(x_7);
+                    let x_15 <- wrReq_infoRam__00__2(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h3))) begin
-                    let x_14 <- wrReq_infoRam__00__3(x_7);
+                    let x_17 <- wrReq_infoRam__00__3(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h4))) begin
-                    let x_16 <- wrReq_infoRam__00__4(x_7);
+                    let x_19 <- wrReq_infoRam__00__4(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h5))) begin
-                    let x_18 <- wrReq_infoRam__00__5(x_7);
+                    let x_21 <- wrReq_infoRam__00__5(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h6))) begin
-                    let x_20 <- wrReq_infoRam__00__6(x_7);
+                    let x_23 <- wrReq_infoRam__00__6(x_10);
                 end else begin
 
                 end
                 if ((x_4) == ((Bit#(3))'(3'h7))) begin
-                    let x_22 <- wrReq_infoRam__00__7(x_7);
+                    let x_25 <- wrReq_infoRam__00__7(x_10);
                 end else begin
 
                 end
                 if (! ((x_0).info_hit)) begin
-                    Struct12 x_24 = ((x_0).may_victim);
-                    Struct14 x_25 = (Struct14 {victim_valid : (Bool)'(True),
-                    victim_addr : (x_24).mv_addr, victim_info :
-                    (x_24).mv_info, victim_value : x_1, victim_req : Struct15
+                    Struct12 x_27 = ((x_0).may_victim);
+                    Struct14 x_28 = (Struct14 {victim_valid : (Bool)'(True),
+                    victim_addr : (x_27).mv_addr, victim_info :
+                    (x_27).mv_info, victim_value : x_1, victim_req : Struct15
                     {valid : (Bool)'(False), data : unpack(0)}});
-                    let x_26 <- victims__00__registerVictim(x_25);
+                    let x_29 <- victims__00__registerVictim(x_28);
                 end else begin
 
                 end
-                let x_28 <- repAccess__00(Struct34 {acc_type :
+                let x_31 <- repAccess__00(Struct34 {acc_type :
                 ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
                 (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ?
                 ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))), acc_reps :
-                (x_0).reps, acc_index : x_3, acc_way : x_4});
+                (x_0).reps, acc_index : x_3, acc_way :
+                x_4});
+                if ((x_0).value_write) begin
+                    Struct35 x_32 = (Struct35 {addr : {(x_4),((x_2)[13:5])},
+                    datain : (x_0).value});
+                    let x_33 <- wrReq_dataRam__00(x_32);
+                end else begin
+
+                end
             end else begin
 
             end
-            if ((x_0).value_write) begin
-                Struct35 x_30 = (Struct35 {addr : {(x_4),((x_2)[13:5])},
-                datain : (x_0).value});
-                let x_31 <- wrReq_dataRam__00(x_30);
-            end else begin
-
-            end
-        end else begin
-
-        end
-        if (((x_0).info_write) && ((x_0).edir_hit)) begin
-            Bit#(2) x_34 = ((x_0).edir_way);
-            Struct36 x_35 = (Struct36 {addr : (x_2)[13:5], datain : Struct30
-            {tag : (x_2)[63:14], value : (x_6 ? (Struct31 {mesi_edir_st :
-            (x_5).mesi_dir_st, mesi_edir_sharers : (x_5).mesi_dir_sharers}) :
-            (unpack(0)))}});
-            if ((x_34) == ((Bit#(2))'(2'h0))) begin
-                let x_36 <- wrReq_edirRam__00__0(x_35);
-            end else begin
-
-            end
-            if ((x_34) == ((Bit#(2))'(2'h1))) begin
-                let x_38 <- wrReq_edirRam__00__1(x_35);
-            end else begin
-
-            end
-            if ((x_34) == ((Bit#(2))'(2'h2))) begin
-                let x_40 <- wrReq_edirRam__00__2(x_35);
-            end else begin
-
-            end
-            if ((x_34) == ((Bit#(2))'(2'h3))) begin
-                let x_42 <- wrReq_edirRam__00__3(x_35);
-            end else begin
-
-            end
-        end else begin
-            Struct6 x_44 =
-            ((x_0).edir_slot);
-            if (((! ((x_0).edir_hit)) && ((x_44).valid)) && (x_6))
-                begin
-                Bit#(2) x_45 = ((x_44).data);
-                Struct36 x_46 = (Struct36 {addr : (x_2)[13:5], datain :
+            if (((! ((x_0).info_hit)) && (x_6)) && (((x_0).edir_hit) ||
+                (x_8))) begin
+                Bit#(2) x_36 = (((x_0).edir_hit ? ((x_0).edir_way) :
+                (x_9)));
+                Struct36 x_37 = (Struct36 {addr : (x_2)[13:5], datain :
                 Struct30 {tag : (x_2)[63:14], value : Struct31 {mesi_edir_st
                 : (x_5).mesi_dir_st, mesi_edir_sharers :
                 (x_5).mesi_dir_sharers}}});
-                if ((x_45) == ((Bit#(2))'(2'h0))) begin
-                    let x_47 <- wrReq_edirRam__00__0(x_46);
+                if ((x_36) == ((Bit#(2))'(2'h0))) begin
+                    let x_38 <- wrReq_edirRam__00__0(x_37);
                 end else begin
 
                 end
-                if ((x_45) == ((Bit#(2))'(2'h1))) begin
-                    let x_49 <- wrReq_edirRam__00__1(x_46);
+                if ((x_36) == ((Bit#(2))'(2'h1))) begin
+                    let x_40 <- wrReq_edirRam__00__1(x_37);
                 end else begin
 
                 end
-                if ((x_45) == ((Bit#(2))'(2'h2))) begin
-                    let x_51 <- wrReq_edirRam__00__2(x_46);
+                if ((x_36) == ((Bit#(2))'(2'h2))) begin
+                    let x_42 <- wrReq_edirRam__00__2(x_37);
                 end else begin
 
                 end
-                if ((x_45) == ((Bit#(2))'(2'h3))) begin
-                    let x_53 <- wrReq_edirRam__00__3(x_46);
+                if ((x_36) == ((Bit#(2))'(2'h3))) begin
+                    let x_44 <- wrReq_edirRam__00__3(x_37);
                 end else begin
 
                 end
-            end else begin
+            end else
+                begin
+                if ((x_0).edir_hit) begin
+                    Bit#(2) x_46 = ((x_0).edir_way);
+                    Struct36 x_47 = (Struct36 {addr : (x_2)[13:5], datain :
+                    Struct30 {tag : (x_2)[63:14], value : Struct31
+                    {mesi_edir_st : (x_5).mesi_dir_st, mesi_edir_sharers :
+                    (x_5).mesi_dir_sharers}}});
+                    if ((x_46) == ((Bit#(2))'(2'h0))) begin
+                        let x_48 <- wrReq_edirRam__00__0(x_47);
+                    end else begin
 
+                    end
+                    if ((x_46) == ((Bit#(2))'(2'h1))) begin
+                        let x_50 <- wrReq_edirRam__00__1(x_47);
+                    end else begin
+
+                    end
+                    if ((x_46) == ((Bit#(2))'(2'h2))) begin
+                        let x_52 <- wrReq_edirRam__00__2(x_47);
+                    end else begin
+
+                    end
+                    if ((x_46) == ((Bit#(2))'(2'h3))) begin
+                        let x_54 <- wrReq_edirRam__00__3(x_47);
+                    end else begin
+
+                    end
+                end else begin
+
+                end
             end
+        end else begin
+
         end
         return x_1;
     endmethod
@@ -5470,9 +5475,9 @@ interface Module81;
     (Struct52 x_0);
 endinterface
 
-module mkModule81#(function Action repAccess__000(Struct60 _),
+module mkModule81#(function Action wrReq_dataRam__000(Struct60 _),
+    function Action repAccess__000(Struct59 _),
     function Action victims__000__registerVictim(Struct48 _),
-    function Action wrReq_dataRam__000(Struct59 _),
     function Action wrReq_infoRam__000__3(Struct58 _),
     function Action wrReq_infoRam__000__2(Struct58 _),
     function Action wrReq_infoRam__000__1(Struct58 _),
@@ -5592,28 +5597,29 @@ module mkModule81#(function Action repAccess__000(Struct60 _),
             end else begin
 
             end
-            if ((x_0).value_write) begin
-                Struct59 x_15 = (Struct59 {addr : {(x_4),((x_2)[12:5])},
-                datain : (x_0).value});
-                let x_16 <- wrReq_dataRam__000(x_15);
-            end else begin
-
-            end
             if (! ((x_0).info_hit)) begin
-                Struct12 x_18 = ((x_0).may_victim);
-                Struct48 x_19 = (Struct48 {victim_valid : (Bool)'(True),
-                victim_addr : (x_18).mv_addr, victim_info : (x_18).mv_info,
+                Struct12 x_15 = ((x_0).may_victim);
+                Struct48 x_16 = (Struct48 {victim_valid : (Bool)'(True),
+                victim_addr : (x_15).mv_addr, victim_info : (x_15).mv_info,
                 victim_value : x_1, victim_req : Struct49 {valid :
                 (Bool)'(False), data : unpack(0)}});
-                let x_20 <- victims__000__registerVictim(x_19);
+                let x_17 <- victims__000__registerVictim(x_16);
             end else begin
 
             end
-            let x_22 <- repAccess__000(Struct60 {acc_type :
+            let x_19 <- repAccess__000(Struct59 {acc_type :
             ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
             (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ? ((Bit#(1))'(1'h1))
             : ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
-            acc_way : x_4});
+            acc_way :
+            x_4});
+            if ((x_0).value_write) begin
+                Struct60 x_20 = (Struct60 {addr : {(x_4),((x_2)[12:5])},
+                datain : (x_0).value});
+                let x_21 <- wrReq_dataRam__000(x_20);
+            end else begin
+
+            end
         end else begin
 
         end
@@ -5628,9 +5634,9 @@ interface Module82;
     (Struct52 x_0);
 endinterface
 
-module mkModule82#(function Action repAccess__001(Struct60 _),
+module mkModule82#(function Action wrReq_dataRam__001(Struct60 _),
+    function Action repAccess__001(Struct59 _),
     function Action victims__001__registerVictim(Struct48 _),
-    function Action wrReq_dataRam__001(Struct59 _),
     function Action wrReq_infoRam__001__3(Struct58 _),
     function Action wrReq_infoRam__001__2(Struct58 _),
     function Action wrReq_infoRam__001__1(Struct58 _),
@@ -5750,28 +5756,29 @@ module mkModule82#(function Action repAccess__001(Struct60 _),
             end else begin
 
             end
-            if ((x_0).value_write) begin
-                Struct59 x_15 = (Struct59 {addr : {(x_4),((x_2)[12:5])},
-                datain : (x_0).value});
-                let x_16 <- wrReq_dataRam__001(x_15);
-            end else begin
-
-            end
             if (! ((x_0).info_hit)) begin
-                Struct12 x_18 = ((x_0).may_victim);
-                Struct48 x_19 = (Struct48 {victim_valid : (Bool)'(True),
-                victim_addr : (x_18).mv_addr, victim_info : (x_18).mv_info,
+                Struct12 x_15 = ((x_0).may_victim);
+                Struct48 x_16 = (Struct48 {victim_valid : (Bool)'(True),
+                victim_addr : (x_15).mv_addr, victim_info : (x_15).mv_info,
                 victim_value : x_1, victim_req : Struct49 {valid :
                 (Bool)'(False), data : unpack(0)}});
-                let x_20 <- victims__001__registerVictim(x_19);
+                let x_17 <- victims__001__registerVictim(x_16);
             end else begin
 
             end
-            let x_22 <- repAccess__001(Struct60 {acc_type :
+            let x_19 <- repAccess__001(Struct59 {acc_type :
             ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
             (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ? ((Bit#(1))'(1'h1))
             : ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
-            acc_way : x_4});
+            acc_way :
+            x_4});
+            if ((x_0).value_write) begin
+                Struct60 x_20 = (Struct60 {addr : {(x_4),((x_2)[12:5])},
+                datain : (x_0).value});
+                let x_21 <- wrReq_dataRam__001(x_20);
+            end else begin
+
+            end
         end else begin
 
         end
@@ -12620,24 +12627,24 @@ function Action enq_fifo000(Struct1 _)) (CC);
     m13.rdReq_infoRam__00__5, m14.rdReq_infoRam__00__4,
     m15.rdReq_infoRam__00__3, m16.rdReq_infoRam__00__2,
     m17.rdReq_infoRam__00__1, m18.rdReq_infoRam__00__0);
-    Module81 m81 <- mkModule81 (m75.repAccess__000,
-    m38.victims__000__registerVictim, m43.wrReq_dataRam__000,
-    m39.wrReq_infoRam__000__3, m40.wrReq_infoRam__000__2,
-    m41.wrReq_infoRam__000__1, m42.wrReq_infoRam__000__0,
-    m43.rdResp_dataRam__000, m43.rdReq_dataRam__000, m75.repGetRs__000,
-    m39.rdResp_infoRam__000__3, m40.rdResp_infoRam__000__2,
-    m41.rdResp_infoRam__000__1, m42.rdResp_infoRam__000__0,
-    m75.repGetRq__000, m39.rdReq_infoRam__000__3, m40.rdReq_infoRam__000__2,
-    m41.rdReq_infoRam__000__1, m42.rdReq_infoRam__000__0);
-    Module82 m82 <- mkModule82 (m79.repAccess__001,
-    m58.victims__001__registerVictim, m63.wrReq_dataRam__001,
-    m59.wrReq_infoRam__001__3, m60.wrReq_infoRam__001__2,
-    m61.wrReq_infoRam__001__1, m62.wrReq_infoRam__001__0,
-    m63.rdResp_dataRam__001, m63.rdReq_dataRam__001, m79.repGetRs__001,
-    m59.rdResp_infoRam__001__3, m60.rdResp_infoRam__001__2,
-    m61.rdResp_infoRam__001__1, m62.rdResp_infoRam__001__0,
-    m79.repGetRq__001, m59.rdReq_infoRam__001__3, m60.rdReq_infoRam__001__2,
-    m61.rdReq_infoRam__001__1, m62.rdReq_infoRam__001__0);
+    Module81 m81 <- mkModule81 (m43.wrReq_dataRam__000, m75.repAccess__000,
+    m38.victims__000__registerVictim, m39.wrReq_infoRam__000__3,
+    m40.wrReq_infoRam__000__2, m41.wrReq_infoRam__000__1,
+    m42.wrReq_infoRam__000__0, m43.rdResp_dataRam__000,
+    m43.rdReq_dataRam__000, m75.repGetRs__000, m39.rdResp_infoRam__000__3,
+    m40.rdResp_infoRam__000__2, m41.rdResp_infoRam__000__1,
+    m42.rdResp_infoRam__000__0, m75.repGetRq__000, m39.rdReq_infoRam__000__3,
+    m40.rdReq_infoRam__000__2, m41.rdReq_infoRam__000__1,
+    m42.rdReq_infoRam__000__0);
+    Module82 m82 <- mkModule82 (m63.wrReq_dataRam__001, m79.repAccess__001,
+    m58.victims__001__registerVictim, m59.wrReq_infoRam__001__3,
+    m60.wrReq_infoRam__001__2, m61.wrReq_infoRam__001__1,
+    m62.wrReq_infoRam__001__0, m63.rdResp_dataRam__001,
+    m63.rdReq_dataRam__001, m79.repGetRs__001, m59.rdResp_infoRam__001__3,
+    m60.rdResp_infoRam__001__2, m61.rdResp_infoRam__001__1,
+    m62.rdResp_infoRam__001__0, m79.repGetRq__001, m59.rdReq_infoRam__001__3,
+    m60.rdReq_infoRam__001__2, m61.rdReq_infoRam__001__1,
+    m62.rdReq_infoRam__001__0);
     Module83 m83 <- mkModule83 (m10.victims__00__setVictimRq,
     m25.getULImm_00, m10.victims__00__getFirstVictim, m25.transferUpDown_00,
     m70.broadcast_parentChildren00, m25.registerDL_00, m25.registerUL_00,
