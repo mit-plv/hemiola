@@ -983,9 +983,14 @@ Section Cache.
 
   Definition edirRamN (way: nat): string := "edirRam"+o _++ nat_to_string way.
   Variable (edirInitVal: ConstT edirK).
+  (** NOTE: initial tags of the extended directory should be disjoint to the ones
+   * in the conventional directory. In order for it [Nat.pow 2 lgWay] is added to
+   * each way.
+   *)
   Definition edirRam (way: nat) :=
     bram2 (dType:= TagEDirK) (edirRamN way) indexSz
-          (CSTRUCT { "tag" ::= ConstBit $way; "value" ::= edirInitVal })%init.
+          (CSTRUCT { "tag" ::= ConstBit $(way + Nat.pow 2 lgWay);
+                     "value" ::= edirInitVal })%init.
   Definition edirRdReq (way: nat) :=
     MethodSig ((edirRamN way) -- "rdReq")(Bit indexSz): Void.
   Definition edirRdResp (way: nat) :=

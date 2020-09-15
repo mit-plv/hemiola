@@ -394,13 +394,12 @@ Section Compile.
                                          "type" ::= $$Default;
                                          "addr" ::= #rsr!RsReady@."r_addr";
                                          "value" ::= $$Default };
-        Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$true;
                              "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= $$Default;
                              "ir_mshr_id" ::= #rsr!RsReady@."r_id";
-                             "ir_by_victim" ::= #mv };
+                             "ir_by_victim" ::= MaybeNone };
         Call enqIN2IR(#nelt);
         Retv)%kami_action.
 
@@ -1073,31 +1072,76 @@ Section Compile.
   Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
   Section DebugFifos.
+    Let cntSz := 18.
+
+    Definition msgDisps {ty} (msg: Expr ty (SyntaxKind (Struct KMsg))): list (Disp ty) :=
+      (DispBit (0, Hex) (msg!KMsg@."id")%kami_expr)
+        :: (DispBool (0, Binary) (msg!KMsg@."type")%kami_expr)
+        :: (DispBit (0, Hex) (msg!KMsg@."addr")%kami_expr)
+        :: nil.
+
     Definition dMsgFifo (fifoName: string) :=
-      debugFifo (dType:= Struct KMsg) fifoName 18
+      debugFifo (dType:= Struct KMsg) fifoName cntSz
                 ("-- MSG " ++ fifoName ++ ":")%string
-                (fun _ elt =>
-                   (DispBit (0, Hex) (#elt!KMsg@."id")%kami_expr)
-                     :: (DispBit (0, Hex) (#elt!KMsg@."addr")%kami_expr)
-                     :: nil).
+                (fun _ elt => msgDisps (#elt)%kami_expr).
 
     Definition dChildInputFifo (fifoName: string) :=
-      debugFifo (dType:= Struct ChildInput) fifoName 18
+      debugFifo (dType:= Struct ChildInput) fifoName cntSz
                 ("-- CINPUT " ++ fifoName ++ ":")%string
                 (fun _ elt =>
                    (DispBit (0, Hex) (#elt!ChildInput@."ch_idx")%kami_expr)
-                     :: (DispBit (0, Hex) (#elt!ChildInput@."ch_msg"!KMsg@."id")%kami_expr)
-                     :: (DispBit (0, Hex) (#elt!ChildInput@."ch_msg"!KMsg@."addr")%kami_expr)
-                     :: nil).
+                     :: (msgDisps (#elt!ChildInput@."ch_msg")%kami_expr)).
 
     Definition dInputFifo (fifoName: string) :=
-      debugFifo (dType:= Struct Input) fifoName 18
+      debugFifo (dType:= Struct Input) fifoName cntSz
                 ("-- INPUT " ++ fifoName ++ ":")%string
                 (fun _ elt =>
                    (DispBit (0, Hex) (#elt!Input@."in_msg_from")%kami_expr)
-                     :: (DispBit (0, Hex) (#elt!Input@."in_msg"!KMsg@."id")%kami_expr)
-                     :: (DispBit (0, Hex) (#elt!Input@."in_msg"!KMsg@."addr")%kami_expr)
-                     :: nil).
+                     :: (msgDisps (#elt!Input@."in_msg")%kami_expr)).
+
+    Definition irDisps {ty} (elt: Expr ty (SyntaxKind (Struct IRElt))): list (Disp ty) :=
+      (DispBool (0, Binary) (elt!IRElt@."ir_is_rs_rel")%kami_expr)
+        :: (DispBool (0, Binary) (elt!IRElt@."ir_is_rs_acc")%kami_expr)
+        :: (msgDisps (elt!IRElt@."ir_msg")%kami_expr)
+        ++ (DispBit (0, Hex) (elt!IRElt@."ir_msg_from")%kami_expr)
+        :: (DispBit (0, Hex) (elt!IRElt@."ir_mshr_id")%kami_expr)
+        :: (DispBool (0, Binary)
+                     (elt!IRElt@."ir_by_victim"
+                                   !(MaybeStr (Bit victimIdxSz))@."valid")%kami_expr)
+        :: (DispBit (0, Hex)
+                    (elt!IRElt@."ir_by_victim"
+                                  !(MaybeStr (Bit victimIdxSz))@."data")%kami_expr)
+        :: nil.
+
+    Definition dIRFifo (fifoName: string) :=
+      debugFifo (dType:= Struct IRElt) fifoName cntSz
+                ("-- IR " ++ fifoName ++ ":")%string
+                (fun _ elt => irDisps (#elt)%kami_expr).
+
+    Local Notation InfoRead :=
+      (InfoRead infoK indexSz hcfg_addr_sz lgWay edirLgWay).
+    Definition infoReadDisps {ty}
+               (ir: Expr ty (SyntaxKind (Struct InfoRead))): list (Disp ty) :=
+      (DispBit (0, Hex) (ir!InfoRead@."info_index")%kami_expr)
+        :: (DispBool (0, Binary) (ir!InfoRead@."info_hit")%kami_expr)
+        :: (DispBit (0, Hex) (ir!InfoRead@."info_way")%kami_expr)
+        :: (DispBool (0, Binary) (ir!InfoRead@."edir_hit")%kami_expr)
+        :: (DispBit (0, Hex) (ir!InfoRead@."edir_way")%kami_expr)
+        :: (DispBool (0, Binary)
+                     (ir!InfoRead@."edir_slot"
+                                     !(MaybeStr (Bit edirLgWay))@."valid")%kami_expr)
+        :: (DispBit (0, Hex)
+                    (ir!InfoRead@."edir_slot"
+                                    !(MaybeStr (Bit edirLgWay))@."data")%kami_expr)
+        :: nil.
+
+    Definition dLRFifo (fifoName: string) :=
+      debugFifo (dType:= Struct LRElt) fifoName cntSz
+                ("-- LR " ++ fifoName ++ ":")%string
+                (fun _ elt =>
+                   (irDisps (#elt!LRElt@."lr_ir_pp")%kami_expr)
+                     ++ (infoReadDisps (#elt!LRElt@."lr_ir")%kami_expr)).
+
   End DebugFifos.
 
   Definition build_int_fifos (oidx: IdxT): Modules :=
@@ -1365,11 +1409,11 @@ Section Compile.
     ((build_parent_inputs oidx)
        ++ (build_child_inputs_l1 oidx)
        ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (nfifo (ppIN2IRN (pppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIR2LRN (pppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIN2IRN (cppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIR2LRN (cppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ (dIRFifo (ppIN2IRN (pppN oidx)))
+       ++ (dIRFifo (ppIR2LRN (pppN oidx)))
+       ++ (dIRFifo (ppIN2IRN (cppN oidx)))
+       ++ (dIRFifo (ppIR2LRN (cppN oidx)))
+       ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
        ++ build_outputs_l1 oidx
        ++ build_int_fifos oidx
        ++ build_ext_fifos oidx)%kami.
@@ -1380,11 +1424,11 @@ Section Compile.
     ((build_parent_inputs oidx)
        ++ (build_child_inputs_li_2 oidx)
        ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (nfifo (ppIN2IRN (pppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIR2LRN (pppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIN2IRN (cppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIR2LRN (cppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ (dIRFifo (ppIN2IRN (pppN oidx)))
+       ++ (dIRFifo (ppIR2LRN (pppN oidx)))
+       ++ (dIRFifo (ppIN2IRN (cppN oidx)))
+       ++ (dIRFifo (ppIR2LRN (cppN oidx)))
+       ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_4_no_ints
@@ -1393,11 +1437,11 @@ Section Compile.
     ((build_parent_inputs oidx)
        ++ (build_child_inputs_li_4 oidx)
        ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (nfifo (ppIN2IRN (pppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIR2LRN (pppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIN2IRN (cppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppIR2LRN (cppN oidx)) (Struct IRElt))
-       ++ (nfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt))
+       ++ (dIRFifo (ppIN2IRN (pppN oidx)))
+       ++ (dIRFifo (ppIR2LRN (pppN oidx)))
+       ++ (dIRFifo (ppIN2IRN (cppN oidx)))
+       ++ (dIRFifo (ppIR2LRN (cppN oidx)))
+       ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_2
