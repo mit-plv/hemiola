@@ -1872,9 +1872,15 @@ module mkModule25
         when ((x_2).valid, noAction);
         Bit#(4) x_3 = ((x_2).data);
         Struct17 x_4 = ((x_1)[x_3]);
-        Struct8 x_5 = (Struct8 {r_id : x_3, r_addr :
+        Struct17 x_5 = (Struct17 {m_status : (Bit#(3))'(3'h5), m_next :
+        (x_4).m_next, m_is_ul : (x_4).m_is_ul, m_msg : (x_4).m_msg, m_qidx :
+        (x_4).m_qidx, m_rsb : (x_4).m_rsb, m_dl_rss_from :
+        (x_4).m_dl_rss_from, m_dl_rss_recv : (x_4).m_dl_rss_recv, m_dl_rss :
+        (x_4).m_dl_rss});
+        rqs_00 <= update (x_1, x_3, x_5);
+        Struct8 x_6 = (Struct8 {r_id : x_3, r_addr :
         ((x_4).m_msg).addr});
-        return x_5;
+        return x_6;
     endmethod
 endmodule
 
@@ -3216,9 +3222,15 @@ module mkModule45
         when ((x_2).valid, noAction);
         Bit#(3) x_3 = ((x_2).data);
         Struct51 x_4 = ((x_1)[x_3]);
-        Struct43 x_5 = (Struct43 {r_id : x_3, r_addr :
+        Struct51 x_5 = (Struct51 {m_status : (Bit#(3))'(3'h5), m_next :
+        (x_4).m_next, m_is_ul : (x_4).m_is_ul, m_msg : (x_4).m_msg, m_qidx :
+        (x_4).m_qidx, m_rsb : (x_4).m_rsb, m_dl_rss_from :
+        (x_4).m_dl_rss_from, m_dl_rss_recv : (x_4).m_dl_rss_recv, m_dl_rss :
+        (x_4).m_dl_rss});
+        rqs_000 <= update (x_1, x_3, x_5);
+        Struct43 x_6 = (Struct43 {r_id : x_3, r_addr :
         ((x_4).m_msg).addr});
-        return x_5;
+        return x_6;
     endmethod
 endmodule
 
@@ -4560,9 +4572,15 @@ module mkModule65
         when ((x_2).valid, noAction);
         Bit#(3) x_3 = ((x_2).data);
         Struct51 x_4 = ((x_1)[x_3]);
-        Struct43 x_5 = (Struct43 {r_id : x_3, r_addr :
+        Struct51 x_5 = (Struct51 {m_status : (Bit#(3))'(3'h5), m_next :
+        (x_4).m_next, m_is_ul : (x_4).m_is_ul, m_msg : (x_4).m_msg, m_qidx :
+        (x_4).m_qidx, m_rsb : (x_4).m_rsb, m_dl_rss_from :
+        (x_4).m_dl_rss_from, m_dl_rss_recv : (x_4).m_dl_rss_recv, m_dl_rss :
+        (x_4).m_dl_rss});
+        rqs_001 <= update (x_1, x_3, x_5);
+        Struct43 x_6 = (Struct43 {r_id : x_3, r_addr :
         ((x_4).m_msg).addr});
-        return x_5;
+        return x_6;
     endmethod
 endmodule
 

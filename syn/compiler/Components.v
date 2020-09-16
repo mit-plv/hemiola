@@ -260,6 +260,7 @@ Section MSHR.
   Definition mshrFirstWait {var}: Expr var (SyntaxKind MSHRStatus) := ($2)%kami_expr.
   Definition mshrOwned {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr.
   Definition mshrValid {var}: Expr var (SyntaxKind MSHRStatus) := ($4)%kami_expr.
+  Definition mshrReleasing {var}: Expr var (SyntaxKind MSHRStatus) := ($5)%kami_expr.
 
   Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
@@ -676,6 +677,16 @@ Section MSHR.
           Assert (#mmid!(MaybeStr MshrId)@."valid");
           LET mid <- #mmid!(MaybeStr MshrId)@."data";
           LET pmshr <- #rqs#[#mid];
+          LET nmshr: Struct MSHR <- STRUCT { "m_status" ::= mshrReleasing;
+                                             "m_next" ::= #pmshr!MSHR@."m_next";
+                                             "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
+                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
+                                             "m_qidx" ::= #pmshr!MSHR@."m_qidx";
+                                             "m_rsb" ::= #pmshr!MSHR@."m_rsb";
+                                             "m_dl_rss_from" ::= #pmshr!MSHR@."m_dl_rss_from";
+                                             "m_dl_rss_recv" ::= #pmshr!MSHR@."m_dl_rss_recv";
+                                             "m_dl_rss" ::= #pmshr!MSHR@."m_dl_rss" };
+          Write "rqs"+o <- #rqs#[#mid <- #nmshr];
           LET ret: RsReadyK <- STRUCT { "r_id" ::= #mid;
                                         "r_addr" ::= #pmshr!MSHR@."m_msg"!KMsg@."addr" };
           Ret #ret
