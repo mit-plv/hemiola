@@ -590,29 +590,25 @@ Section Compile.
            | HUpLockFree => cont
            | HDownLockFree => cont
            | HUpLockMsgId mty mid =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid);
-             Assert (#mshr!MSHR@."m_rsb");
+             (Assert (#mshr!MSHR@."m_rsb");
              Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
              Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
-           | HUpLockMsg =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
-           | HUpLockIdxBack =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
-           | HUpLockBackNone =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (!(#mshr!MSHR@."m_rsb")); cont)
+           | HUpLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HUpLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HUpLockBackNone => (Assert (!(#mshr!MSHR@."m_rsb")); cont)
            | HDownLockMsgId mty mid =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid);
-             Assert (#mshr!MSHR@."m_rsb");
+             (Assert (#mshr!MSHR@."m_rsb");
              Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
              Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
-           | HDownLockMsg =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
-           | HDownLockIdxBack =>
-             (Assert (#mshr!MSHR@."m_status" == mshrValid); Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HDownLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HDownLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-           | HRssFull => (Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from"); cont)
+           | HRssFull =>
+             (** The below assertion is already checked in [inputRsRel] *)
+             (* Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from");  *)
+             cont
            end)%kami_action.
 
         Fixpoint compile_rule_prec (rp: HOPrecT (hvar_of var))

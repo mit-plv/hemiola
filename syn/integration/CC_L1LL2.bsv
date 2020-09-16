@@ -8735,11 +8735,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h3)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h2)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -8847,11 +8845,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h4)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h2)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -8948,11 +8944,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
         dir_sharers : (x_7).mesi_dir_sharers});
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h2)), noAction);
-        when (((x_10).m_dl_rss) == ((x_10).m_dl_rss), noAction);
         when ((Bool)'(True), noAction);
         Struct25 x_15 = (Struct25 {cidx :
         {((Bit#(2))'(2'h1)),(((((x_10).m_dl_rss_from)[0:0]) ==
@@ -9191,11 +9185,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
         dir_sharers : (x_7).mesi_dir_sharers});
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h5)), noAction);
-        when (((x_10).m_dl_rss) == ((x_10).m_dl_rss), noAction);
         when ((Bool)'(True), noAction);
         Struct25 x_15 = (Struct25 {cidx :
         {((Bit#(2))'(2'h1)),(((((x_10).m_dl_rss_from)[0:0]) ==
@@ -9305,11 +9297,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'hb)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'ha)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((((x_14).dir_st) == ((Bit#(3))'(3'h1))) || ((((x_14).dir_st) ==
@@ -9405,11 +9395,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'hb)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'ha)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when (((Bool)'(True)) && (((Bool)'(True)) && (((Bool)'(True)) && ((!
@@ -9475,11 +9463,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
         dir_sharers : (x_7).mesi_dir_sharers});
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'ha)), noAction);
-        when (((x_10).m_dl_rss) == ((x_10).m_dl_rss), noAction);
         when ((Bool)'(True), noAction);
         Struct1 x_15 = ((x_10).m_msg);
         Bit#(3) x_16 = ((x_10).m_qidx);
@@ -9868,11 +9854,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
         dir_sharers : (x_7).mesi_dir_sharers});
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'hc)), noAction);
-        when (((x_10).m_dl_rss) == ((x_10).m_dl_rss), noAction);
         when ((Bool)'(True), noAction);
         Struct1 x_15 = ((x_10).m_msg);
         Bit#(3) x_16 = ((x_10).m_qidx);
@@ -9959,11 +9943,9 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
         dir_sharers : (x_7).mesi_dir_sharers});
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'he)), noAction);
-        when (((x_10).m_dl_rss) == ((x_10).m_dl_rss), noAction);
         when ((Bool)'(True), noAction);
         Struct1 x_15 = ((x_10).m_msg);
         Bit#(3) x_16 = ((x_10).m_qidx);
@@ -10128,7 +10110,6 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct27 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h16)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when (! ((x_10).m_rsb), noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -10610,11 +10591,9 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h3)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h0)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -10689,11 +10668,9 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h4)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h0)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -11030,11 +11007,9 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'hb)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h8)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -11332,7 +11307,6 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h16)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when (! ((x_10).m_rsb), noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -11760,11 +11734,9 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h3)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h0)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -11839,11 +11811,9 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h4)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h0)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -12180,11 +12150,9 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'hb)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((((x_10).m_msg).type_) == ((Bool)'(False)), noAction);
         when ((((x_10).m_msg).id) == ((Bit#(6))'(6'h8)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when ((x_10).m_rsb, noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
@@ -12482,7 +12450,6 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct55 _),
         when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
         noAction);
         when (((x_3).id) == ((Bit#(6))'(6'h16)), noAction);
-        when (((x_10).m_status) == ((Bit#(3))'(3'h4)), noAction);
         when (! ((x_10).m_rsb), noAction);
         when ((x_3).type_, noAction);
         when ((Bool)'(True), noAction);
