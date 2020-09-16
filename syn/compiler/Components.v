@@ -260,7 +260,8 @@ Section MSHR.
   Definition mshrFirstWait {var}: Expr var (SyntaxKind MSHRStatus) := ($2)%kami_expr.
   Definition mshrOwned {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr.
   Definition mshrValid {var}: Expr var (SyntaxKind MSHRStatus) := ($4)%kami_expr.
-  Definition mshrReleasing {var}: Expr var (SyntaxKind MSHRStatus) := ($5)%kami_expr.
+  Definition mshrRetrying {var}: Expr var (SyntaxKind MSHRStatus) := ($5)%kami_expr.
+  Definition mshrReleasing {var}: Expr var (SyntaxKind MSHRStatus) := ($6)%kami_expr.
 
   Local Notation "s '+o'" := (s ++ "_" ++ idx_to_string oidx)%string (at level 60).
   Local Notation "s1 _++ s2" := (s1 ++ "_" ++ s2)%string (at level 60).
@@ -521,7 +522,7 @@ Section MSHR.
           then (LET mid <- #mwait!(MaybeStr MshrId)@."data";
                LET mshr <- #rqs#[#mid];
                Write "rqs"+o <- #rqs#[#mid <-
-                                      STRUCT { "m_status" ::= mshrValid;
+                                      STRUCT { "m_status" ::= mshrRetrying;
                                                "m_next" ::= #mshr!MSHR@."m_next";
                                                "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
                                                "m_msg" ::= #mshr!MSHR@."m_msg";
