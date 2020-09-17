@@ -707,7 +707,7 @@ Section Victims.
   Let MshrId := Bit mshrSlotSz.
 
   Let numVictims := S predNumVictims.
-  Let victimIdxSz := Nat.log2 predNumVictims.
+  Let victimIdxSz := S (Nat.log2 predNumVictims).
   Let MviK := Maybe (Bit victimIdxSz).
 
   Definition Victim :=

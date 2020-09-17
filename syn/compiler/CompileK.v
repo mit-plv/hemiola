@@ -94,7 +94,7 @@ Section Compile.
 
   (** Victims *)
   Variable predNumVictims: nat.
-  Let victimIdxSz := Nat.log2 predNumVictims.
+  Let victimIdxSz := S (Nat.log2 predNumVictims).
   Let MviK := Maybe (Bit victimIdxSz).
 
   Definition kind_of_hbtype (hbt: hbtype): Kind :=
@@ -1154,7 +1154,7 @@ Section Compile.
   Section Inputs.
     Variable oidx: IdxT.
 
-    Definition ppPInputFifoN: string := ("fifoPInput" ++ idx_to_string oidx).
+    Definition ppPInputFifoN: string := ("fifoPInput_" ++ idx_to_string oidx).
     Definition enqPInputN := ppPInputFifoN -- enqN.
     Definition deqPInputN := ppPInputFifoN -- deqN.
 
