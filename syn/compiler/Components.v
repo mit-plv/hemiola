@@ -790,15 +790,15 @@ Section Victims.
     (match n with
      | O => MaybeNone
      | S n' =>
-       (IF (victims#[$v$n]!Victim@."victim_valid")
+       (IF (victims#[$v$n']!Victim@."victim_valid")
         then getVictimSlotFix victims n'
-        else MaybeSome $n)
+        else MaybeSome $n')
      end)%kami_expr.
 
   Definition getVictimSlot (var: Kind -> Type)
              (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
     : Expr var (SyntaxKind (Maybe (Bit victimIdxSz))) :=
-    getVictimSlotFix victims (numVictims - 1).
+    getVictimSlotFix victims numVictims.
 
   Fixpoint getFirstVictimFix (var: Kind -> Type)
            (victims: Expr var (SyntaxKind (Array VictimK numVictims)))

@@ -613,9 +613,11 @@ module mkModule10
         ((((x_1)[(Bit#(3))'(3'h4)]).victim_valid ?
         ((((x_1)[(Bit#(3))'(3'h3)]).victim_valid ?
         ((((x_1)[(Bit#(3))'(3'h2)]).victim_valid ?
-        ((((x_1)[(Bit#(3))'(3'h1)]).victim_valid ? (Struct6 {valid :
+        ((((x_1)[(Bit#(3))'(3'h1)]).victim_valid ?
+        ((((x_1)[(Bit#(3))'(3'h0)]).victim_valid ? (Struct6 {valid :
         (Bool)'(False), data : unpack(0)}) : (Struct6 {valid : (Bool)'(True),
-        data : (Bit#(3))'(3'h1)}))) : (Struct6 {valid : (Bool)'(True), data :
+        data : (Bit#(3))'(3'h0)}))) : (Struct6 {valid : (Bool)'(True), data :
+        (Bit#(3))'(3'h1)}))) : (Struct6 {valid : (Bool)'(True), data :
         (Bit#(3))'(3'h2)}))) : (Struct6 {valid : (Bool)'(True), data :
         (Bit#(3))'(3'h3)}))) : (Struct6 {valid : (Bool)'(True), data :
         (Bit#(3))'(3'h4)}))) : (Struct6 {valid : (Bool)'(True), data :
@@ -2513,8 +2515,10 @@ module mkModule38
         let x_1 = (victimRegs__000);
         Struct11 x_2 = ((((x_1)[(Bit#(2))'(2'h3)]).victim_valid ?
         ((((x_1)[(Bit#(2))'(2'h2)]).victim_valid ?
-        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid ? (Struct11 {valid :
+        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid ?
+        ((((x_1)[(Bit#(2))'(2'h0)]).victim_valid ? (Struct11 {valid :
         (Bool)'(False), data : unpack(0)}) : (Struct11 {valid :
+        (Bool)'(True), data : (Bit#(2))'(2'h0)}))) : (Struct11 {valid :
         (Bool)'(True), data : (Bit#(2))'(2'h1)}))) : (Struct11 {valid :
         (Bool)'(True), data : (Bit#(2))'(2'h2)}))) : (Struct11 {valid :
         (Bool)'(True), data : (Bit#(2))'(2'h3)})));
@@ -3863,8 +3867,10 @@ module mkModule58
         let x_1 = (victimRegs__001);
         Struct11 x_2 = ((((x_1)[(Bit#(2))'(2'h3)]).victim_valid ?
         ((((x_1)[(Bit#(2))'(2'h2)]).victim_valid ?
-        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid ? (Struct11 {valid :
+        ((((x_1)[(Bit#(2))'(2'h1)]).victim_valid ?
+        ((((x_1)[(Bit#(2))'(2'h0)]).victim_valid ? (Struct11 {valid :
         (Bool)'(False), data : unpack(0)}) : (Struct11 {valid :
+        (Bool)'(True), data : (Bit#(2))'(2'h0)}))) : (Struct11 {valid :
         (Bool)'(True), data : (Bit#(2))'(2'h1)}))) : (Struct11 {valid :
         (Bool)'(True), data : (Bit#(2))'(2'h2)}))) : (Struct11 {valid :
         (Bool)'(True), data : (Bit#(2))'(2'h3)})));
