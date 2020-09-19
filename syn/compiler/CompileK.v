@@ -270,6 +270,7 @@ Section Compile.
 
       Local Notation findVictim := (findVictim oidx hcfg_addr_sz predNumVictims).
       Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
+      Local Notation hasVictim := (hasVictim oidx).
 
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
@@ -330,6 +331,12 @@ Section Compile.
         Assert (_truncLsb_ #mf == $rqUpIdx);
         LET msg <- #pelt!Input@."in_msg";
         Assert !(#msg!KMsg@."type");
+        (** NOTE: the [hasVictim] check is necessary to avoid deadlocks between
+         * victim lines and uplocks. It is tricky to have the assertion in this MSHR
+         * transition, but [HUpdUpLock] is the only and exact transition that
+         * requires this check. *)
+        Call hasVictim <- hasVictim();
+        Assert !#hasVictim;
         Call gs <- getCRqSlot(STRUCT { "r_id" ::= $$Default;
                                        "r_msg" ::= #msg;
                                        "r_msg_from" ::= #mf });
