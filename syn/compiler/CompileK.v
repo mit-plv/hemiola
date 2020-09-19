@@ -888,11 +888,29 @@ Section Compile.
         | _ => false
         end.
 
+      Definition check_rule_orq_intact_orq (horq: HORq hvarU): bool :=
+        match horq with
+        | HORqI _ => true
+        | _ => false
+        end.
+
+      Fixpoint check_rule_orq_intact_monad (hm: HMonadT hvarU): bool :=
+        match hm with
+        | HBind _ mcont => check_rule_orq_intact_monad (mcont tt)
+        | HRet _ horq _ => check_rule_orq_intact_orq horq
+        end.
+
+      Definition check_rule_orq_intact (htrs: HOTrs): bool :=
+        match htrs with
+        | HTrsMTrs (HMTrs mn) => check_rule_orq_intact_monad (mn hvarU)
+        end.
+
       Definition deqLR2EX := MethodSig deqLR2EXN(): LREltK.
 
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
       Local Notation getFirstVictim := (getFirstVictim oidx hcfg_addr_sz infoK KValue mshrSlotSz).
       Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
@@ -906,7 +924,7 @@ Section Compile.
       Local Notation ": f ; cont" :=
         (f cont) (at level 12, right associativity, only parsing): kami_action_scope.
 
-      Definition execPP: ActionT var Void :=
+      Definition execPP (isImm: bool): ActionT var Void :=
         (Call lr <- deqLR2EX();
         LET irpp <- #lr!LRElt@."lr_ir_pp";
         LET mf <- #irpp!IRElt@."ir_msg_from";
@@ -924,7 +942,7 @@ Section Compile.
         :compile_rule_prec
            msgIn mshr ostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs_ord msgIn mshrId mshr pir ostVars mvi victimVal (hrule_trs hr);
-        Retv)%kami_action.
+        (if isImm then (Call releaseMSHR(#mshrId); Retv) else Retv))%kami_action.
 
       Definition execRsRel: ActionT var Void :=
         (Call lr <- deqLR2EX();
@@ -1029,11 +1047,11 @@ Section Compile.
          ++ "_" ++ idx_to_string oidx
          ++ "_" ++ idx_to_string ridx)%string.
 
-    Definition compile_execPP
+    Definition compile_execPP (isImm: bool)
                (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let r := projT1 rule in
       {| attrName := execRuleNameI (rule_idx r);
-         attrType := fun _ => execPP oidx deqLR2EXN rule |}.
+         attrType := fun _ => execPP oidx deqLR2EXN rule isImm |}.
 
     Definition compile_execRsRel
                (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
@@ -1047,6 +1065,7 @@ Section Compile.
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execInvRq oidx rule |}.
 
+    (** * FIXME: filter out [invRs] *)
     Definition compile_rule_exec (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       option (Attribute (Action Void)) :=
       let hr := projT2 rule in
@@ -1054,11 +1073,12 @@ Section Compile.
       let isRs := check_rule_rs_prec (hrule_precond hr _) in
       let mfNil := check_rule_msg_from_nil (hrule_msg_from hr) in
       let mfChild := check_rule_msg_from_child (hrule_msg_from hr) in
+      let isImm := check_rule_orq_intact (hrule_trs hr) in
       if mfNil
       then if isRq then Some (compile_execInvRq rule) else Some (compile_execRsRel rule)
       else if (isRs && mfChild)
            then None (* A child-response acceptor is already defined in [lrRsAcc] *)
-           else Some (compile_execPP rule).
+           else Some (compile_execPP isImm rule).
 
     Definition compile_rules_exec (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=

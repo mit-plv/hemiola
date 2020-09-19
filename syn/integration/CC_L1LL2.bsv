@@ -6253,6 +6253,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h3), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_20}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_001000;
@@ -6333,6 +6334,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h4), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_21}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_01000;
@@ -6536,6 +6538,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'hb), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_24 <- makeEnq_parentChildren00(x_23);
+        let x_25 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_11000;
@@ -6758,6 +6761,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_20 <- makeEnq_parentChildren00(x_19);
+        let x_21 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_2600000;
@@ -6835,6 +6839,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_2601000;
@@ -6923,6 +6928,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_261000;
@@ -7008,6 +7014,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_27000;
@@ -7093,6 +7100,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_28000;
@@ -7149,6 +7157,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_20 <- makeEnq_parentChildren00(x_19);
+        let x_21 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_290000;
@@ -7226,6 +7235,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_291000;
@@ -7311,6 +7321,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_210000;
@@ -7399,6 +7410,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_211000;
@@ -7498,6 +7510,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_25 <- makeEnq_parentChildren00(x_24);
+        let x_26 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_000001;
@@ -7577,6 +7590,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h3), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_20}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_001001;
@@ -7657,6 +7671,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h4), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_21}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_01001;
@@ -7860,6 +7875,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'hb), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_24 <- makeEnq_parentChildren00(x_23);
+        let x_25 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_11001;
@@ -8082,6 +8098,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_20 <- makeEnq_parentChildren00(x_19);
+        let x_21 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_2600001;
@@ -8159,6 +8176,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_2601001;
@@ -8247,6 +8265,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_261001;
@@ -8332,6 +8351,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_27001;
@@ -8417,6 +8437,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_28001;
@@ -8473,6 +8494,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_20 <- makeEnq_parentChildren00(x_19);
+        let x_21 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_290001;
@@ -8550,6 +8572,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_291001;
@@ -8635,6 +8658,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren00(x_21);
+        let x_23 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_210001;
@@ -8723,6 +8747,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_211001;
@@ -8822,6 +8847,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h16), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_25 <- makeEnq_parentChildren00(x_24);
+        let x_26 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_020;
@@ -9217,6 +9243,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'h6), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_21}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_06;
@@ -9714,6 +9741,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_171;
@@ -9787,6 +9815,7 @@ module mkModule83#(function Action victims__00__setVictimRq(Struct28 _),
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren00(x_22);
+        let x_24 <- releaseMSHR_00(x_4);
     endrule
 
     rule rule_exec_00_190;
@@ -10629,6 +10658,7 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h1), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_18}});
         let x_20 <- makeEnq_parentChildren000(x_19);
+        let x_21 <- releaseMSHR_000(x_4);
     endrule
 
     rule rule_exec_000_01;
@@ -10907,6 +10937,7 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h6), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_21}});
         let x_23 <- makeEnq_parentChildren000(x_22);
+        let x_24 <- releaseMSHR_000(x_4);
     endrule
 
     rule rule_exec_000_100;
@@ -10984,6 +11015,7 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_24 <- makeEnq_parentChildren000(x_23);
+        let x_25 <- releaseMSHR_000(x_4);
     endrule
 
     rule rule_exec_000_101;
@@ -11045,6 +11077,7 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren000(x_21);
+        let x_23 <- releaseMSHR_000(x_4);
     endrule
 
     rule rule_exec_000_11;
@@ -11254,6 +11287,7 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct54 _),
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren000(x_22);
+        let x_24 <- releaseMSHR_000(x_4);
     endrule
 
     rule rule_exec_000_131;
@@ -11326,6 +11360,7 @@ module mkModule84#(function Action victims__000__setVictimRq(Struct54 _),
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren000(x_22);
+        let x_24 <- releaseMSHR_000(x_4);
     endrule
 
     rule rule_exec_000_20;
@@ -11775,6 +11810,7 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h1), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_18}});
         let x_20 <- makeEnq_parentChildren001(x_19);
+        let x_21 <- releaseMSHR_001(x_4);
     endrule
 
     rule rule_exec_001_01;
@@ -12053,6 +12089,7 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h6), type_ : (Bool)'(True), addr : (x_15).addr, value :
         x_21}});
         let x_23 <- makeEnq_parentChildren001(x_22);
+        let x_24 <- releaseMSHR_001(x_4);
     endrule
 
     rule rule_exec_001_100;
@@ -12130,6 +12167,7 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_24 <- makeEnq_parentChildren001(x_23);
+        let x_25 <- releaseMSHR_001(x_4);
     endrule
 
     rule rule_exec_001_101;
@@ -12191,6 +12229,7 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct54 _),
         (Bit#(6))'(6'h9), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_22 <- makeEnq_parentChildren001(x_21);
+        let x_23 <- releaseMSHR_001(x_4);
     endrule
 
     rule rule_exec_001_11;
@@ -12400,6 +12439,7 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct54 _),
         (Bit#(6))'(6'hd), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren001(x_22);
+        let x_24 <- releaseMSHR_001(x_4);
     endrule
 
     rule rule_exec_001_131;
@@ -12472,6 +12512,7 @@ module mkModule85#(function Action victims__001__setVictimRq(Struct54 _),
         (Bit#(6))'(6'hf), type_ : (Bool)'(True), addr : (x_15).addr, value :
         unpack(0)}});
         let x_23 <- makeEnq_parentChildren001(x_22);
+        let x_24 <- releaseMSHR_001(x_4);
     endrule
 
     rule rule_exec_001_20;
