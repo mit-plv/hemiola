@@ -239,9 +239,7 @@ Section Compile.
         (deqFn (rsUpFrom cidx0)) (deqFn (rsUpFrom cidx1))
         (deqFn (rsUpFrom cidx2)) (deqFn (rsUpFrom cidx3)) enqCRsN.
 
-    Variables deqCRqN deqCRsN enqInputN: string.
-
-    Definition childInputAcceptor: Modules :=
+    Definition childInputAcceptor (deqCRqN deqCRsN enqCInputN: string): Modules :=
       acceptor2
         ("child_inputs_" ++ idx_to_string oidx)
         (peltT0:= ChildInputK) (peltT1:= ChildInputK) (eltT:= InputK)
@@ -249,7 +247,7 @@ Section Compile.
                               "in_msg_from" ::= {$rqUpIdx, #ci!ChildInput@."ch_idx"} })%kami_expr
         (fun _ ci => STRUCT { "in_msg" ::= #ci!ChildInput@."ch_msg";
                               "in_msg_from" ::= {$rsUpIdx, #ci!ChildInput@."ch_idx"} })%kami_expr
-        deqCRqN deqCRsN enqInputN.
+        deqCRqN deqCRsN enqCInputN.
 
     (*! Pipeline Stages *)
 
@@ -998,31 +996,31 @@ Section Compile.
   Context `{CompExtExp} `{CompLineRW}.
 
   Section Pipeline.
-    Variables (oidx: IdxT) (ppN: string).
-    Variables (deqInputN enqIN2IRN deqIN2IRN
-                         enqIR2LRN deqIR2LRN
-                         enqLR2EXN deqLR2EXN: string).
+    Variables (oidx: IdxT).
+    Variables (deqPInputN deqCInputN enqIN2IRN deqIN2IRN
+                          enqIR2LRN deqIR2LRN
+                          enqLR2EXN deqLR2EXN: string).
 
-    Let ppIdxN := (ppN ++ "_" ++ idx_to_string oidx)%string.
+    Let ppIdxN := idx_to_string oidx.
 
     Definition compile_rules_in_parent: list (Attribute (Action Void)) :=
       {| attrName := "rule_in_prq_" ++ ppIdxN;
-         attrType := fun var => inputPRq oidx deqInputN enqIN2IRN |}
+         attrType := fun var => inputPRq oidx deqPInputN enqIN2IRN |}
         :: {| attrName := "rule_in_prs_" ++ ppIdxN;
-              attrType := fun var => inputPRs oidx deqInputN enqIN2IRN |}
+              attrType := fun var => inputPRs oidx deqPInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_retry_" ++ ppIdxN;
+              attrType := fun var => inputRetry oidx enqIN2IRN |}
         :: {| attrName := "rule_in_invrs_" ++ ppIdxN;
-              attrType := fun var => inputInvRs oidx deqInputN |}
-        :: {| attrName := "rule_in_rsrel_" ++ ppIdxN;
-              attrType := fun var => inputRsRel oidx enqIN2IRN |}
+              attrType := fun var => inputInvRs oidx deqPInputN |}
         :: nil.
 
     Definition compile_rules_in_child: list (Attribute (Action Void)) :=
       {| attrName := "rule_in_crq_" ++ ppIdxN;
-         attrType := fun var => inputCRq oidx deqInputN enqIN2IRN |}
+         attrType := fun var => inputCRq oidx deqCInputN enqIN2IRN |}
         :: {| attrName := "rule_in_crs_" ++ ppIdxN;
-              attrType := fun var => inputCRs oidx deqInputN enqIN2IRN |}
-        :: {| attrName := "rule_in_retry_" ++ ppIdxN;
-              attrType := fun var => inputRetry oidx enqIN2IRN |}
+              attrType := fun var => inputCRs oidx deqCInputN enqIN2IRN |}
+        :: {| attrName := "rule_in_rsrel_" ++ ppIdxN;
+              attrType := fun var => inputRsRel oidx enqIN2IRN |}
         :: nil.
 
     Definition compile_rules_ir: list (Attribute (Action Void)) :=
@@ -1084,11 +1082,8 @@ Section Compile.
       list (Attribute (Action Void)) :=
       ListSupport.oll (map compile_rule_exec rules).
 
-    Definition compile_rules_pipeline_parent: list (Attribute (Action Void)) :=
-      compile_rules_in_parent ++ compile_rules_ir ++ compile_rules_lr.
-
-    Definition compile_rules_pipeline_child: list (Attribute (Action Void)) :=
-      compile_rules_in_child ++ compile_rules_ir ++ compile_rules_lr.
+    Definition compile_rules_pipeline: list (Attribute (Action Void)) :=
+      compile_rules_in_parent ++ compile_rules_in_child ++ compile_rules_ir ++ compile_rules_lr.
 
   End Pipeline.
 
@@ -1211,7 +1206,7 @@ Section Compile.
     Definition enqCInputN := ppCInputFifoN -- enqN.
     Definition deqCInputN := ppCInputFifoN -- deqN.
 
-    Let deqCRqN := (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))) -- deqN.
+    Let deqCRqN := deqFn (rqUpFrom (l1ExtOf oidx)).
     Definition cInputConverter: Modules :=
       MODULE {
         Rule ("child_convert_" ++ idx_to_string oidx) :=
@@ -1393,6 +1388,9 @@ Section Compile.
   Let enqIN2IRN (ppName: string) := (ppIN2IRN ppName) -- enqN.
   Let deqIN2IRN (ppName: string) := (ppIN2IRN ppName) -- deqN.
 
+  Let parentN (oidx: IdxT): string := ("parent_" ++ idx_to_string oidx).
+  Let childN (oidx: IdxT): string := ("child_" ++ idx_to_string oidx).
+
   Let ppIR2LRN (ppName: string): string := ("fifoI2L_" ++ ppName).
   Let enqIR2LRN (ppName: string) := (ppIR2LRN ppName) -- enqN.
   Let deqIR2LRN (ppName: string) := (ppIR2LRN ppName) -- deqN.
@@ -1401,41 +1399,27 @@ Section Compile.
   Let enqLR2EXN (ppName: string) := (ppLR2EXN ppName) -- enqN.
   Let deqLR2EXN (ppName: string) := (ppLR2EXN ppName) -- deqN.
 
-  Let pppN (oidx: IdxT): string := ("parent_" ++ idx_to_string oidx).
-  Let cppN (oidx: IdxT): string := ("child_" ++ idx_to_string oidx).
-
-  (** NOTE: it builds the "two" pipelines: one for the messages from the parent,
-   * and the other for the messages from children. If just a single pipeline is used,
-   * then a deadlock happens at the pipelines between a child and the parent.
-   *)
-  Definition build_pipeline (deqPInputN deqCInputN: string)
+  Definition build_pipeline
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
-    let ppp := compile_rules_pipeline_parent
-                 oidx "parent" deqPInputN
-                 (enqIN2IRN (pppN oidx)) (deqIN2IRN (pppN oidx))
-                 (enqIR2LRN (pppN oidx)) (deqIR2LRN (pppN oidx))
-                 (enqLR2EXN (idx_to_string oidx)) in
-    let cpp := compile_rules_pipeline_child
-                 oidx "child" deqCInputN
-                 (enqIN2IRN (cppN oidx)) (deqIN2IRN (cppN oidx))
-                 (enqIR2LRN (cppN oidx)) (deqIR2LRN (cppN oidx))
-                 (enqLR2EXN (idx_to_string oidx)) in
+    let pp := compile_rules_pipeline
+                oidx (deqPInputN oidx) (deqCInputN oidx)
+                (enqIN2IRN (idx_to_string oidx)) (deqIN2IRN (idx_to_string oidx))
+                (enqIR2LRN (idx_to_string oidx)) (deqIR2LRN (idx_to_string oidx))
+                (enqLR2EXN (idx_to_string oidx)) in
     let execRules := compile_rules_exec
                        oidx (deqLR2EXN (idx_to_string oidx)) (hobj_rules (projT2 obj)) in
-    Mod cregs (ppp ++ cpp ++ execRules) nil.
+    Mod cregs (pp ++ execRules) nil.
 
   Definition build_controller_l1
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    ((build_parent_inputs oidx)
-       ++ (build_child_inputs_l1 oidx)
-       ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (dIRFifo (ppIN2IRN (pppN oidx)))
-       ++ (dIRFifo (ppIR2LRN (pppN oidx)))
-       ++ (dIRFifo (ppIN2IRN (cppN oidx)))
-       ++ (dIRFifo (ppIR2LRN (cppN oidx)))
+    ((build_child_inputs_l1 oidx)
+       ++ (build_parent_inputs oidx)
+       ++ (build_pipeline obj)
+       ++ (dIRFifo (ppIN2IRN (idx_to_string oidx)))
+       ++ (dIRFifo (ppIR2LRN (idx_to_string oidx)))
        ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
        ++ build_outputs_l1 oidx
        ++ build_int_fifos oidx
@@ -1444,26 +1428,22 @@ Section Compile.
   Definition build_controller_li_2_no_ints
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    ((build_parent_inputs oidx)
-       ++ (build_child_inputs_li_2 oidx)
-       ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (dIRFifo (ppIN2IRN (pppN oidx)))
-       ++ (dIRFifo (ppIR2LRN (pppN oidx)))
-       ++ (dIRFifo (ppIN2IRN (cppN oidx)))
-       ++ (dIRFifo (ppIR2LRN (cppN oidx)))
+    ((build_child_inputs_li_2 oidx)
+       ++ (build_parent_inputs oidx)
+       ++ (build_pipeline obj)
+       ++ (dIRFifo (ppIN2IRN (idx_to_string oidx)))
+       ++ (dIRFifo (ppIR2LRN (idx_to_string oidx)))
        ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_4_no_ints
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
-    ((build_parent_inputs oidx)
-       ++ (build_child_inputs_li_4 oidx)
-       ++ (build_pipeline (deqPInputN oidx) (deqCInputN oidx) obj)
-       ++ (dIRFifo (ppIN2IRN (pppN oidx)))
-       ++ (dIRFifo (ppIR2LRN (pppN oidx)))
-       ++ (dIRFifo (ppIN2IRN (cppN oidx)))
-       ++ (dIRFifo (ppIR2LRN (cppN oidx)))
+    ((build_child_inputs_li_4 oidx)
+       ++ (build_parent_inputs oidx)
+       ++ (build_pipeline obj)
+       ++ (dIRFifo (ppIN2IRN (idx_to_string oidx)))
+       ++ (dIRFifo (ppIR2LRN (idx_to_string oidx)))
        ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
        ++ build_outputs_li oidx)%kami.
 
