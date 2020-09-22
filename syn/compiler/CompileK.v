@@ -255,7 +255,6 @@ Section Compile.
 
     Definition IRElt :=
       STRUCT { "ir_is_rs_rel" :: Bool;
-               "ir_is_rs_acc" :: Bool;
                "ir_msg" :: Struct KMsg;
                "ir_msg_from" :: KQIdx;
                "ir_mshr_id" :: MshrId;
@@ -276,6 +275,7 @@ Section Compile.
       Let GetSlotK := Struct GetSlot.
       Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
       Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation addRs := (addRs oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getRsReady := (getRsReady oidx mshrNumPRqs mshrNumCRqs).
       Local Notation RsReady := (RsReady mshrNumPRqs mshrNumCRqs).
       Let RsReadyK := Struct RsReady.
@@ -297,7 +297,6 @@ Section Compile.
         If !(#gs!GetSlot@."s_conflict")
          then (Call mv <- findVictim(#msg!KMsg@."addr");
               LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                                   "ir_is_rs_acc" ::= $$false;
                                    "ir_msg" ::= #pelt!Input@."in_msg";
                                    "ir_msg_from" ::= #mf;
                                    "ir_mshr_id" ::= #gs!GetSlot@."s_id";
@@ -315,7 +314,6 @@ Section Compile.
         Call mid <- findUL(#msg!KMsg@."addr");
         Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                             "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #pelt!Input@."in_msg";
                              "ir_msg_from" ::= #mf;
                              "ir_mshr_id" ::= #mid;
@@ -342,7 +340,6 @@ Section Compile.
         If !(#gs!GetSlot@."s_conflict")
          then (Call mv <- findVictim(#msg!KMsg@."addr");
               LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                                   "ir_is_rs_acc" ::= $$false;
                                    "ir_msg" ::= #pelt!Input@."in_msg";
                                    "ir_msg_from" ::= #mf;
                                    "ir_mshr_id" ::= #gs!GetSlot@."s_id";
@@ -358,14 +355,7 @@ Section Compile.
         LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type");
         Call mid <- findDL(#msg!KMsg@."addr");
-        Call mv <- findVictim(#msg!KMsg@."addr");
-        LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                             "ir_is_rs_acc" ::= $$true;
-                             "ir_msg" ::= #msg;
-                             "ir_msg_from" ::= #mf;
-                             "ir_mshr_id" ::= #mid;
-                             "ir_by_victim" ::= #mv };
-        Call enqIN2IR(#nelt);
+        Call addRs(STRUCT { "r_id" ::= #mid; "r_midx" ::= _truncate_ #mf; "r_msg" ::= #msg });
         Retv)%kami_action.
 
       Definition inputRetry: ActionT var Void :=
@@ -375,7 +365,6 @@ Section Compile.
         LET msg <- #pmshr!PreMSHR@."r_msg";
         Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
-                             "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= #pmshr!PreMSHR@."r_msg_from";
                              "ir_mshr_id" ::= #pmshr!PreMSHR@."r_id";
@@ -400,7 +389,6 @@ Section Compile.
                                          "addr" ::= #rsr!RsReady@."r_addr";
                                          "value" ::= $$Default };
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$true;
-                             "ir_is_rs_acc" ::= $$false;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= $$Default;
                              "ir_mshr_id" ::= #rsr!RsReady@."r_id";
@@ -418,11 +406,9 @@ Section Compile.
       Definition enqIR2LR := MethodSig enqIR2LRN(IREltK): Void.
 
       Local Notation infoRq := (infoRq oidx hcfg_addr_sz).
-      Local Notation addRs := (addRs oidx mshrNumPRqs mshrNumCRqs).
 
       Definition irCache: ActionT var Void :=
         (Call pelt <- deqIN2IR();
-        Assert !(#pelt!IRElt@."ir_is_rs_acc");
         Assert !(#pelt!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
         LET msg <- #pelt!IRElt@."ir_msg";
         Call infoRq(#msg!KMsg@."addr");
@@ -431,17 +417,8 @@ Section Compile.
 
       Definition irVictims: ActionT var Void :=
         (Call pelt <- deqIN2IR();
-        Assert !(#pelt!IRElt@."ir_is_rs_acc");
         Assert (#pelt!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
         Call enqIR2LR(#pelt);
-        Retv)%kami_action.
-
-      Definition irRsAcc: ActionT var Void :=
-        (Call pelt <- deqIN2IR();
-        Assert #pelt!IRElt@."ir_is_rs_acc";
-        Call addRs(STRUCT { "r_id" ::= #pelt!IRElt@."ir_mshr_id";
-                            "r_midx" ::= _truncate_ (#pelt!IRElt@."ir_msg_from");
-                            "r_msg" ::= #pelt!IRElt@."ir_msg" });
         Retv)%kami_action.
 
     End InfoReadStage.
@@ -739,7 +716,7 @@ Section Compile.
                                             "r_dl_rss_from" ::= compile_exp rssf });
              cont)
            | HAddRs midx msg =>
-             (** Already handled by the previous pipeline stage; see the [lrRsAcc] rule. *)
+             (** Already handled by the previous pipeline stage; see the [inputRsAcc] rule. *)
              cont
            end)%kami_action.
 
@@ -845,20 +822,13 @@ Section Compile.
     Variables deqLR2EXN: string.
 
     Section ExecStage.
+      Definition hvarU: htype -> Type := fun _ => unit.
 
       Definition check_rule_rq_prec_rqrs (rrp: HOPrecR): bool :=
         match rrp with
         | HRqAccepting => true
         | _ => false
         end.
-
-      Definition check_rule_rs_prec_rqrs (rrp: HOPrecR): bool :=
-        match rrp with
-        | HRsAccepting => true
-        | _ => false
-        end.
-
-      Definition hvarU: htype -> Type := fun _ => unit.
       Fixpoint check_rule_rq_prec (rp: HOPrecT hvarU): bool :=
         match rp with
         | HOPrecAnd prec1 prec2 => check_rule_rq_prec prec1 || check_rule_rq_prec prec2
@@ -866,10 +836,27 @@ Section Compile.
         | HOPrecProp _ => false
         end.
 
+      Definition check_rule_rs_prec_rqrs (rrp: HOPrecR): bool :=
+        match rrp with
+        | HRsAccepting => true
+        | _ => false
+        end.
       Fixpoint check_rule_rs_prec (rp: HOPrecT hvarU): bool :=
         match rp with
         | HOPrecAnd prec1 prec2 => check_rule_rs_prec prec1 || check_rule_rs_prec prec2
         | HOPrecRqRs _ rrprec => check_rule_rs_prec_rqrs rrprec
+        | HOPrecProp _ => false
+        end.
+
+      Definition check_rule_rssfull_prec_rqrs (rrp: HOPrecR): bool :=
+        match rrp with
+        | HRssFull => true
+        | _ => false
+        end.
+      Fixpoint check_rule_rssfull_prec (rp: HOPrecT hvarU): bool :=
+        match rp with
+        | HOPrecAnd prec1 prec2 => check_rule_rssfull_prec prec1 || check_rule_rssfull_prec prec2
+        | HOPrecRqRs _ rrprec => check_rule_rssfull_prec_rqrs rrprec
         | HOPrecProp _ => false
         end.
 
@@ -901,6 +888,23 @@ Section Compile.
       Definition check_rule_orq_intact (htrs: HOTrs): bool :=
         match htrs with
         | HTrsMTrs (HMTrs mn) => check_rule_orq_intact_monad (mn hvarU)
+        end.
+
+      Definition check_rule_msgs_out_nil_out (hmsgs: HMsgsOut hvarU): bool :=
+        match hmsgs with
+        | HMsgOutNil _ => true
+        | _ => false
+        end.
+
+      Fixpoint check_rule_msgs_out_nil_monad (hm: HMonadT hvarU): bool :=
+        match hm with
+        | HBind _ mcont => check_rule_msgs_out_nil_monad (mcont tt)
+        | HRet _ _ hmsgs => check_rule_msgs_out_nil_out hmsgs
+        end.
+
+      Definition check_rule_msgs_out_nil (htrs: HOTrs): bool :=
+        match htrs with
+        | HTrsMTrs (HMTrs mn) => check_rule_msgs_out_nil_monad (mn hvarU)
         end.
 
       Definition deqLR2EX := MethodSig deqLR2EXN(): LREltK.
@@ -1018,7 +1022,7 @@ Section Compile.
       {| attrName := "rule_in_crq_" ++ ppIdxN;
          attrType := fun var => inputCRq oidx deqCInputN enqIN2IRN |}
         :: {| attrName := "rule_in_crs_" ++ ppIdxN;
-              attrType := fun var => inputCRs oidx deqCInputN enqIN2IRN |}
+              attrType := fun var => inputCRs oidx deqCInputN |}
         :: {| attrName := "rule_in_rsrel_" ++ ppIdxN;
               attrType := fun var => inputRsRel oidx enqIN2IRN |}
         :: nil.
@@ -1028,8 +1032,6 @@ Section Compile.
          attrType := fun var => irCache oidx deqIN2IRN enqIR2LRN |}
         :: {| attrName := "rule_ir_victims_" ++ ppIdxN;
               attrType := fun var => irVictims deqIN2IRN enqIR2LRN |}
-        :: {| attrName := "rule_ir_rs_acc_" ++ ppIdxN;
-              attrType := fun var => irRsAcc oidx deqIN2IRN |}
         :: nil.
 
     Definition compile_rules_lr: list (Attribute (Action Void)) :=
@@ -1063,20 +1065,22 @@ Section Compile.
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execInvRq oidx rule |}.
 
-    (** * FIXME: filter out [invRs] *)
     Definition compile_rule_exec (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       option (Attribute (Action Void)) :=
       let hr := projT2 rule in
-      let isRq := check_rule_rq_prec (hrule_precond hr _) in
       let isRs := check_rule_rs_prec (hrule_precond hr _) in
+      let rssFull := check_rule_rssfull_prec (hrule_precond hr _) in
       let mfNil := check_rule_msg_from_nil (hrule_msg_from hr) in
       let mfChild := check_rule_msg_from_child (hrule_msg_from hr) in
+      let mtNil := check_rule_msgs_out_nil (hrule_trs hr) in
       let isImm := check_rule_orq_intact (hrule_trs hr) in
-      if mfNil
-      then if isRq then Some (compile_execInvRq rule) else Some (compile_execRsRel rule)
-      else if (isRs && mfChild)
-           then None (* A child-response acceptor is already defined in [lrRsAcc] *)
-           else Some (compile_execPP isImm rule).
+      if rssFull then Some (compile_execRsRel rule)
+      else if mfNil then Some (compile_execInvRq rule)
+           else if (isRs && mfChild)
+                then None (* Child-response rules are already defined in [inputRsAcc] *)
+                else if (isRs && mtNil)
+                     then None (* Invalidation-response rules are already defined in [inputInvRs]. *)
+                     else Some (compile_execPP isImm rule).
 
     Definition compile_rules_exec (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
@@ -1119,7 +1123,6 @@ Section Compile.
 
     Definition irDisps {ty} (elt: Expr ty (SyntaxKind (Struct IRElt))): list (Disp ty) :=
       (DispBool (0, Binary) (elt!IRElt@."ir_is_rs_rel")%kami_expr)
-        :: (DispBool (0, Binary) (elt!IRElt@."ir_is_rs_acc")%kami_expr)
         :: (msgDisps (elt!IRElt@."ir_msg")%kami_expr)
         ++ (DispBit (0, Hex) (elt!IRElt@."ir_msg_from")%kami_expr)
         :: (DispBit (0, Hex) (elt!IRElt@."ir_mshr_id")%kami_expr)

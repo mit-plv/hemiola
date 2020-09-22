@@ -12,7 +12,7 @@ interface CC;
 endinterface
 
 typedef struct { Bit#(6) id; Bool type_; Bit#(64) addr; Vector#(4, Bit#(64)) value;  } Struct1 deriving(Eq, Bits);
-typedef struct { Bit#(4) r_id; Bit#(1) r_midx; Struct1 r_msg;  } Struct10 deriving(Eq, Bits);
+typedef struct { Bit#(4) r_id; Bit#(64) r_addr;  } Struct10 deriving(Eq, Bits);
 typedef struct { Bit#(9) info_index; Bool info_hit; Bit#(3) info_way; Bool edir_hit; Bit#(2) edir_way; Struct12 edir_slot; Struct13 info; Struct14 may_victim; Vector#(8, Bit#(8)) reps;  } Struct11 deriving(Eq, Bits);
 typedef struct { Bool valid; Bit#(2) data;  } Struct12 deriving(Eq, Bits);
 typedef struct { Bool mesi_owned; Bit#(3) mesi_status; Bit#(3) mesi_dir_st; Bit#(2) mesi_dir_sharers;  } Struct13 deriving(Eq, Bits);
@@ -47,10 +47,10 @@ typedef struct { Bit#(9) addr; Vector#(8, Bit#(8)) datain;  } Struct39 deriving(
 typedef struct { Bit#(4) r_id; Struct1 r_msg; Bit#(3) r_msg_from;  } Struct4 deriving(Eq, Bits);
 typedef struct { Bit#(3) r_id; Struct1 r_msg; Bit#(3) r_msg_from;  } Struct40 deriving(Eq, Bits);
 typedef struct { Bool s_has_slot; Bool s_conflict; Bit#(3) s_id;  } Struct41 deriving(Eq, Bits);
-typedef struct { Bool ir_is_rs_rel; Bool ir_is_rs_acc; Struct1 ir_msg; Bit#(3) ir_msg_from; Bit#(3) ir_mshr_id; Struct12 ir_by_victim;  } Struct42 deriving(Eq, Bits);
+typedef struct { Bool ir_is_rs_rel; Struct1 ir_msg; Bit#(3) ir_msg_from; Bit#(3) ir_mshr_id; Struct12 ir_by_victim;  } Struct42 deriving(Eq, Bits);
 typedef struct { Bool valid; Struct40 data;  } Struct43 deriving(Eq, Bits);
-typedef struct { Bit#(3) r_id; Bit#(64) r_addr;  } Struct44 deriving(Eq, Bits);
-typedef struct { Bit#(3) r_id; Bit#(1) r_midx; Struct1 r_msg;  } Struct45 deriving(Eq, Bits);
+typedef struct { Bit#(3) r_id; Bit#(1) r_midx; Struct1 r_msg;  } Struct44 deriving(Eq, Bits);
+typedef struct { Bit#(3) r_id; Bit#(64) r_addr;  } Struct45 deriving(Eq, Bits);
 typedef struct { Bit#(8) info_index; Bool info_hit; Bit#(2) info_way; Bool edir_hit; void edir_way; Struct47 edir_slot; Struct13 info; Struct14 may_victim; Vector#(4, Bit#(8)) reps;  } Struct46 deriving(Eq, Bits);
 typedef struct { Bool valid; void data;  } Struct47 deriving(Eq, Bits);
 typedef struct { Struct42 lr_ir_pp; Struct46 lr_ir; Vector#(4, Bit#(64)) lr_value;  } Struct48 deriving(Eq, Bits);
@@ -71,9 +71,9 @@ typedef struct { Bool valid; Struct49 data;  } Struct60 deriving(Eq, Bits);
 typedef struct { Bit#(8) addr; Vector#(4, Bit#(8)) datain;  } Struct61 deriving(Eq, Bits);
 typedef struct { Bit#(3) r_id; Bit#(2) r_dl_rss_from; Bool r_dl_rsb; Bit#(3) r_dl_rsbTo;  } Struct62 deriving(Eq, Bits);
 typedef struct { Bit#(3) r_id; Bit#(2) r_dl_rss_from;  } Struct63 deriving(Eq, Bits);
-typedef struct { Bool ir_is_rs_rel; Bool ir_is_rs_acc; Struct1 ir_msg; Bit#(3) ir_msg_from; Bit#(4) ir_mshr_id; Struct6 ir_by_victim;  } Struct7 deriving(Eq, Bits);
+typedef struct { Bool ir_is_rs_rel; Struct1 ir_msg; Bit#(3) ir_msg_from; Bit#(4) ir_mshr_id; Struct6 ir_by_victim;  } Struct7 deriving(Eq, Bits);
 typedef struct { Bool valid; Struct4 data;  } Struct8 deriving(Eq, Bits);
-typedef struct { Bit#(4) r_id; Bit#(64) r_addr;  } Struct9 deriving(Eq, Bits);
+typedef struct { Bit#(4) r_id; Bit#(1) r_midx; Struct1 r_msg;  } Struct9 deriving(Eq, Bits);
 
 interface Module1;
     method Action enq_fifoCRqInput_00 (Struct2 x_0);
@@ -282,7 +282,7 @@ module mkModule5
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoN2I_00);
-            $display ("-- IR fifoN2I_00: %b %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, (x_3).ir_is_rs_acc, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
+            $display ("-- IR fifoN2I_00: %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
             countDone_fifoN2I_00 <= (Bool)'(True);
         end else begin
 
@@ -328,7 +328,7 @@ module mkModule6
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoI2L_00);
-            $display ("-- IR fifoI2L_00: %b %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, (x_3).ir_is_rs_acc, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
+            $display ("-- IR fifoI2L_00: %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
             countDone_fifoI2L_00 <= (Bool)'(True);
         end else begin
 
@@ -374,7 +374,7 @@ module mkModule7
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoL2E_00);
-            $display ("-- LR fifoL2E_00: %b %b %x %b %x %x %x %b %x %x %b %x %b %x %b %x", ((x_3).lr_ir_pp).ir_is_rs_rel, ((x_3).lr_ir_pp).ir_is_rs_acc, (((x_3).lr_ir_pp).ir_msg).id, (((x_3).lr_ir_pp).ir_msg).type_, (((x_3).lr_ir_pp).ir_msg).addr, ((x_3).lr_ir_pp).ir_msg_from, ((x_3).lr_ir_pp).ir_mshr_id, (((x_3).lr_ir_pp).ir_by_victim).valid, (((x_3).lr_ir_pp).ir_by_victim).data, ((x_3).lr_ir).info_index, ((x_3).lr_ir).info_hit, ((x_3).lr_ir).info_way, ((x_3).lr_ir).edir_hit, ((x_3).lr_ir).edir_way, (((x_3).lr_ir).edir_slot).valid, (((x_3).lr_ir).edir_slot).data);
+            $display ("-- LR fifoL2E_00: %b %x %b %x %x %x %b %x %x %b %x %b %x %b %x", ((x_3).lr_ir_pp).ir_is_rs_rel, (((x_3).lr_ir_pp).ir_msg).id, (((x_3).lr_ir_pp).ir_msg).type_, (((x_3).lr_ir_pp).ir_msg).addr, ((x_3).lr_ir_pp).ir_msg_from, ((x_3).lr_ir_pp).ir_mshr_id, (((x_3).lr_ir_pp).ir_by_victim).valid, (((x_3).lr_ir_pp).ir_by_victim).data, ((x_3).lr_ir).info_index, ((x_3).lr_ir).info_hit, ((x_3).lr_ir).info_way, ((x_3).lr_ir).edir_hit, ((x_3).lr_ir).edir_way, (((x_3).lr_ir).edir_slot).valid, (((x_3).lr_ir).edir_slot).data);
             countDone_fifoL2E_00 <= (Bool)'(True);
         end else begin
 
@@ -1322,8 +1322,8 @@ interface Module23;
     method ActionValue#(Bit#(4)) findUL_00 (Bit#(64) x_0);
     method ActionValue#(Bit#(4)) findDL_00 (Bit#(64) x_0);
     method Action releaseMSHR_00 (Bit#(4) x_0);
-    method Action addRs_00 (Struct10 x_0);
-    method ActionValue#(Struct9) getRsReady_00 ();
+    method Action addRs_00 (Struct9 x_0);
+    method ActionValue#(Struct10) getRsReady_00 ();
 endinterface
 
 module mkModule23
@@ -1745,7 +1745,7 @@ module mkModule23
         rqs_00 <= x_7;
     endmethod
 
-    method Action addRs_00 (Struct10 x_0);
+    method Action addRs_00 (Struct9 x_0);
         let x_1 = (rqs_00);
         Bit#(4) x_2 = ((x_0).r_id);
         Struct18 x_3 = ((x_1)[x_2]);
@@ -1758,7 +1758,7 @@ module mkModule23
         rqs_00 <= update (x_1, x_2, x_4);
     endmethod
 
-    method ActionValue#(Struct9) getRsReady_00 ();
+    method ActionValue#(Struct10) getRsReady_00 ();
         let x_1 = (rqs_00);
         Struct17 x_2 = (((((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
         ((Bit#(3))'(3'h4))) && (! (((x_1)[(Bit#(4))'(4'h0)]).m_is_ul))) &&
@@ -1830,7 +1830,7 @@ module mkModule23
         (x_4).m_dl_rss_from, m_dl_rss_recv : (x_4).m_dl_rss_recv, m_dl_rss :
         (x_4).m_dl_rss});
         rqs_00 <= update (x_1, x_3, x_5);
-        Struct9 x_6 = (Struct9 {r_id : x_3, r_addr :
+        Struct10 x_6 = (Struct10 {r_id : x_3, r_addr :
         ((x_4).m_msg).addr});
         return x_6;
     endmethod
@@ -1951,7 +1951,7 @@ module mkModule26
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoN2I_000);
-            $display ("-- IR fifoN2I_000: %b %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, (x_3).ir_is_rs_acc, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
+            $display ("-- IR fifoN2I_000: %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
             countDone_fifoN2I_000 <= (Bool)'(True);
         end else begin
 
@@ -1997,7 +1997,7 @@ module mkModule27
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoI2L_000);
-            $display ("-- IR fifoI2L_000: %b %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, (x_3).ir_is_rs_acc, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
+            $display ("-- IR fifoI2L_000: %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
             countDone_fifoI2L_000 <= (Bool)'(True);
         end else begin
 
@@ -2043,7 +2043,7 @@ module mkModule28
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoL2E_000);
-            $display ("-- LR fifoL2E_000: %b %b %x %b %x %x %x %b %x %x %b %x %b %x %b %x", ((x_3).lr_ir_pp).ir_is_rs_rel, ((x_3).lr_ir_pp).ir_is_rs_acc, (((x_3).lr_ir_pp).ir_msg).id, (((x_3).lr_ir_pp).ir_msg).type_, (((x_3).lr_ir_pp).ir_msg).addr, ((x_3).lr_ir_pp).ir_msg_from, ((x_3).lr_ir_pp).ir_mshr_id, (((x_3).lr_ir_pp).ir_by_victim).valid, (((x_3).lr_ir_pp).ir_by_victim).data, ((x_3).lr_ir).info_index, ((x_3).lr_ir).info_hit, ((x_3).lr_ir).info_way, ((x_3).lr_ir).edir_hit, ((x_3).lr_ir).edir_way, (((x_3).lr_ir).edir_slot).valid, (((x_3).lr_ir).edir_slot).data);
+            $display ("-- LR fifoL2E_000: %b %x %b %x %x %x %b %x %x %b %x %b %x %b %x", ((x_3).lr_ir_pp).ir_is_rs_rel, (((x_3).lr_ir_pp).ir_msg).id, (((x_3).lr_ir_pp).ir_msg).type_, (((x_3).lr_ir_pp).ir_msg).addr, ((x_3).lr_ir_pp).ir_msg_from, ((x_3).lr_ir_pp).ir_mshr_id, (((x_3).lr_ir_pp).ir_by_victim).valid, (((x_3).lr_ir_pp).ir_by_victim).data, ((x_3).lr_ir).info_index, ((x_3).lr_ir).info_hit, ((x_3).lr_ir).info_way, ((x_3).lr_ir).edir_hit, ((x_3).lr_ir).edir_way, (((x_3).lr_ir).edir_slot).valid, (((x_3).lr_ir).edir_slot).data);
             countDone_fifoL2E_000 <= (Bool)'(True);
         end else begin
 
@@ -2754,8 +2754,8 @@ interface Module41;
     method ActionValue#(Bit#(3)) findUL_000 (Bit#(64) x_0);
     method ActionValue#(Bit#(3)) findDL_000 (Bit#(64) x_0);
     method Action releaseMSHR_000 (Bit#(3) x_0);
-    method Action addRs_000 (Struct45 x_0);
-    method ActionValue#(Struct44) getRsReady_000 ();
+    method Action addRs_000 (Struct44 x_0);
+    method ActionValue#(Struct45) getRsReady_000 ();
 endinterface
 
 module mkModule41
@@ -3067,7 +3067,7 @@ module mkModule41
         rqs_000 <= x_7;
     endmethod
 
-    method Action addRs_000 (Struct45 x_0);
+    method Action addRs_000 (Struct44 x_0);
         let x_1 = (rqs_000);
         Bit#(3) x_2 = ((x_0).r_id);
         Struct50 x_3 = ((x_1)[x_2]);
@@ -3080,7 +3080,7 @@ module mkModule41
         rqs_000 <= update (x_1, x_2, x_4);
     endmethod
 
-    method ActionValue#(Struct44) getRsReady_000 ();
+    method ActionValue#(Struct45) getRsReady_000 ();
         let x_1 = (rqs_000);
         Struct6 x_2 = (((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h4))) && (! (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul))) &&
@@ -3122,7 +3122,7 @@ module mkModule41
         (x_4).m_dl_rss_from, m_dl_rss_recv : (x_4).m_dl_rss_recv, m_dl_rss :
         (x_4).m_dl_rss});
         rqs_000 <= update (x_1, x_3, x_5);
-        Struct44 x_6 = (Struct44 {r_id : x_3, r_addr :
+        Struct45 x_6 = (Struct45 {r_id : x_3, r_addr :
         ((x_4).m_msg).addr});
         return x_6;
     endmethod
@@ -3243,7 +3243,7 @@ module mkModule44
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoN2I_001);
-            $display ("-- IR fifoN2I_001: %b %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, (x_3).ir_is_rs_acc, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
+            $display ("-- IR fifoN2I_001: %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
             countDone_fifoN2I_001 <= (Bool)'(True);
         end else begin
 
@@ -3289,7 +3289,7 @@ module mkModule45
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoI2L_001);
-            $display ("-- IR fifoI2L_001: %b %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, (x_3).ir_is_rs_acc, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
+            $display ("-- IR fifoI2L_001: %b %x %b %x %x %x %b %x", (x_3).ir_is_rs_rel, ((x_3).ir_msg).id, ((x_3).ir_msg).type_, ((x_3).ir_msg).addr, (x_3).ir_msg_from, (x_3).ir_mshr_id, ((x_3).ir_by_victim).valid, ((x_3).ir_by_victim).data);
             countDone_fifoI2L_001 <= (Bool)'(True);
         end else begin
 
@@ -3335,7 +3335,7 @@ module mkModule46
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 =
             (elt_fifoL2E_001);
-            $display ("-- LR fifoL2E_001: %b %b %x %b %x %x %x %b %x %x %b %x %b %x %b %x", ((x_3).lr_ir_pp).ir_is_rs_rel, ((x_3).lr_ir_pp).ir_is_rs_acc, (((x_3).lr_ir_pp).ir_msg).id, (((x_3).lr_ir_pp).ir_msg).type_, (((x_3).lr_ir_pp).ir_msg).addr, ((x_3).lr_ir_pp).ir_msg_from, ((x_3).lr_ir_pp).ir_mshr_id, (((x_3).lr_ir_pp).ir_by_victim).valid, (((x_3).lr_ir_pp).ir_by_victim).data, ((x_3).lr_ir).info_index, ((x_3).lr_ir).info_hit, ((x_3).lr_ir).info_way, ((x_3).lr_ir).edir_hit, ((x_3).lr_ir).edir_way, (((x_3).lr_ir).edir_slot).valid, (((x_3).lr_ir).edir_slot).data);
+            $display ("-- LR fifoL2E_001: %b %x %b %x %x %x %b %x %x %b %x %b %x %b %x", ((x_3).lr_ir_pp).ir_is_rs_rel, (((x_3).lr_ir_pp).ir_msg).id, (((x_3).lr_ir_pp).ir_msg).type_, (((x_3).lr_ir_pp).ir_msg).addr, ((x_3).lr_ir_pp).ir_msg_from, ((x_3).lr_ir_pp).ir_mshr_id, (((x_3).lr_ir_pp).ir_by_victim).valid, (((x_3).lr_ir_pp).ir_by_victim).data, ((x_3).lr_ir).info_index, ((x_3).lr_ir).info_hit, ((x_3).lr_ir).info_way, ((x_3).lr_ir).edir_hit, ((x_3).lr_ir).edir_way, (((x_3).lr_ir).edir_slot).valid, (((x_3).lr_ir).edir_slot).data);
             countDone_fifoL2E_001 <= (Bool)'(True);
         end else begin
 
@@ -4046,8 +4046,8 @@ interface Module59;
     method ActionValue#(Bit#(3)) findUL_001 (Bit#(64) x_0);
     method ActionValue#(Bit#(3)) findDL_001 (Bit#(64) x_0);
     method Action releaseMSHR_001 (Bit#(3) x_0);
-    method Action addRs_001 (Struct45 x_0);
-    method ActionValue#(Struct44) getRsReady_001 ();
+    method Action addRs_001 (Struct44 x_0);
+    method ActionValue#(Struct45) getRsReady_001 ();
 endinterface
 
 module mkModule59
@@ -4359,7 +4359,7 @@ module mkModule59
         rqs_001 <= x_7;
     endmethod
 
-    method Action addRs_001 (Struct45 x_0);
+    method Action addRs_001 (Struct44 x_0);
         let x_1 = (rqs_001);
         Bit#(3) x_2 = ((x_0).r_id);
         Struct50 x_3 = ((x_1)[x_2]);
@@ -4372,7 +4372,7 @@ module mkModule59
         rqs_001 <= update (x_1, x_2, x_4);
     endmethod
 
-    method ActionValue#(Struct44) getRsReady_001 ();
+    method ActionValue#(Struct45) getRsReady_001 ();
         let x_1 = (rqs_001);
         Struct6 x_2 = (((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h4))) && (! (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul))) &&
@@ -4414,7 +4414,7 @@ module mkModule59
         (x_4).m_dl_rss_from, m_dl_rss_recv : (x_4).m_dl_rss_recv, m_dl_rss :
         (x_4).m_dl_rss});
         rqs_001 <= update (x_1, x_3, x_5);
-        Struct44 x_6 = (Struct44 {r_id : x_3, r_addr :
+        Struct45 x_6 = (Struct45 {r_id : x_3, r_addr :
         ((x_4).m_msg).addr});
         return x_6;
     endmethod
@@ -5660,11 +5660,11 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
     function Action enq_fifoL2E_00(Struct15 _),
     function ActionValue#(Struct11) cache__00__infoRsValueRq(Bit#(64) _),
     function ActionValue#(Struct7) deq_fifoI2L_00(),
-    function Action addRs_00(Struct10 _),
     function Action enq_fifoI2L_00(Struct7 _),
     function Action cache__00__infoRq(Bit#(64) _),
     function ActionValue#(Struct7) deq_fifoN2I_00(),
-    function ActionValue#(Struct9) getRsReady_00(),
+    function ActionValue#(Struct10) getRsReady_00(),
+    function Action addRs_00(Struct9 _),
     function ActionValue#(Bit#(4)) findDL_00(Bit#(64) _),
     function ActionValue#(Struct5) getCRqSlot_00(Struct4 _),
     function ActionValue#(Bool) victims__00__hasVictim(),
@@ -5693,9 +5693,9 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         noAction);
         if (! ((x_3).s_conflict)) begin
             let x_4 <- victims__00__findVictim((x_2).addr);
-            Struct7 x_5 = (Struct7 {ir_is_rs_rel : (Bool)'(False),
-            ir_is_rs_acc : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from
-            : x_1, ir_mshr_id : (x_3).s_id, ir_by_victim : x_4});
+            Struct7 x_5 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+            (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : (x_3).s_id,
+            ir_by_victim : x_4});
             let x_6 <- enq_fifoN2I_00(x_5);
         end else begin
 
@@ -5713,9 +5713,9 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         noAction);
         let x_3 <- findUL_00((x_2).addr);
         let x_4 <- victims__00__findVictim((x_2).addr);
-        Struct7 x_5 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc :
-        (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id
-        : x_3, ir_by_victim : x_4});
+        Struct7 x_5 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+        (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : x_3, ir_by_victim :
+        x_4});
         let x_6 <- enq_fifoN2I_00(x_5);
     endrule
 
@@ -5726,9 +5726,9 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         Struct4 x_1 = ((x_0).data);
         Struct1 x_2 = ((x_1).r_msg);
         let x_3 <- victims__00__findVictim((x_2).addr);
-        Struct7 x_4 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc :
-        (Bool)'(False), ir_msg : x_2, ir_msg_from : (x_1).r_msg_from,
-        ir_mshr_id : (x_1).r_id, ir_by_victim : x_3});
+        Struct7 x_4 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_msg : x_2,
+        ir_msg_from : (x_1).r_msg_from, ir_mshr_id : (x_1).r_id, ir_by_victim
+        : x_3});
         let x_5 <- enq_fifoN2I_00(x_4);
     endrule
 
@@ -5760,9 +5760,9 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         noAction);
         if (! ((x_4).s_conflict)) begin
             let x_5 <- victims__00__findVictim((x_2).addr);
-            Struct7 x_6 = (Struct7 {ir_is_rs_rel : (Bool)'(False),
-            ir_is_rs_acc : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from
-            : x_1, ir_mshr_id : (x_4).s_id, ir_by_victim : x_5});
+            Struct7 x_6 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+            (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : (x_4).s_id,
+            ir_by_victim : x_5});
             let x_7 <- enq_fifoN2I_00(x_6);
         end else begin
 
@@ -5777,11 +5777,8 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         Struct1 x_2 = ((x_0).in_msg);
         when ((x_2).type_, noAction);
         let x_3 <- findDL_00((x_2).addr);
-        let x_4 <- victims__00__findVictim((x_2).addr);
-        Struct7 x_5 = (Struct7 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc :
-        (Bool)'(True), ir_msg : x_2, ir_msg_from : x_1, ir_mshr_id : x_3,
-        ir_by_victim : x_4});
-        let x_6 <- enq_fifoN2I_00(x_5);
+        let x_4 <- addRs_00(Struct9 {r_id : x_3, r_midx : (x_1)[0:0], r_msg :
+        x_2});
     endrule
 
     rule rule_in_rsrel_00;
@@ -5789,17 +5786,15 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         let x_0 <- getRsReady_00();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
-        Struct7 x_2 = (Struct7 {ir_is_rs_rel : (Bool)'(True), ir_is_rs_acc :
-        (Bool)'(False), ir_msg : x_1, ir_msg_from : unpack(0), ir_mshr_id :
-        (x_0).r_id, ir_by_victim : Struct6 {valid : (Bool)'(False), data :
-        unpack(0)}});
+        Struct7 x_2 = (Struct7 {ir_is_rs_rel : (Bool)'(True), ir_msg : x_1,
+        ir_msg_from : unpack(0), ir_mshr_id : (x_0).r_id, ir_by_victim :
+        Struct6 {valid : (Bool)'(False), data : unpack(0)}});
         let x_3 <- enq_fifoN2I_00(x_2);
     endrule
 
     rule rule_ir_cache_00;
         $display ("Rule fired: rule_ir_cache_00 at %t", $time);
         let x_0 <- deq_fifoN2I_00();
-        when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
         Struct1 x_1 = ((x_0).ir_msg);
         let x_2 <- cache__00__infoRq((x_1).addr);
@@ -5809,17 +5804,8 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
     rule rule_ir_victims_00;
         $display ("Rule fired: rule_ir_victims_00 at %t", $time);
         let x_0 <- deq_fifoN2I_00();
-        when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L_00(x_0);
-    endrule
-
-    rule rule_ir_rs_acc_00;
-        $display ("Rule fired: rule_ir_rs_acc_00 at %t", $time);
-        let x_0 <- deq_fifoN2I_00();
-        when ((x_0).ir_is_rs_acc, noAction);
-        let x_1 <- addRs_00(Struct10 {r_id : (x_0).ir_mshr_id, r_midx :
-        ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
     rule rule_lr_cache_00;
@@ -9898,126 +9884,33 @@ module mkModule77#(function Action victims__00__setVictimRq(Struct28 _),
         let x_13 <- makeEnq_parentChildren00(x_12);
     endrule
 
-    rule rule_exec_00_22;
-        $display ("Rule fired: rule_exec_00_22 at %t", $time);
-        let x_0 <- deq_fifoL2E_00();
-        Struct7 x_1 = ((x_0).lr_ir_pp);
-        Bit#(3) x_2 = ((x_1).ir_msg_from);
-        Struct1 x_3 = ((x_1).ir_msg);
-        Bit#(4) x_4 = ((x_1).ir_mshr_id);
-        Bool x_5 = ((x_1).ir_is_rs_rel);
-        when (! (x_5), noAction);
-        Struct11 x_6 = ((x_0).lr_ir);
-        Struct13 x_7 = ((x_6).info);
-        Struct6 x_8 = ((x_1).ir_by_victim);
-        Vector#(4, Bit#(64)) x_9 = ((x_0).lr_value);
-        let x_10 <- getMSHR_00(x_4);
-        Vector#(4, Bit#(64)) x_11 = (unpack(0));
-        Bool x_12 = ((x_7).mesi_owned);
-        Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct19 x_14 = (Struct19 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
-        ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
-        ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
-        ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
-        dir_sharers : (x_7).mesi_dir_sharers});
-        when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
-        noAction);
-        when (((x_3).id) == ((Bit#(6))'(6'h16)), noAction);
-        when (! ((x_10).m_rsb), noAction);
-        when ((x_3).type_, noAction);
-        when ((Bool)'(True), noAction);
-        Struct1 x_15 = (x_3);
-        Struct20 x_16 = (Struct20 {addr : (x_3).addr, info_write :
-        (Bool)'(False), info_hit : (x_6).info_hit, info_way : (x_6).info_way,
-        edir_hit : (x_6).edir_hit, edir_way : (x_6).edir_way, edir_slot :
-        (x_6).edir_slot, info : (x_6).info, value_write : (Bool)'(False),
-        value : unpack(0), may_victim : (x_6).may_victim, reps :
-        (x_6).reps});
-        Struct20 x_17 = (Struct20 {addr : (x_16).addr, info_write :
-        (Bool)'(True), info_hit : (x_16).info_hit, info_way :
-        (x_16).info_way, edir_hit : (x_16).edir_hit, edir_way :
-        (x_16).edir_way, edir_slot : (x_16).edir_slot, info : Struct13
-        {mesi_owned : ((x_16).info).mesi_owned, mesi_status :
-        (Bit#(3))'(3'h0), mesi_dir_st : ((x_16).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_16).info).mesi_dir_sharers}, value_write :
-        (x_16).value_write, value : (x_16).value, may_victim :
-        (x_16).may_victim, reps : (x_16).reps});
-        Struct20 x_18 = (Struct20 {addr : (x_17).addr, info_write :
-        (Bool)'(True), info_hit : (x_17).info_hit, info_way :
-        (x_17).info_way, edir_hit : (x_17).edir_hit, edir_way :
-        (x_17).edir_way, edir_slot : (x_17).edir_slot, info : Struct13
-        {mesi_owned : (Bool)'(False), mesi_status :
-        ((x_17).info).mesi_status, mesi_dir_st : ((x_17).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_17).info).mesi_dir_sharers}, value_write :
-        (x_17).value_write, value : (x_17).value, may_victim :
-        (x_17).may_victim, reps :
-        (x_17).reps});
-        let x_21 = ?;
-        if ((x_8).valid) begin
-            let x_19 <- victims__00__setVictim(Struct21 {victim_idx :
-            (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
-            x_21 = x_9;
-        end else begin
-            let x_20 <- cache__00__valueRsLineRq(x_18);
-            x_21 = x_20;
-        end
-        let x_22 <- releaseMSHR_00(x_4);
-    endrule
-
     rule rule_exec_00_23;
         $display ("Rule fired: rule_exec_00_23 at %t", $time);
-        let x_0 <- deq_fifoL2E_00();
-        Struct7 x_1 = ((x_0).lr_ir_pp);
-        Bit#(3) x_2 = ((x_1).ir_msg_from);
-        Struct1 x_3 = ((x_1).ir_msg);
-        Bit#(4) x_4 = ((x_1).ir_mshr_id);
-        Bool x_5 = ((x_1).ir_is_rs_rel);
-        when (x_5, noAction);
-        Struct11 x_6 = ((x_0).lr_ir);
-        Struct13 x_7 = ((x_6).info);
-        Struct6 x_8 = ((x_1).ir_by_victim);
-        Vector#(4, Bit#(64)) x_9 = ((x_0).lr_value);
-        let x_10 <- getMSHR_00(x_4);
-        Vector#(4, Bit#(64)) x_11 = (unpack(0));
-        Bool x_12 = ((x_7).mesi_owned);
-        Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct19 x_14 = (Struct19 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        let x_0 <- victims__00__getFirstVictim();
+        Bit#(64) x_1 = ((x_0).victim_addr);
+        Struct13 x_2 = ((x_0).victim_info);
+        Vector#(4, Bit#(64)) x_3 = ((x_0).victim_value);
+        Struct1 x_4 = (Struct1 {id : unpack(0), type_ : (Bool)'(False), addr
+        : x_1, value : unpack(0)});
+        let x_5 <- getULImm_00(x_4);
+        let x_6 <- victims__00__setVictimRq(Struct28 {victim_addr : x_1,
+        victim_req : x_5});
+        Struct18 x_7 = (Struct18 {m_status : (Bit#(3))'(3'h4), m_next :
+        unpack(0), m_is_ul : (Bool)'(True), m_msg : x_4, m_qidx : unpack(0),
+        m_rsb : (Bool)'(False), m_dl_rss_from : unpack(0), m_dl_rss_recv :
+        unpack(0), m_dl_rss : unpack(0)});
+        Vector#(4, Bit#(64)) x_8 = (unpack(0));
+        Bool x_9 = ((x_2).mesi_owned);
+        Bit#(3) x_10 = ((x_2).mesi_status);
+        Struct19 x_11 = (Struct19 {dir_st : (x_2).mesi_dir_st, dir_excl :
+        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
-        ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
+        ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
-        dir_sharers : (x_7).mesi_dir_sharers});
-        when ((((x_13) == ((Bit#(3))'(3'h1))) && (! (((x_14).dir_st) ==
-        ((Bit#(3))'(3'h3))))) || (((x_13) == ((Bit#(3))'(3'h2))) && ((x_12)
-        == ((Bool)'(False)))), noAction);
-        Struct20 x_15 = (Struct20 {addr : (x_3).addr, info_write :
-        (Bool)'(False), info_hit : (x_6).info_hit, info_way : (x_6).info_way,
-        edir_hit : (x_6).edir_hit, edir_way : (x_6).edir_way, edir_slot :
-        (x_6).edir_slot, info : (x_6).info, value_write : (Bool)'(False),
-        value : unpack(0), may_victim : (x_6).may_victim, reps :
-        (x_6).reps});
-        Struct20 x_16 = (Struct20 {addr : (x_15).addr, info_write :
-        (Bool)'(True), info_hit : (x_15).info_hit, info_way :
-        (x_15).info_way, edir_hit : (x_15).edir_hit, edir_way :
-        (x_15).edir_way, edir_slot : (x_15).edir_slot, info : Struct13
-        {mesi_owned : ((x_15).info).mesi_owned, mesi_status :
-        (Bit#(3))'(3'h0), mesi_dir_st : ((x_15).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_15).info).mesi_dir_sharers}, value_write :
-        (x_15).value_write, value : (x_15).value, may_victim :
-        (x_15).may_victim, reps :
-        (x_15).reps});
-        let x_19 = ?;
-        if ((x_8).valid) begin
-            let x_17 <- victims__00__setVictim(Struct21 {victim_idx :
-            (x_8).data, victim_info : (x_16).info, victim_value :
-            (x_16).value});
-            x_19 = x_9;
-        end else begin
-            let x_18 <- cache__00__valueRsLineRq(x_16);
-            x_19 = x_18;
-        end
+        dir_sharers : (x_2).mesi_dir_sharers});
+        when ((((x_10) == ((Bit#(3))'(3'h1))) && (! (((x_11).dir_st) ==
+        ((Bit#(3))'(3'h3))))) || (((x_10) == ((Bit#(3))'(3'h2))) && ((x_9) ==
+        ((Bool)'(False)))), noAction);
     endrule
 
     // No methods in this module
@@ -10040,11 +9933,11 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
     function Action enq_fifoL2E_000(Struct48 _),
     function ActionValue#(Struct46) cache__000__infoRsValueRq(Bit#(64) _),
     function ActionValue#(Struct42) deq_fifoI2L_000(),
-    function Action addRs_000(Struct45 _),
     function Action enq_fifoI2L_000(Struct42 _),
     function Action cache__000__infoRq(Bit#(64) _),
     function ActionValue#(Struct42) deq_fifoN2I_000(),
-    function ActionValue#(Struct44) getRsReady_000(),
+    function ActionValue#(Struct45) getRsReady_000(),
+    function Action addRs_000(Struct44 _),
     function ActionValue#(Bit#(3)) findDL_000(Bit#(64) _),
     function ActionValue#(Struct41) getCRqSlot_000(Struct40 _),
     function ActionValue#(Bool) victims__000__hasVictim(),
@@ -10073,9 +9966,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         noAction);
         if (! ((x_3).s_conflict)) begin
             let x_4 <- victims__000__findVictim((x_2).addr);
-            Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False),
-            ir_is_rs_acc : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from
-            : x_1, ir_mshr_id : (x_3).s_id, ir_by_victim : x_4});
+            Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+            (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : (x_3).s_id,
+            ir_by_victim : x_4});
             let x_6 <- enq_fifoN2I_000(x_5);
         end else begin
 
@@ -10093,9 +9986,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         noAction);
         let x_3 <- findUL_000((x_2).addr);
         let x_4 <- victims__000__findVictim((x_2).addr);
-        Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc
-        : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from : x_1,
-        ir_mshr_id : x_3, ir_by_victim : x_4});
+        Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+        (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : x_3, ir_by_victim :
+        x_4});
         let x_6 <- enq_fifoN2I_000(x_5);
     endrule
 
@@ -10106,9 +9999,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         Struct40 x_1 = ((x_0).data);
         Struct1 x_2 = ((x_1).r_msg);
         let x_3 <- victims__000__findVictim((x_2).addr);
-        Struct42 x_4 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc
-        : (Bool)'(False), ir_msg : x_2, ir_msg_from : (x_1).r_msg_from,
-        ir_mshr_id : (x_1).r_id, ir_by_victim : x_3});
+        Struct42 x_4 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+        x_2, ir_msg_from : (x_1).r_msg_from, ir_mshr_id : (x_1).r_id,
+        ir_by_victim : x_3});
         let x_5 <- enq_fifoN2I_000(x_4);
     endrule
 
@@ -10140,9 +10033,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         noAction);
         if (! ((x_4).s_conflict)) begin
             let x_5 <- victims__000__findVictim((x_2).addr);
-            Struct42 x_6 = (Struct42 {ir_is_rs_rel : (Bool)'(False),
-            ir_is_rs_acc : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from
-            : x_1, ir_mshr_id : (x_4).s_id, ir_by_victim : x_5});
+            Struct42 x_6 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+            (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : (x_4).s_id,
+            ir_by_victim : x_5});
             let x_7 <- enq_fifoN2I_000(x_6);
         end else begin
 
@@ -10157,11 +10050,8 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         Struct1 x_2 = ((x_0).in_msg);
         when ((x_2).type_, noAction);
         let x_3 <- findDL_000((x_2).addr);
-        let x_4 <- victims__000__findVictim((x_2).addr);
-        Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc
-        : (Bool)'(True), ir_msg : x_2, ir_msg_from : x_1, ir_mshr_id : x_3,
-        ir_by_victim : x_4});
-        let x_6 <- enq_fifoN2I_000(x_5);
+        let x_4 <- addRs_000(Struct44 {r_id : x_3, r_midx : (x_1)[0:0], r_msg
+        : x_2});
     endrule
 
     rule rule_in_rsrel_000;
@@ -10169,17 +10059,15 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         let x_0 <- getRsReady_000();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
-        Struct42 x_2 = (Struct42 {ir_is_rs_rel : (Bool)'(True), ir_is_rs_acc
-        : (Bool)'(False), ir_msg : x_1, ir_msg_from : unpack(0), ir_mshr_id :
-        (x_0).r_id, ir_by_victim : Struct12 {valid : (Bool)'(False), data :
-        unpack(0)}});
+        Struct42 x_2 = (Struct42 {ir_is_rs_rel : (Bool)'(True), ir_msg : x_1,
+        ir_msg_from : unpack(0), ir_mshr_id : (x_0).r_id, ir_by_victim :
+        Struct12 {valid : (Bool)'(False), data : unpack(0)}});
         let x_3 <- enq_fifoN2I_000(x_2);
     endrule
 
     rule rule_ir_cache_000;
         $display ("Rule fired: rule_ir_cache_000 at %t", $time);
         let x_0 <- deq_fifoN2I_000();
-        when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
         Struct1 x_1 = ((x_0).ir_msg);
         let x_2 <- cache__000__infoRq((x_1).addr);
@@ -10189,17 +10077,8 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
     rule rule_ir_victims_000;
         $display ("Rule fired: rule_ir_victims_000 at %t", $time);
         let x_0 <- deq_fifoN2I_000();
-        when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L_000(x_0);
-    endrule
-
-    rule rule_ir_rs_acc_000;
-        $display ("Rule fired: rule_ir_rs_acc_000 at %t", $time);
-        let x_0 <- deq_fifoN2I_000();
-        when ((x_0).ir_is_rs_acc, noAction);
-        let x_1 <- addRs_000(Struct45 {r_id : (x_0).ir_mshr_id, r_midx :
-        ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
     rule rule_lr_cache_000;
@@ -11050,74 +10929,6 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct54 _),
         let x_13 <- makeEnq_parentChildren000(x_12);
     endrule
 
-    rule rule_exec_000_22;
-        $display ("Rule fired: rule_exec_000_22 at %t", $time);
-        let x_0 <- deq_fifoL2E_000();
-        Struct42 x_1 = ((x_0).lr_ir_pp);
-        Bit#(3) x_2 = ((x_1).ir_msg_from);
-        Struct1 x_3 = ((x_1).ir_msg);
-        Bit#(3) x_4 = ((x_1).ir_mshr_id);
-        Bool x_5 = ((x_1).ir_is_rs_rel);
-        when (! (x_5), noAction);
-        Struct46 x_6 = ((x_0).lr_ir);
-        Struct13 x_7 = ((x_6).info);
-        Struct12 x_8 = ((x_1).ir_by_victim);
-        Vector#(4, Bit#(64)) x_9 = ((x_0).lr_value);
-        let x_10 <- getMSHR_000(x_4);
-        Vector#(4, Bit#(64)) x_11 = (unpack(0));
-        Bool x_12 = ((x_7).mesi_owned);
-        Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct19 x_14 = (Struct19 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
-        ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
-        ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
-        ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
-        dir_sharers : (x_7).mesi_dir_sharers});
-        when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
-        noAction);
-        when (((x_3).id) == ((Bit#(6))'(6'h16)), noAction);
-        when (! ((x_10).m_rsb), noAction);
-        when ((x_3).type_, noAction);
-        when ((Bool)'(True), noAction);
-        Struct1 x_15 = (x_3);
-        Struct51 x_16 = (Struct51 {addr : (x_3).addr, info_write :
-        (Bool)'(False), info_hit : (x_6).info_hit, info_way : (x_6).info_way,
-        edir_hit : (x_6).edir_hit, edir_way : (x_6).edir_way, edir_slot :
-        (x_6).edir_slot, info : (x_6).info, value_write : (Bool)'(False),
-        value : unpack(0), may_victim : (x_6).may_victim, reps :
-        (x_6).reps});
-        Struct51 x_17 = (Struct51 {addr : (x_16).addr, info_write :
-        (Bool)'(True), info_hit : (x_16).info_hit, info_way :
-        (x_16).info_way, edir_hit : (x_16).edir_hit, edir_way :
-        (x_16).edir_way, edir_slot : (x_16).edir_slot, info : Struct13
-        {mesi_owned : ((x_16).info).mesi_owned, mesi_status :
-        (Bit#(3))'(3'h0), mesi_dir_st : ((x_16).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_16).info).mesi_dir_sharers}, value_write :
-        (x_16).value_write, value : (x_16).value, may_victim :
-        (x_16).may_victim, reps : (x_16).reps});
-        Struct51 x_18 = (Struct51 {addr : (x_17).addr, info_write :
-        (Bool)'(True), info_hit : (x_17).info_hit, info_way :
-        (x_17).info_way, edir_hit : (x_17).edir_hit, edir_way :
-        (x_17).edir_way, edir_slot : (x_17).edir_slot, info : Struct13
-        {mesi_owned : (Bool)'(False), mesi_status :
-        ((x_17).info).mesi_status, mesi_dir_st : ((x_17).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_17).info).mesi_dir_sharers}, value_write :
-        (x_17).value_write, value : (x_17).value, may_victim :
-        (x_17).may_victim, reps :
-        (x_17).reps});
-        let x_21 = ?;
-        if ((x_8).valid) begin
-            let x_19 <- victims__000__setVictim(Struct53 {victim_idx :
-            (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
-            x_21 = x_9;
-        end else begin
-            let x_20 <- cache__000__valueRsLineRq(x_18);
-            x_21 = x_20;
-        end
-        let x_22 <- releaseMSHR_000(x_4);
-    endrule
-
     // No methods in this module
 endmodule
 
@@ -11138,11 +10949,11 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
     function Action enq_fifoL2E_001(Struct48 _),
     function ActionValue#(Struct46) cache__001__infoRsValueRq(Bit#(64) _),
     function ActionValue#(Struct42) deq_fifoI2L_001(),
-    function Action addRs_001(Struct45 _),
     function Action enq_fifoI2L_001(Struct42 _),
     function Action cache__001__infoRq(Bit#(64) _),
     function ActionValue#(Struct42) deq_fifoN2I_001(),
-    function ActionValue#(Struct44) getRsReady_001(),
+    function ActionValue#(Struct45) getRsReady_001(),
+    function Action addRs_001(Struct44 _),
     function ActionValue#(Bit#(3)) findDL_001(Bit#(64) _),
     function ActionValue#(Struct41) getCRqSlot_001(Struct40 _),
     function ActionValue#(Bool) victims__001__hasVictim(),
@@ -11171,9 +10982,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         noAction);
         if (! ((x_3).s_conflict)) begin
             let x_4 <- victims__001__findVictim((x_2).addr);
-            Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False),
-            ir_is_rs_acc : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from
-            : x_1, ir_mshr_id : (x_3).s_id, ir_by_victim : x_4});
+            Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+            (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : (x_3).s_id,
+            ir_by_victim : x_4});
             let x_6 <- enq_fifoN2I_001(x_5);
         end else begin
 
@@ -11191,9 +11002,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         noAction);
         let x_3 <- findUL_001((x_2).addr);
         let x_4 <- victims__001__findVictim((x_2).addr);
-        Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc
-        : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from : x_1,
-        ir_mshr_id : x_3, ir_by_victim : x_4});
+        Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+        (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : x_3, ir_by_victim :
+        x_4});
         let x_6 <- enq_fifoN2I_001(x_5);
     endrule
 
@@ -11204,9 +11015,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         Struct40 x_1 = ((x_0).data);
         Struct1 x_2 = ((x_1).r_msg);
         let x_3 <- victims__001__findVictim((x_2).addr);
-        Struct42 x_4 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc
-        : (Bool)'(False), ir_msg : x_2, ir_msg_from : (x_1).r_msg_from,
-        ir_mshr_id : (x_1).r_id, ir_by_victim : x_3});
+        Struct42 x_4 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+        x_2, ir_msg_from : (x_1).r_msg_from, ir_mshr_id : (x_1).r_id,
+        ir_by_victim : x_3});
         let x_5 <- enq_fifoN2I_001(x_4);
     endrule
 
@@ -11238,9 +11049,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         noAction);
         if (! ((x_4).s_conflict)) begin
             let x_5 <- victims__001__findVictim((x_2).addr);
-            Struct42 x_6 = (Struct42 {ir_is_rs_rel : (Bool)'(False),
-            ir_is_rs_acc : (Bool)'(False), ir_msg : (x_0).in_msg, ir_msg_from
-            : x_1, ir_mshr_id : (x_4).s_id, ir_by_victim : x_5});
+            Struct42 x_6 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_msg :
+            (x_0).in_msg, ir_msg_from : x_1, ir_mshr_id : (x_4).s_id,
+            ir_by_victim : x_5});
             let x_7 <- enq_fifoN2I_001(x_6);
         end else begin
 
@@ -11255,11 +11066,8 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         Struct1 x_2 = ((x_0).in_msg);
         when ((x_2).type_, noAction);
         let x_3 <- findDL_001((x_2).addr);
-        let x_4 <- victims__001__findVictim((x_2).addr);
-        Struct42 x_5 = (Struct42 {ir_is_rs_rel : (Bool)'(False), ir_is_rs_acc
-        : (Bool)'(True), ir_msg : x_2, ir_msg_from : x_1, ir_mshr_id : x_3,
-        ir_by_victim : x_4});
-        let x_6 <- enq_fifoN2I_001(x_5);
+        let x_4 <- addRs_001(Struct44 {r_id : x_3, r_midx : (x_1)[0:0], r_msg
+        : x_2});
     endrule
 
     rule rule_in_rsrel_001;
@@ -11267,17 +11075,15 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         let x_0 <- getRsReady_001();
         Struct1 x_1 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
         (x_0).r_addr, value : unpack(0)});
-        Struct42 x_2 = (Struct42 {ir_is_rs_rel : (Bool)'(True), ir_is_rs_acc
-        : (Bool)'(False), ir_msg : x_1, ir_msg_from : unpack(0), ir_mshr_id :
-        (x_0).r_id, ir_by_victim : Struct12 {valid : (Bool)'(False), data :
-        unpack(0)}});
+        Struct42 x_2 = (Struct42 {ir_is_rs_rel : (Bool)'(True), ir_msg : x_1,
+        ir_msg_from : unpack(0), ir_mshr_id : (x_0).r_id, ir_by_victim :
+        Struct12 {valid : (Bool)'(False), data : unpack(0)}});
         let x_3 <- enq_fifoN2I_001(x_2);
     endrule
 
     rule rule_ir_cache_001;
         $display ("Rule fired: rule_ir_cache_001 at %t", $time);
         let x_0 <- deq_fifoN2I_001();
-        when (! ((x_0).ir_is_rs_acc), noAction);
         when (! (((x_0).ir_by_victim).valid), noAction);
         Struct1 x_1 = ((x_0).ir_msg);
         let x_2 <- cache__001__infoRq((x_1).addr);
@@ -11287,17 +11093,8 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
     rule rule_ir_victims_001;
         $display ("Rule fired: rule_ir_victims_001 at %t", $time);
         let x_0 <- deq_fifoN2I_001();
-        when (! ((x_0).ir_is_rs_acc), noAction);
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L_001(x_0);
-    endrule
-
-    rule rule_ir_rs_acc_001;
-        $display ("Rule fired: rule_ir_rs_acc_001 at %t", $time);
-        let x_0 <- deq_fifoN2I_001();
-        when ((x_0).ir_is_rs_acc, noAction);
-        let x_1 <- addRs_001(Struct45 {r_id : (x_0).ir_mshr_id, r_midx :
-        ((x_0).ir_msg_from)[0:0], r_msg : (x_0).ir_msg});
     endrule
 
     rule rule_lr_cache_001;
@@ -12148,74 +11945,6 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct54 _),
         let x_13 <- makeEnq_parentChildren001(x_12);
     endrule
 
-    rule rule_exec_001_22;
-        $display ("Rule fired: rule_exec_001_22 at %t", $time);
-        let x_0 <- deq_fifoL2E_001();
-        Struct42 x_1 = ((x_0).lr_ir_pp);
-        Bit#(3) x_2 = ((x_1).ir_msg_from);
-        Struct1 x_3 = ((x_1).ir_msg);
-        Bit#(3) x_4 = ((x_1).ir_mshr_id);
-        Bool x_5 = ((x_1).ir_is_rs_rel);
-        when (! (x_5), noAction);
-        Struct46 x_6 = ((x_0).lr_ir);
-        Struct13 x_7 = ((x_6).info);
-        Struct12 x_8 = ((x_1).ir_by_victim);
-        Vector#(4, Bit#(64)) x_9 = ((x_0).lr_value);
-        let x_10 <- getMSHR_001(x_4);
-        Vector#(4, Bit#(64)) x_11 = (unpack(0));
-        Bool x_12 = ((x_7).mesi_owned);
-        Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct19 x_14 = (Struct19 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
-        ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
-        ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
-        ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
-        dir_sharers : (x_7).mesi_dir_sharers});
-        when ((x_2) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
-        noAction);
-        when (((x_3).id) == ((Bit#(6))'(6'h16)), noAction);
-        when (! ((x_10).m_rsb), noAction);
-        when ((x_3).type_, noAction);
-        when ((Bool)'(True), noAction);
-        Struct1 x_15 = (x_3);
-        Struct51 x_16 = (Struct51 {addr : (x_3).addr, info_write :
-        (Bool)'(False), info_hit : (x_6).info_hit, info_way : (x_6).info_way,
-        edir_hit : (x_6).edir_hit, edir_way : (x_6).edir_way, edir_slot :
-        (x_6).edir_slot, info : (x_6).info, value_write : (Bool)'(False),
-        value : unpack(0), may_victim : (x_6).may_victim, reps :
-        (x_6).reps});
-        Struct51 x_17 = (Struct51 {addr : (x_16).addr, info_write :
-        (Bool)'(True), info_hit : (x_16).info_hit, info_way :
-        (x_16).info_way, edir_hit : (x_16).edir_hit, edir_way :
-        (x_16).edir_way, edir_slot : (x_16).edir_slot, info : Struct13
-        {mesi_owned : ((x_16).info).mesi_owned, mesi_status :
-        (Bit#(3))'(3'h0), mesi_dir_st : ((x_16).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_16).info).mesi_dir_sharers}, value_write :
-        (x_16).value_write, value : (x_16).value, may_victim :
-        (x_16).may_victim, reps : (x_16).reps});
-        Struct51 x_18 = (Struct51 {addr : (x_17).addr, info_write :
-        (Bool)'(True), info_hit : (x_17).info_hit, info_way :
-        (x_17).info_way, edir_hit : (x_17).edir_hit, edir_way :
-        (x_17).edir_way, edir_slot : (x_17).edir_slot, info : Struct13
-        {mesi_owned : (Bool)'(False), mesi_status :
-        ((x_17).info).mesi_status, mesi_dir_st : ((x_17).info).mesi_dir_st,
-        mesi_dir_sharers : ((x_17).info).mesi_dir_sharers}, value_write :
-        (x_17).value_write, value : (x_17).value, may_victim :
-        (x_17).may_victim, reps :
-        (x_17).reps});
-        let x_21 = ?;
-        if ((x_8).valid) begin
-            let x_19 <- victims__001__setVictim(Struct53 {victim_idx :
-            (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
-            x_21 = x_9;
-        end else begin
-            let x_20 <- cache__001__valueRsLineRq(x_18);
-            x_21 = x_20;
-        end
-        let x_22 <- releaseMSHR_001(x_4);
-    endrule
-
     // No methods in this module
 endmodule
 
@@ -12354,9 +12083,9 @@ function Action enq_fifo000(Struct1 _)) (CC);
     m64.makeEnq_parentChildren00, m74.cache__00__valueRsLineRq,
     m8.victims__00__setVictim, m23.getMSHR_00, m7.deq_fifoL2E_00,
     m8.victims__00__getVictim, m7.enq_fifoL2E_00,
-    m74.cache__00__infoRsValueRq, m6.deq_fifoI2L_00, m23.addRs_00,
-    m6.enq_fifoI2L_00, m74.cache__00__infoRq, m5.deq_fifoN2I_00,
-    m23.getRsReady_00, m23.findDL_00, m23.getCRqSlot_00,
+    m74.cache__00__infoRsValueRq, m6.deq_fifoI2L_00, m6.enq_fifoI2L_00,
+    m74.cache__00__infoRq, m5.deq_fifoN2I_00, m23.getRsReady_00,
+    m23.addRs_00, m23.findDL_00, m23.getCRqSlot_00,
     m8.victims__00__hasVictim, m3.deq_fifoCInput_00, m23.releaseMSHR_00,
     m8.victims__00__releaseVictim, m23.getWait_00, m23.findUL_00,
     m5.enq_fifoN2I_00, m8.victims__00__findVictim, m23.getPRqSlot_00,
@@ -12367,24 +12096,24 @@ function Action enq_fifo000(Struct1 _)) (CC);
     m68.makeEnq_parentChildren000, m75.cache__000__valueRsLineRq,
     m41.getMSHR_000, m28.deq_fifoL2E_000, m34.victims__000__getVictim,
     m28.enq_fifoL2E_000, m75.cache__000__infoRsValueRq, m27.deq_fifoI2L_000,
-    m41.addRs_000, m27.enq_fifoI2L_000, m75.cache__000__infoRq,
-    m26.deq_fifoN2I_000, m41.getRsReady_000, m41.findDL_000,
-    m41.getCRqSlot_000, m34.victims__000__hasVictim, m24.deq_fifoCInput_000,
-    m41.releaseMSHR_000, m34.victims__000__releaseVictim, m41.getWait_000,
-    m41.findUL_000, m26.enq_fifoN2I_000, m34.victims__000__findVictim,
-    m41.getPRqSlot_000, m25.deq_fifoPInput_000);
+    m27.enq_fifoI2L_000, m75.cache__000__infoRq, m26.deq_fifoN2I_000,
+    m41.getRsReady_000, m41.addRs_000, m41.findDL_000, m41.getCRqSlot_000,
+    m34.victims__000__hasVictim, m24.deq_fifoCInput_000, m41.releaseMSHR_000,
+    m34.victims__000__releaseVictim, m41.getWait_000, m41.findUL_000,
+    m26.enq_fifoN2I_000, m34.victims__000__findVictim, m41.getPRqSlot_000,
+    m25.deq_fifoPInput_000);
     Module79 m79 <- mkModule79 (m52.victims__001__setVictimRq,
     m59.getULImm_001, m52.victims__001__getFirstVictim,
     m52.victims__001__setVictim, m59.registerUL_001,
     m72.makeEnq_parentChildren001, m76.cache__001__valueRsLineRq,
     m59.getMSHR_001, m46.deq_fifoL2E_001, m52.victims__001__getVictim,
     m46.enq_fifoL2E_001, m76.cache__001__infoRsValueRq, m45.deq_fifoI2L_001,
-    m59.addRs_001, m45.enq_fifoI2L_001, m76.cache__001__infoRq,
-    m44.deq_fifoN2I_001, m59.getRsReady_001, m59.findDL_001,
-    m59.getCRqSlot_001, m52.victims__001__hasVictim, m42.deq_fifoCInput_001,
-    m59.releaseMSHR_001, m52.victims__001__releaseVictim, m59.getWait_001,
-    m59.findUL_001, m44.enq_fifoN2I_001, m52.victims__001__findVictim,
-    m59.getPRqSlot_001, m43.deq_fifoPInput_001);
+    m45.enq_fifoI2L_001, m76.cache__001__infoRq, m44.deq_fifoN2I_001,
+    m59.getRsReady_001, m59.addRs_001, m59.findDL_001, m59.getCRqSlot_001,
+    m52.victims__001__hasVictim, m42.deq_fifoCInput_001, m59.releaseMSHR_001,
+    m52.victims__001__releaseVictim, m59.getWait_001, m59.findUL_001,
+    m44.enq_fifoN2I_001, m52.victims__001__findVictim, m59.getPRqSlot_001,
+    m43.deq_fifoPInput_001);
     //// Interface
 
     function MemRqRs#(Struct1) getMemRqRs (function Action enq_rq (Struct1 _),
