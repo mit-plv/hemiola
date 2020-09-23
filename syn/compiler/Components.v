@@ -319,7 +319,8 @@ Section MSHR.
   Let RegDLK := Struct RegDL.
   Definition registerDL: Attribute SignatureT := MethodSig ("registerDL"+o)(RegDLK): Void.
 
-  Definition getULImm: Attribute SignatureT := MethodSig ("getULImm"+o)(Struct KMsg): MshrId.
+  Definition canImm: Attribute SignatureT := MethodSig ("canImm"+o)(KAddr): Void.
+  Definition setULImm: Attribute SignatureT := MethodSig ("setULImm"+o)(Struct KMsg): MshrId.
 
   Definition TrsfUpDown :=
     STRUCT { "r_id" :: MshrId; "r_dl_rss_from" :: KCBv }.
@@ -570,23 +571,51 @@ Section MSHR.
           Write "rqs"+o <- #rqs#[#mid <- #mshr];
           Retv
 
-        with Method ("getULImm"+o)(msg: Struct KMsg): MshrId :=
+        with Method ("canImm"+o)(addr: KAddr): Void :=
           Read rqs <- "rqs"+o;
-          LET ret <- (crqIter MaybeNone
-                              (fun n _ => MaybeSome $n)
-                              (fun m => m!MSHR@."m_status" == mshrInvalid)
-                              #rqs);
-          Assert (#ret!(MaybeStr MshrId)@."valid");
-          LET mid <- #ret!(MaybeStr MshrId)@."data";
-          Write "rqs"+o <- #rqs#[#mid <- STRUCT { "m_status" ::= mshrValid;
-                                                  "m_next" ::= MaybeNone;
-                                                  "m_is_ul" ::= $$true;
-                                                  "m_msg" ::= #msg;
-                                                  "m_qidx" ::= $$Default;
-                                                  "m_rsb" ::= $$false;
-                                                  "m_dl_rss_from" ::= $$Default;
-                                                  "m_dl_rss_recv" ::= $$Default;
-                                                  "m_dl_rss" ::= $$Default }];
+          LET mmid <- (crqIter MaybeNone
+                               (fun n _ => MaybeSome $n)
+                               (fun m => m!MSHR@."m_status" == mshrInvalid)
+                               #rqs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid"); (* Has a slot *)
+          LET cmmid <- (rqIter MaybeNone
+                               (fun i m => MaybeSome $i)
+                               (fun m =>
+                                  (m!MSHR@."m_status" != mshrInvalid) &&
+                                  (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                  m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                               #rqs);
+          Assert !(#cmmid!(MaybeStr MshrId)@."valid"); (* No conflicts with the other MSHRs *)
+          Retv
+
+        with Method ("setULImm"+o)(msg: Struct KMsg): MshrId :=
+          Read rqs <- "rqs"+o;
+          LET mmid <- (crqIter MaybeNone
+                               (fun n _ => MaybeSome $n)
+                               (fun m => m!MSHR@."m_status" == mshrInvalid)
+                               #rqs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid"); (* Has a slot *)
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          LET addr <- #msg!KMsg@."addr";
+          LET cmmid <- (rqIter MaybeNone
+                               (fun i m => MaybeSome $i)
+                               (fun m =>
+                                  (m!MSHR@."m_status" != mshrInvalid) &&
+                                  (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                  m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                               #rqs);
+          Assert !(#cmmid!(MaybeStr MshrId)@."valid"); (* No conflicts with the other MSHRs *)
+          LET nrqs <-
+          #rqs#[#mid <- STRUCT { "m_status" ::= mshrValid;
+                                 "m_next" ::= MaybeNone;
+                                 "m_is_ul" ::= $$true;
+                                 "m_msg" ::= #msg;
+                                 "m_qidx" ::= $$Default;
+                                 "m_rsb" ::= $$false;
+                                 "m_dl_rss_from" ::= $$Default;
+                                 "m_dl_rss_recv" ::= $$Default;
+                                 "m_dl_rss" ::= $$Default }];
+          Write "rqs"+o <- #nrqs;
           Ret #mid
 
         with Method ("transferUpDown"+o)(trsf: TrsfUpDownK): Void :=
@@ -608,22 +637,26 @@ Section MSHR.
         with Method ("findUL"+o)(addr: KAddr): MshrId :=
           Read rqs <- "rqs"+o;
           (* PRq cannot make any uplocks *)
-          LET ret <- (crqIter $$Default
-                              (fun n _ => $n)
-                              (fun m =>
-                                 m!MSHR@."m_status" == mshrValid &&
-                                 m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
-                              #rqs);
-          Ret #ret
+          LET mmid <- (crqIter MaybeNone
+                               (fun n _ => MaybeSome $n)
+                               (fun m =>
+                                  m!MSHR@."m_status" == mshrValid &&
+                                  m!MSHR@."m_is_ul" && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                               #rqs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid");
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          Ret #mid
         with Method ("findDL"+o)(addr: KAddr): MshrId :=
           Read rqs <- "rqs"+o;
-          LET ret <- (rqIter $$Default
-                             (fun i _ => $i)
-                             (fun m =>
-                                m!MSHR@."m_status" == mshrValid &&
-                                (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
-                             #rqs);
-          Ret #ret
+          LET mmid <- (rqIter MaybeNone
+                              (fun n _ => MaybeSome $n)
+                              (fun m =>
+                                 m!MSHR@."m_status" == mshrValid &&
+                                 (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                              #rqs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid");
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          Ret #mid
 
         with Method ("releaseMSHR"+o)(mid: MshrId): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;

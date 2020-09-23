@@ -916,7 +916,9 @@ Section Compile.
       Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
       Local Notation getFirstVictim := (getFirstVictim oidx hcfg_addr_sz infoK KValue mshrSlotSz).
       Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
-      Local Notation getULImm := (getULImm oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
+      Local Notation canImm := (canImm oidx).
+      Local Notation setULImm := (setULImm oidx mshrNumPRqs mshrNumCRqs).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -966,7 +968,7 @@ Section Compile.
         :compile_rule_trs_ord msgIn mshrId mshr pir ostVars mvi victimVal (hrule_trs hr);
         Retv)%kami_action.
 
-      Definition execInvRq: ActionT var Void :=
+      Definition execInvRq (isImm: bool): ActionT var Void :=
         (Call victim <- getFirstVictim();
         LET paddr <- #victim!Victim@."victim_addr";
         LET pinfo <- #victim!Victim@."victim_info";
@@ -975,8 +977,6 @@ Section Compile.
                             "type" ::= $$MRq;
                             "addr" ::= #paddr;
                             "value" ::= $$Default };
-        Call mid <- getULImm(#msg);
-        Call setVictimRq(STRUCT { "victim_addr" ::= #paddr; "victim_req" ::= #mid });
         LET mshr <- STRUCT { "m_status" ::= mshrValid;
                              "m_next" ::= $$Default;
                              "m_is_ul" ::= $$true;
@@ -991,7 +991,13 @@ Section Compile.
         :compile_rule_prec
            msg mshr nostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs_invrq msg mshr nostVars (hrule_trs hr);
-        Retv)%kami_action.
+        (if isImm
+         then (Call canImm(#paddr);
+              Call releaseVictim(#paddr);
+              Retv)
+         else (Call mid <- setULImm(#msg);
+              Call setVictimRq(STRUCT { "victim_addr" ::= #paddr; "victim_req" ::= #mid });
+              Retv)))%kami_action.
 
     End ExecStage.
 
@@ -1059,11 +1065,11 @@ Section Compile.
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execRsRel oidx deqLR2EXN rule |}.
 
-    Definition compile_execInvRq
+    Definition compile_execInvRq (isImm: bool)
                (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let r := projT1 rule in
       {| attrName := execRuleNameI (rule_idx r);
-         attrType := fun _ => execInvRq oidx rule |}.
+         attrType := fun _ => execInvRq oidx rule isImm |}.
 
     Definition compile_rule_exec (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
       option (Attribute (Action Void)) :=
@@ -1075,7 +1081,7 @@ Section Compile.
       let mtNil := check_rule_msgs_out_nil (hrule_trs hr) in
       let isImm := check_rule_orq_intact (hrule_trs hr) in
       if rssFull then Some (compile_execRsRel rule)
-      else if mfNil then Some (compile_execInvRq rule)
+      else if mfNil then Some (compile_execInvRq isImm rule)
            else if (isRs && mfChild)
                 then None (* Child-response rules are already defined in [inputRsAcc] *)
                 else if (isRs && mtNil)
