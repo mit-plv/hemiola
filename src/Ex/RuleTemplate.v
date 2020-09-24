@@ -269,6 +269,31 @@ Section Template.
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
+  Definition rsUpUpRuleS (prec: OPrec)
+             (trs: OState ->
+                   list (Id Msg) (* incoming messages *) ->
+                   OState) :=
+    rule[ridx]
+    :requires (MsgsFromORq downRq /\ MsgIdFromEach msgId /\
+               DownLockBackNone /\ RsAccepting /\ prec)
+    :transition
+       (do (st --> (return {{ trs st.(ost) st.(msgs),
+                              removeRq st.(orq) downRq,
+                              nil }}))).
+
+  Definition rsUpUpRuleSOne (prec: OPrec)
+             (trs: OState ->
+                   Id Msg (* an incoming message *) ->
+                   OState) :=
+    rule[ridx]
+    :requires (MsgsFromORq downRq /\ MsgIdsFrom [msgId] /\
+               DownLockBackNone /\ RsAccepting /\ prec)
+    :transition
+       (do (st --> (idm <- getFirstIdMsg st.(msgs);
+                    return {{ trs st.(ost) idm,
+                              removeRq st.(orq) downRq,
+                              nil }}))).
+
   Definition RsDownRqDownSoundPrec (oidx: IdxT) (orq: ORq Msg)
              (outInds: list IdxT): Prop :=
     orq@[upRq] >>=[True]
@@ -345,10 +370,16 @@ Notation "'rule.rsud' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' 
   (rsUpDownRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsudo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsUpDownRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
+
 Notation "'rule.rsuu' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsUpUpRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsuuo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsUpUpRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
+
+Notation "'rule.rsus' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
+  (rsUpUpRuleS RIDX MSGID PREC TRS%trs) (at level 5).
+Notation "'rule.rsuso' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
+  (rsUpUpRuleSOne RIDX MSGID PREC TRS%trs) (at level 5).
 
 Notation "'rule.rsrq' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':me' ME ':requires' PREC ':transition' TRS" :=
   (rsDownRqDownRule RIDX MSGID ME RQID PREC TRS%trs) (at level 5).
@@ -589,6 +620,25 @@ Section Facts.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
   Qed.
+
+  Lemma rsUpUpRuleS_RsBackRule:
+    forall ridx msgId prec trs,
+      RsBackRule (rsUpUpRuleS ridx msgId prec trs).
+  Proof.
+    unfold rsUpUpRule; intros; split.
+    - right; repeat red; repeat ssplit; solve_rule_conds_ex.
+    - repeat red; repeat ssplit; solve_rule_conds_ex.
+  Qed.
+
+  Lemma rsUpUpRuleSOne_RsBackRule:
+    forall ridx msgId prec trs,
+      RsBackRule (rsUpUpRuleSOne ridx msgId prec trs).
+  Proof.
+    unfold rsUpUpRule; intros; split.
+    - right; repeat red; repeat ssplit; solve_rule_conds_ex.
+    - repeat red; repeat ssplit; solve_rule_conds_ex.
+  Qed.
+
 
   Lemma rsDownRqDownRule_RsDownRqDownRule:
     forall sys oidx ridx msgId rqId prec trs,
