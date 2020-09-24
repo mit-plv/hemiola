@@ -121,6 +121,12 @@ Section DecValue.
   Definition getDownLockIdxBackI (orq: ORq Msg): IdxT :=
     (getDownLockIdxBack orq) >>=[ii] (fun idx => idx).
 
+  Definition DownLockBackNone `{OStateIfc}: OPrec :=
+    fun ost orq mins =>
+      (orq@[downRq])
+        >>=[False] (fun rqid => rqid.(rqi_midx_rsb) = None /\
+                                rqid.(rqi_msg) = None).
+
   Definition getFirstIdxFromI (inds: list IdxT): IdxT :=
     (hd_error inds) >>=[ii] (fun idx => idx).
 
@@ -144,7 +150,7 @@ Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMs
      UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
      UpLockIdxBack getUpLockIdxBack getUpLockIdxBackI UpLockBackNone
      DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
-     DownLockIdxBack getDownLockIndsFrom getDownLockIdxBack getDownLockIdxBackI
+     DownLockIdxBack DownLockBackNone getDownLockIndsFrom getDownLockIdxBack getDownLockIdxBackI
      getFirstIdxFromI MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq : RuleConds.
 
 Definition initORqs `{DecValue} (oinds: list IdxT): ORqs Msg :=

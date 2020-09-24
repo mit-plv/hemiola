@@ -38,7 +38,7 @@ Section RqRsTopo.
 
   Local Notation "RULE '#prec' '<=' P" := (RulePrecSat RULE P) (at level 0).
   Local Notation "RULE '#post' '<=' PP" := (RulePostSat RULE PP) (at level 0).
-  
+
   (** Preconditions and postconditions dealing with messages. *)
   Definition RqAccepting: OPrec :=
     fun _ _ mins =>
@@ -83,7 +83,7 @@ Section RqRsTopo.
     forall ost orq1 orq2 rins,
       rule.(rule_precond) ost orq1 rins -> orq2@[downRq] = None ->
       rule.(rule_precond) ost orq2 rins.
-  
+
   Definition StateSilent (rule: Rule): Prop :=
     rule#post <=
     fun post porq rins nost norq routs =>
@@ -135,7 +135,7 @@ Section RqRsTopo.
       nrqi.(rqi_msg) = prqi.(rqi_msg) /\
       nrqi.(rqi_rss) = nrssFrom /\
       nrqi.(rqi_midx_rsb) = prqi.(rqi_midx_rsb).
-  
+
   (** Upward-requested *)
   Definition FootprintedUp (orq: ORq Msg) (rssFrom: list (IdxT * option Msg))
              (rsbTo: option IdxT) :=
@@ -145,11 +145,12 @@ Section RqRsTopo.
       rqi.(rqi_midx_rsb) = rsbTo.
 
   (** Downward-requested *)
-  Definition FootprintedDown (orq: ORq Msg) (rssFrom: list (IdxT * option Msg)) (rsbTo: IdxT) :=
+  Definition FootprintedDown (orq: ORq Msg) (rssFrom: list (IdxT * option Msg))
+             (rsbTo: option IdxT) :=
     exists rqi,
       orq@[downRq] = Some rqi /\
       rqi.(rqi_rss) = rssFrom /\
-      rqi.(rqi_midx_rsb) = Some rsbTo.
+      rqi.(rqi_midx_rsb) = rsbTo.
 
   Definition FootprintReleasingUpPost
              (post: OState) (porq: ORq Msg) (rins: list (Id Msg))
@@ -174,7 +175,10 @@ Section RqRsTopo.
       FootprintedDown porq rssFrom rsbTo /\
       norq = porq -[downRq] /\
       idsOf rins = map fst rssFrom /\
-      routs = [(rsbTo, rsm)].
+      (match rsbTo with
+       | Some rsbTo => routs = [(rsbTo, rsm)]
+       | None => routs = nil
+       end).
 
   (** A rule handling _upward responses_. *)
   Definition FootprintReleasingDown (rule: Rule) :=
@@ -205,7 +209,7 @@ Section RqRsTopo.
                 snd (snd rqrs) = None /\
                 rsEdgeUpFrom cidx = Some (fst (snd rqrs)))
            (combine rqTos rssFrom).
-  
+
   Definition FootprintUpDownOk (oidx: IdxT)
              (rrFrom: option (IdxT * IdxT)) (rqTos: list IdxT)
              (rssFrom: list (IdxT * option Msg)) :=
@@ -249,7 +253,7 @@ Section RqRsTopo.
         In erq sys.(sys_merqs) ->
         exists eoidx,
           rqEdgeUpFrom eoidx = Some erq.
-          
+
     Definition ExtRssOnDTree :=
       forall ers,
         In ers sys.(sys_merss) ->
@@ -258,17 +262,17 @@ Section RqRsTopo.
 
     Definition ExtsOnDTree :=
       ExtRqsOnDTree /\ ExtRssOnDTree.
-    
+
     Definition RqRsDTree :=
       WfDTree dtr /\
       RqRsChnsOnDTree /\
       RqRsChnsOnSystem /\
       ExtsOnDTree.
-    
+
   End RqRsDTree.
-  
+
   Section GoodRqRs.
-    
+
     Section PerObject.
       Variable (oidx: IdxT).
 
@@ -281,7 +285,7 @@ Section RqRsTopo.
           parentIdxOf dtr cidx = Some oidx /\
           rins = [(rqFrom, rqm)] /\
           routs = [(rsTo, rsm)].
-      
+
       (* A rule making an immediate response to one of its children *)
       Definition ImmDownRule (rule: Rule) :=
         rule#prec <= RqAccepting /\
@@ -318,7 +322,7 @@ Section RqRsTopo.
                FootprintingUp porq norq (Some rqfm) rsFrom (Some rsbTo) /\
                FootprintUpOk oidx (Some (rqFrom, rsbTo)) rqTo rsFrom)) /\
           routs = [(rqTo, rqtm)].
-      
+
       Definition RqUpUp (rule: Rule) :=
         rule#prec <= UpLockFree /\
         FootprintDownSilent rule /\
@@ -350,7 +354,7 @@ Section RqRsTopo.
           FootprintDownDownOk oidx rqFrom rqTos rssFrom rsbTo /\
           rins = [(rqFrom, rqfm)] /\
           idsOf routs = rqTos.
-      
+
       Definition RqDownDown (rule: Rule) :=
         rule#prec <= DownLockFree /\
         FootprintUpSilent rule /\
@@ -371,7 +375,7 @@ Section RqRsTopo.
       Definition RqFwdRule (rule: Rule) :=
         RqFwdRuleCommon rule /\
         (RqUpUp rule \/ RqUpDown rule \/ RqDownDown rule).
-      
+
       Definition RsBackRuleCommon (rule: Rule) :=
         rule#prec <= RsAccepting /\ RsReleasing rule.
 
@@ -403,7 +407,7 @@ Section RqRsTopo.
         rule#prec <= DownLockFree /\
         RqReleasing rule /\
         rule#post <= RsDownRqDownOk.
-      
+
       Definition GoodRqRsRule (rule: Rule) :=
         ImmDownRule rule \/ ImmUpRule rule \/
         RqFwdRule rule \/ RsBackRule rule \/
@@ -416,7 +420,7 @@ Section RqRsTopo.
 
     Definition GoodRqRsSys :=
       Forall GoodRqRsObj sys.(sys_objs).
-    
+
   End GoodRqRs.
 
   Section RqUpRsUpComm.
@@ -427,7 +431,7 @@ Section RqRsTopo.
     Definition RsToUpRule (oidx: IdxT) (rule: Rule) :=
       ImmUpRule oidx rule \/
       (RsUp rule /\ RsBackRuleCommon rule).
-    
+
     Definition RqUpRsUpOkObj (obj: Object) (oinv: ObjInv) :=
       forall rqUpRule rsUpRule,
         In rqUpRule obj.(obj_rules) -> RqToUpRule obj.(obj_idx) rqUpRule ->
@@ -437,7 +441,7 @@ Section RqRsTopo.
     Definition RqUpRsUpOkSys :=
       Forall (fun obj => RqUpRsUpOkObj obj (oinvs obj.(obj_idx)))
              sys.(sys_objs).
-    
+
   End RqUpRsUpComm.
 
   Section GoodExtRss.
@@ -464,7 +468,7 @@ Section RqRsTopo.
 
   Definition RqRsSys :=
     RqRsDTree /\ GoodRqRsSys /\ GoodRqRsInterfSys.
-  
+
 End RqRsTopo.
 
 Arguments FootprintUpDownOk: simpl never.
@@ -492,4 +496,3 @@ Global Opaque upRq downRq.
 
 Close Scope list.
 Close Scope fmap.
-

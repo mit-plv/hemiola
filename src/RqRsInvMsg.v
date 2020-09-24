@@ -49,7 +49,7 @@ Section FootprintInv.
     unfold FootprintsOkORqs; intros.
     mred; simpl; intros; auto.
   Qed.
-  
+
   Definition FootprintsOk (st: State) :=
     FootprintsOkORqs st.(st_orqs).
 
@@ -72,7 +72,7 @@ Section FootprintInv.
     destruct ((sys_orqs_inits sys)@[oidx]) as [orq|]; simpl in *; auto.
     subst; mred; simpl; auto.
   Qed.
-  
+
   Lemma footprints_ok_step:
     InvStep sys step_m FootprintsOk.
   Proof.
@@ -110,6 +110,7 @@ Section FootprintInv.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
       + apply footprints_ok_orqs_add; disc_rule_conds; auto.
+      + apply footprints_ok_orqs_add; disc_rule_conds; auto.
     - disc_rule_conds.
       apply footprints_ok_orqs_add; disc_rule_conds; auto.
       eexists (Some (rqOrig, rsbTo)), _, _; repeat split; try eassumption.
@@ -124,7 +125,7 @@ Section FootprintInv.
     - apply footprints_ok_init.
     - apply footprints_ok_step.
   Qed.
-  
+
 End FootprintInv.
 
 Ltac good_footprint_get oidx :=
@@ -167,6 +168,7 @@ Ltac disc_footprints_ok :=
     destruct H as [[cidx ?] ?]; dest
   | [H: FootprintUpOk _ _ None _ _ |- _] => red in H; simpl in H; dest
   | [H: FootprintUpDownOk _ _ _ _ _ _ \/ FootprintDownDownOk _ _ _ _ _ _ |- _] => destruct H
+  | [H: FootprintUpDownOk _ _ _ _ _ _ \/ False |- _] => destruct H; [|exfalso; auto]
   | [H: FootprintUpDownOk _ _ _ None _ _ |- _] => red in H; simpl in H; dest
   | [H: FootprintUpDownOk _ _ _ (Some (_, _)) _ _ |- _] =>
     red in H; simpl in H;
@@ -224,10 +226,10 @@ Section IncomingMessageInv.
       msg_type (valOf rsDown) = MRs /\
       edgeDownTo dtr oidx = Some (idOf rsDown) /\
       In obj sys.(sys_objs) /\ obj.(obj_idx) = oidx.
-  
+
   Ltac disc_rule_custom ::=
     disc_footprints_ok.
-  
+
   Lemma messages_in_cases:
     forall st1 oidx ridx rins routs st2,
       Reachable (steps step_m) sys st1 ->
@@ -261,7 +263,7 @@ Section IncomingMessageInv.
       + left; left; constr_rule_conds.
       + left; right; constr_rule_conds.
       + right; left; constr_rule_conds.
-        
+
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
       + right; right; right.
@@ -270,15 +272,21 @@ Section IncomingMessageInv.
         constr_rule_conds.
       + right; right; left.
         split; auto.
-        clear -H19 H26; apply Forall_forall; intros.
+        clear -H20 H26; apply Forall_forall; intros.
         rewrite H26 in H.
-        eapply RqRsDownMatch_rs_rq in H19; [|eassumption].
+        eapply RqRsDownMatch_rs_rq in H20; [|eassumption].
         dest; eauto.
       + right; right; left.
         split; auto.
-        clear -H4 H26; apply Forall_forall; intros.
+        clear -H5 H26; apply Forall_forall; intros.
         rewrite H26 in H.
-        eapply RqRsDownMatch_rs_rq in H4; [|eassumption].
+        eapply RqRsDownMatch_rs_rq in H5; [|eassumption].
+        dest; eauto.
+      + right; right; left.
+        split; auto.
+        clear -H3 H26; apply Forall_forall; intros.
+        rewrite H26 in H.
+        eapply RqRsDownMatch_rs_rq in H3; [|eassumption].
         dest; eauto.
 
     - good_footprint_get (obj_idx obj).
@@ -324,10 +332,10 @@ Section OutgoingMessageInv.
       msg_type (valOf rsDown) = MRs /\
       parentIdxOf dtr cidx = Some oidx /\
       edgeDownTo dtr cidx = Some (idOf rsDown).
-  
+
   Ltac disc_rule_custom ::=
     disc_footprints_ok.
-  
+
   Lemma messages_out_cases:
     forall st1 oidx ridx rins routs st2,
       Reachable (steps step_m) sys st1 ->
@@ -384,6 +392,8 @@ Section OutgoingMessageInv.
         right; constr_rule_conds.
       + right; right; left.
         constr_rule_conds.
+      + right; right; right.
+        left; reflexivity.
 
     - right; left.
       disc_rule_conds.
@@ -446,7 +456,7 @@ Section ExtRss.
 
   Definition ExtRssInv (st: State) :=
     ExtRssInvMP st.(st_msgs).
-    
+
   Lemma extRssInv_init: InvInit sys ExtRssInv.
   Proof.
     repeat red; intros.
@@ -545,4 +555,3 @@ Qed.
 
 Close Scope list.
 Close Scope fmap.
-
