@@ -242,7 +242,7 @@ Section System.
         :requires (fun _ _ _ => True)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- msiNP],
+                                 +#[status <- invalidate ost#[status]],
                              <| msiBInvRs; ost#[val] |>)).
 
     End L1.
@@ -722,7 +722,7 @@ Section System.
         :requires (fun ost orq mins => ost#[dir].(dir_st) = msiI)
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- msiNP],
+                                 +#[status <- invalidate ost#[status]],
                              <| msiBInvRs; ost#[val] |>)).
 
       Definition liBInvRqDownDownS: Rule :=
@@ -756,7 +756,7 @@ Section System.
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- msiNP]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
                  <| msiBInvRs; ost#[val] |>)).
 
@@ -768,7 +768,7 @@ Section System.
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- false]
-                     +#[status <- msiNP]
+                     +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
                  <| msiBInvRs; msg_value (valOf idm) |>)).
 
