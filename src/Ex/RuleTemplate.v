@@ -289,7 +289,7 @@ Section Template.
     :requires (MsgsFromORq downRq /\ MsgIdsFrom [msgId] /\
                DownLockBackNone /\ RsAccepting /\ prec)
     :transition
-       (do (st --> (idm <- getFirstIdMsg st.(msgs);
+       (do (st --> (idm <-- getFirstIdMsg st.(msgs);
                     return {{ trs st.(ost) idm,
                               removeRq st.(orq) downRq,
                               nil }}))).
@@ -628,6 +628,8 @@ Section Facts.
     unfold rsUpUpRule; intros; split.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
+      Unshelve.
+      exact {| msg_id := 0; msg_type := false; msg_addr := tt; msg_value := t_default |}.
   Qed.
 
   Lemma rsUpUpRuleSOne_RsBackRule:
@@ -637,8 +639,9 @@ Section Facts.
     unfold rsUpUpRule; intros; split.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
+      Unshelve.
+      exact {| msg_id := 0; msg_type := false; msg_addr := tt; msg_value := t_default |}.
   Qed.
-
 
   Lemma rsDownRqDownRule_RsDownRqDownRule:
     forall sys oidx ridx msgId rqId prec trs,
@@ -886,6 +889,36 @@ Section DecValue.
     disc_rule_conds_ex.
     specialize (H3 _ _ _ eq_refl).
     inv H3; discriminate.
+  Qed.
+
+  Lemma tree2Topo_rsUpUpRuleS_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rsUpUpRuleS ridx msgId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleS ridx msgId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
+    clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+    specialize (H5 _ _ _ H0 _ _ _ eq_refl).
+    disc_rule_conds_ex.
+    discriminate.
+  Qed.
+
+  Lemma tree2Topo_rsUpUpRuleSOne_not_RqToUpRule:
+    forall tr bidx oidx ridx msgId prec trs ost orq ins,
+      rule_precond (rsUpUpRuleSOne ridx msgId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleSOne ridx msgId prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
+    clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+    specialize (H5 _ _ _ H0).
+    disc_rule_conds_ex.
+    specialize (H5 _ _ _ eq_refl).
+    disc_rule_conds_ex.
+    discriminate.
   Qed.
 
   Lemma tree2Topo_rsDownRqDownRule_not_RqToUpRule:

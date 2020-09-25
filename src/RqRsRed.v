@@ -23,7 +23,7 @@ Section InsideTree.
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try solve_midx_false.
-  
+
   Lemma step_inside_tree_ins_disj_outs:
     forall st1,
       Reachable (steps step_m) sys st1 ->
@@ -44,7 +44,7 @@ Section InsideTree.
     apply (DisjList_false_spec (id_dec msg_dec)); intros [up umsg] Hin1 Hin2.
     rewrite Forall_forall in H2.
     specialize (H2 _ Hin1); simpl in H2.
-    
+
     inv_step.
     good_rqrs_rule_get rule.
     good_rqrs_rule_cases rule.
@@ -75,16 +75,24 @@ Section InsideTree.
       + destruct H2; disc_rule_conds.
       + apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
         setoid_rewrite H32 in Hin2.
-        eapply RqRsDownMatch_rs_rq in H25; [|eassumption].
-        destruct H25 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H26; [|eassumption].
+        destruct H26 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
         destruct H3; subst.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.
         * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
       + apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
         setoid_rewrite H32 in Hin2.
-        eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
-        destruct H10 as [cidx [down ?]]; dest.
+        eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+        destruct H11 as [cidx [down ?]]; dest.
+        destruct H2; disc_rule_conds.
+        destruct H3; subst.
+        * eapply parent_not_in_subtree; try apply Hrrs; eauto.
+        * elim H3; eapply inside_child_in; try apply Hrrs; eauto.
+      + apply in_map with (f:= idOf) in Hin2; simpl in Hin2.
+        setoid_rewrite H32 in Hin2.
+        eapply RqRsDownMatch_rs_rq in H9; [|eassumption].
+        destruct H9 as [cidx [down ?]]; dest.
         destruct H2; disc_rule_conds.
         destruct H3; subst.
         * eapply parent_not_in_subtree; try apply Hrrs; eauto.
@@ -284,7 +292,7 @@ Section RqRsRed.
       eapply rqrs_lbl_atomic_ins_disj;
         [| | | |eapply H9|eapply H13]; eauto.
   Qed.
-  
+
   Lemma rqrs_lbl_atomic_outs_disj:
     forall inits1 ins1 hst1 outs1 eouts1,
       Atomic inits1 ins1 hst1 outs1 eouts1 ->
@@ -434,7 +442,7 @@ Section RqRsRed.
         eapply IHAtomic; eauto.
         eapply DisjList_app_3 in H7; dest; assumption.
   Qed.
-  
+
   Lemma rqrs_lbl_reducible:
     forall inits1 ins1 hst1 outs1 eouts1 lbl2 oidx2 ridx2 rins2 routs2,
       Atomic inits1 ins1 hst1 outs1 eouts1 ->
@@ -513,4 +521,3 @@ End RqRsRed.
 
 Close Scope list.
 Close Scope fmap.
-

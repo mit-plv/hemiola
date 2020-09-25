@@ -700,20 +700,20 @@ Section System.
 
       Definition liBInvRsS: Rule :=
         rule.rsus[3~>1~>0]
-        :me oidx
+        :accepts msiBInvRs
         :requires
            (fun ost orq mins => ost#[dir].(dir_st) = msiS)
         :transition (!|ost, _| --> (ost +#[dir <- setDirI])).
 
-      Definition liBInvRqM: Rule :=
+      Definition liBInvRsM: Rule :=
         rule.rsuso[3~>1~>1]
-        :me oidx
+        :accepts msiBInvRs
         :requires
            (fun ost orq mins => ost#[dir].(dir_st) = msiM)
-        :transition (!|ost, msg| --> (ost +#[dir <- setDirI]
+        :transition (!|ost, idm| --> (ost +#[dir <- setDirI]
                                           +#[owned <- true]
                                           +#[status <- msiM]
-                                          +#[val <- msg_value msg])).
+                                          +#[val <- msg_value (valOf idm)])).
 
       Definition liBInvImm: Rule :=
         rule.immu[3~>2]
@@ -766,11 +766,11 @@ Section System.
         :holding msiBInvRq
         :requires (fun ost orq mins => ost#[dir].(dir_st) = msiM)
         :transition
-           (!|ost, min, rq, rsbTo|
+           (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- msiNP]
                      +#[dir <- setDirI],
-                 <| msiBInvRs; msg_value min |>)).
+                 <| msiBInvRs; msg_value (valOf idm) |>)).
 
     End Li.
 
@@ -793,7 +793,7 @@ Section System.
              l1GetMRqUpUp oidx eidx;
              l1GetMRsDownDown; l1DownIImmS oidx; l1DownIImmM oidx;
              (** rules involved with [Put] *)
-             l1InvRqUpUp oidx; l1InvRqUpUpWB oidx; l1InvRsDownDown; l1BInvImm];
+             l1InvRqUpUp oidx; l1InvRqUpUpWB oidx; l1InvRsDownDown; l1BInvImm oidx];
            obj_rules_valid := _ |}.
       Next Obligation.
         inds_valid_tac.
@@ -837,10 +837,11 @@ Section System.
                 liDownIRqDownDownDirMS oidx;
                 liDownIRsUpUpS; liDownIRsUpUpM; liDownIRsUpUpMS]
              (** rules involved with [Put] *)
-             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liDropImm]
+             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown]
              (** rules involved with [BInv] *)
-             ++ [liBInvRqS; liBInvRqM; liBInvRsS; liBInvRsM; liBInvImm;
-                liBInvRqDownDownS; liBInvRqDownDownM; liBInvRsUpUpS; liBInvRsUpUpM];
+             ++ [liBInvRqS oidx; liBInvRqM oidx; liBInvRsS; liBInvRsM; liBInvImm oidx;
+                liBInvRqDownDownS oidx; liBInvRqDownDownM oidx;
+                liBInvRsUpUpS; liBInvRsUpUpM];
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.

@@ -234,6 +234,20 @@ Section RqRsDTree.
         eauto 8.
   Qed.
 
+  Lemma RqRsDownMatch_has_child:
+    forall oidx rqTos rssFrom P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      exists cidx, parentIdxOf dtr cidx = Some oidx.
+  Proof.
+    intros.
+    red in H; dest.
+    destruct rqTos as [|rqTo rqTos]; [exfalso; auto|clear H].
+    destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+    simpl in H1; inv H1.
+    destruct H3 as [cidx ?]; dest.
+    exists cidx; assumption.
+  Qed.
+
   Lemma rqrsDTree_rqEdgeUpFrom_sys_minds:
     forall oidx midx,
       In oidx (map obj_idx sys.(sys_objs)) ->

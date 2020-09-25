@@ -162,39 +162,44 @@ Section Coverage.
     (** Invariants for the downlock root *)
 
     (* The root of downlocks is the one that also has a downlock but
-     * the return index ([rqi_midx_rsb]) is one of children.
-     *)
-    Definition DownLockRoot (roidx: IdxT) (rrqid: RqInfo Msg) (rcidx: IdxT) :=
+     * the return index ([rqi_midx_rsb]) is either None or Some of a child *)
+    Definition DownLockRoot (roidx: IdxT) (rrqid: RqInfo Msg) (orcidx: option IdxT) :=
       In roidx oinds /\
       ~ UpLockedNew roidx /\ DownLocked roidx rrqid /\
-      parentIdxOf dtr rcidx = Some roidx /\
-      edgeDownTo dtr rcidx = rrqid.(rqi_midx_rsb).
+      match orcidx with
+      | Some rcidx => parentIdxOf dtr rcidx = Some roidx /\
+                      edgeDownTo dtr rcidx = rrqid.(rqi_midx_rsb)
+      | None => rrqid.(rqi_midx_rsb) = None
+      end.
 
-    Definition RqDownInRoot (roidx: IdxT) (rcidx: IdxT) (eout: Id Msg) :=
+    Definition RqDownInRoot (roidx: IdxT) (orcidx: option IdxT) (eout: Id Msg) :=
       forall oidx pidx,
         RqDownMsgTo oidx eout ->
         parentIdxOf dtr oidx = Some pidx ->
         In pidx (subtreeIndsOf dtr roidx) /\
-        ~ In oidx (subtreeIndsOf dtr rcidx).
+        orcidx >>=[True] (fun rcidx => ~ In oidx (subtreeIndsOf dtr rcidx)).
 
-    Definition RsUpInRoot (roidx: IdxT) (rcidx: IdxT) (eout: Id Msg) :=
+    Definition RsUpInRoot (roidx: IdxT) (orcidx: option IdxT) (eout: Id Msg) :=
       forall oidx pidx,
         RsUpMsgFrom oidx eout ->
         parentIdxOf dtr oidx = Some pidx ->
         In pidx (subtreeIndsOf dtr roidx) /\
-        ~ In oidx (subtreeIndsOf dtr rcidx).
+        orcidx >>=[True] (fun rcidx => ~ In oidx (subtreeIndsOf dtr rcidx)).
 
-    Definition OutInRoot (roidx: IdxT) (rcidx: IdxT) (eout: Id Msg) :=
-      RqDownInRoot roidx rcidx eout /\ RsUpInRoot roidx rcidx eout.
+    Definition OutInRoot (roidx: IdxT) (orcidx: option IdxT) (eout: Id Msg) :=
+      RqDownInRoot roidx orcidx eout /\ RsUpInRoot roidx orcidx eout.
 
-    Definition OutsInRoot (roidx: IdxT) (rcidx: IdxT) (eouts: list (Id Msg)) :=
-      Forall (OutInRoot roidx rcidx) eouts.
+    Definition OutsInRoot (roidx: IdxT) (orcidx: option IdxT) (eouts: list (Id Msg)) :=
+      Forall (OutInRoot roidx orcidx) eouts.
 
-    Definition DownLockRootInv (roidx: IdxT) (rcidx: IdxT) (eouts: list (Id Msg)) :=
-      OutsInRoot roidx rcidx eouts /\
-      DisjExceptUpLocked rcidx /\
-      UpLockCoverInv rcidx /\
-      UpLockedBound rcidx /\
+    Definition DownLockRootInv (roidx: IdxT) (orcidx: option IdxT) (eouts: list (Id Msg)) :=
+      OutsInRoot roidx orcidx eouts /\
+      match orcidx with
+      | Some rcidx => DisjExceptUpLocked rcidx /\
+                      UpLockCoverInv rcidx /\
+                      UpLockedBound rcidx
+      | None => True
+      end /\
       NoDownLockOutside roidx.
 
     (** The final combined invariant for output messages *)
@@ -225,9 +230,9 @@ Section Coverage.
                       RqDownMsgOutInv oidx eout \/
                       RsUpMsgOutInv oidx eout) eouts ->
           DownLocksCoverInv ->
-          (forall roidx rrqid rcidx,
-              DownLockRoot roidx rrqid rcidx ->
-              DownLockRootInv roidx rcidx eouts) ->
+          (forall roidx rrqid orcidx,
+              DownLockRoot roidx rrqid orcidx ->
+              DownLockRootInv roidx orcidx eouts) ->
           MsgOutsInv eouts.
 
   End OnAtomic.
@@ -677,10 +682,7 @@ Section Coverage.
 
     - good_footprint_get (obj_idx obj).
       disc_rule_conds.
-      + intro Hx; red in Hx; repeat (simpl in Hx; mred).
-      + intro Hx; red in Hx; repeat (simpl in Hx; mred).
-      + intro Hx; red in Hx; repeat (simpl in Hx; mred).
-      + intro Hx; red in Hx; repeat (simpl in Hx; mred).
+      all: intro Hx; red in Hx; repeat (simpl in Hx; mred).
 
     - disc_rule_conds.
       intro Hx; red in Hx; repeat (simpl in Hx; mred).
@@ -1324,9 +1326,9 @@ Section Coverage.
           idsOf rins = map fst rqid.(rqi_rss) ->
 
           DownLockRoot (oindsOf hst) (st_orqs st1) (st_orqs st2)
-                       roidx rqid rcidx ->
+                       roidx rqid (Some rcidx) ->
           DownLockCoverInv (oindsOf hst) roidx rqid ->
-          OutsInRoot roidx rcidx eouts ->
+          OutsInRoot roidx (Some rcidx) eouts ->
           SubList eouts rins.
   Proof.
     destruct Hrrs as [? [? [_ ?]]]; intros.
@@ -1557,9 +1559,29 @@ Section Coverage.
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
         * intros.
           red in H3; dest; dest_in.
-          simpl_locks.
-          apply parentIdxOf_Some in H7; [|apply H].
-          dest; congruence.
+          destruct orcidx as [rcidx|]; dest.
+          { simpl_locks.
+            apply parentIdxOf_Some in H3; [|apply H].
+            dest; congruence.
+          }
+          { repeat split; auto.
+            { apply Forall_forall; intros [midx msg] ?.
+              apply in_map with (f:= idOf) in H3.
+              eapply RqRsDownMatch_rq_rs in H36; [|eassumption].
+              destruct H36 as [cidx [rsUp ?]]; dest.
+              split.
+              { red; intros; disc_rule_conds.
+                split; [|auto].
+                eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
+              }
+              { red; intros; disc_rule_conds; solve_midx_false. }
+            }
+            { red; intros; dest_in.
+              elim H11.
+              apply RqRsDownMatch_has_child in H36; dest.
+              eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
+            }
+          }
 
       + eapply MsgOutsRqDownRsUp.
         * eapply rqDownRsUpDisj_down_children; [apply H19|eassumption].
@@ -1580,10 +1602,11 @@ Section Coverage.
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
         * intros.
           red in H5; dest; dest_in.
+          destruct orcidx as [rcidx|]; [dest|simpl_locks; congruence].
           simpl_locks.
           red; repeat ssplit.
           { apply Forall_forall; intros [midx msg] ?.
-            apply in_map with (f:= idOf) in H5.
+            apply in_map with (f:= idOf) in H23.
             eapply RqRsDownMatch_rq_rs in H20; [|eassumption].
             destruct H20 as [cidx [rsUp ?]]; dest.
             split.
@@ -1608,7 +1631,7 @@ Section Coverage.
           }
           { red; intros; dest_in; simpl_locks. }
           { red; intros; dest_in.
-            elim H23.
+            elim H27.
             eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
           }
 
@@ -1632,6 +1655,7 @@ Section Coverage.
           apply parent_not_in_subtree; [apply Hrrs|]; assumption.
         * intros; exfalso.
           red in H7; dest; dest_in; simpl_locks.
+          destruct orcidx as [rcidx|]; [dest|simpl_locks; congruence].
           rewrite H39 in *; solve_midx_false.
 
     - good_footprint_get (obj_idx obj).
@@ -1665,7 +1689,8 @@ Section Coverage.
           { red; intros; dest_in; simpl_locks. }
         * red; intros; dest_in; simpl_locks.
         * intros; exfalso.
-          red in H8; dest; dest_in; simpl_locks.
+          red in H11; dest; dest_in; simpl_locks.
+      + constructor.
 
     - disc_rule_conds.
       eapply MsgOutsRqDownRsUp.
@@ -1686,9 +1711,10 @@ Section Coverage.
         apply parent_not_in_subtree; [apply Hrrs|]; assumption.
       + intros.
         red in H5; dest; dest_in; simpl_locks.
+        destruct orcidx as [rcidx|]; [dest|simpl_locks; congruence].
         red; repeat ssplit.
         * apply Forall_forall; intros [midx msg] ?.
-          apply in_map with (f:= idOf) in H5.
+          apply in_map with (f:= idOf) in H25.
           eapply RqRsDownMatch_rq_rs in H20; [|eassumption].
           destruct H20 as [cidx [rsUp ?]]; dest.
           split.
@@ -1710,7 +1736,7 @@ Section Coverage.
           eapply parent_not_in_subtree; [apply Hrrs|..]; eauto.
         * red; intros; dest_in; simpl_locks.
         * red; intros; dest_in.
-          elim H23.
+          elim H27.
           eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
   Qed.
 
@@ -1942,7 +1968,7 @@ Section Coverage.
       - (** [DownLockRootInv] *)
         intros.
         assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
-                             roidx rrqid rcidx).
+                             roidx rrqid orcidx).
         { red in H19; dest.
           destruct H19; subst; [exfalso; simpl_locks|].
           red; repeat ssplit; assumption.
@@ -1955,37 +1981,39 @@ Section Coverage.
         assert (oidx = obj_idx obj) by disc_rule_conds; subst.
         red in H8; dest.
         pose proof H8.
-        red in H25; rewrite Forall_forall in H25.
-        specialize (H25 _ Hosub).
-        red in H25; dest.
-        specialize (H25 _ _ H3 H16); dest.
+        red in H23; rewrite Forall_forall in H23.
+        specialize (H23 _ Hosub).
+        red in H23; dest.
+        specialize (H23 _ _ H3 H16); dest.
         disc_rule_conds.
 
-        red; repeat ssplit.
+        repeat split.
         + (* [OutsInRoot] *)
           apply Forall_app.
           * apply forall_removeOnce; assumption.
           * constructor; [|constructor].
             split; [red; intros; disc_rule_conds|].
             red; intros; split; disc_rule_conds.
-        + (* [DisjExceptUpLocked] *)
-          disc_rule_conds.
-          apply disjExceptUpLocked_history_add; auto.
-        + (* [UpLockCoverInv] *)
-          red; intros; dest_in; [exfalso; auto|].
-          apply (DisjList_cons_inv idx_dec); [eapply H21; eauto|].
-          intro Hx; elim H27.
-          apply subtreeIndsOf_child_SubList in H32; [|apply Hrrs].
-          apply H32 in Hx.
-          apply subtreeIndsOf_SubList in H28; [|apply Hrrs].
-          apply H28; assumption.
-        + (* [UpLockedBound] *)
-          red; intros; dest_in.
-          * exfalso; eapply steps_not_in_history_no_new_uplocks; eauto.
-          * apply H22; auto.
+        + destruct orcidx as [rcidx|]; [dest|auto].
+          repeat ssplit.
+          * (* [DisjExceptUpLocked] *)
+            disc_rule_conds.
+            apply disjExceptUpLocked_history_add; auto.
+          * (* [UpLockCoverInv] *)
+            red; intros; dest_in; [exfalso; auto|].
+            apply (DisjList_cons_inv idx_dec); [eapply H26; eauto|].
+            intro Hx; elim H25.
+            apply subtreeIndsOf_child_SubList in H32; [|apply Hrrs].
+            apply H32 in Hx.
+            apply subtreeIndsOf_SubList in H28; [|apply Hrrs].
+            apply H28; assumption.
+          * (* [UpLockedBound] *)
+            red; intros; dest_in.
+            { exfalso; eapply steps_not_in_history_no_new_uplocks; eauto. }
+            { apply H27; auto. }
         + (* [NoDownLockOutside] *)
           red; intros; dest_in; [|eauto].
-          elim H29; eapply inside_child_in; [apply Hrrs|..]; eassumption.
+          elim H27; eapply inside_child_in; [apply Hrrs|..]; eassumption.
     Qed.
 
     Lemma step_msg_outs_ok_RsDownRqDownRule:
@@ -2126,8 +2154,9 @@ Section Coverage.
         }
 
         simpl_locks.
+        destruct orcidx as [rcidx|]; [dest|congruence].
         clear H22.
-        red; repeat ssplit.
+        red; repeat split.
         + (* [OutsInRoot] *)
           apply Forall_forall.
           intros [rrqTo rqm] ?.
@@ -2149,11 +2178,11 @@ Section Coverage.
         + (* [UpLockCoverInv] *)
           eapply upLockCoverInv_child; eauto.
         + (* [UpLockedBound] *)
-          rewrite H23 in H28; disc_rule_conds.
+          rewrite H23 in H27; disc_rule_conds.
         + (* [NoDownLockOutside] *)
           red; intros.
           icase oidx.
-          * elim H26; eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
+          * elim H28; eapply parent_subtreeIndsOf_self_in; [apply Hrrs|eassumption].
           * simpl_locks; eapply H19; eauto.
     Qed.
 
@@ -2281,8 +2310,9 @@ Section Coverage.
           icase roidx; [|exfalso; specialize (H17 _ H18); simpl_locks].
           clear H18.
           simpl_locks.
+          destruct orcidx as [rcidx|]; [dest|congruence].
           disc_rule_conds.
-          intros; red; repeat ssplit.
+          red; repeat split.
           * (* [OutsInRoot] *)
             apply Forall_forall.
             intros [rqTo rqm] ?.
@@ -2499,9 +2529,12 @@ Section Coverage.
 
         + (** [DownLockRootInv] *)
           intros.
-          destruct (idx_dec roidx (obj_idx obj)); subst;
-            [red in H19; dest; simpl_locks; rewrite H27 in H28; solve_midx_false|].
-          assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs roidx rrqid rcidx).
+          destruct (idx_dec roidx (obj_idx obj)); subst.
+          1: { red in H19; dest; simpl_locks.
+               destruct orcidx as [rcidx|]; [dest|congruence].
+               rewrite H27 in H26; solve_midx_false.
+          }
+          assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs roidx rrqid orcidx).
           { red in H19; dest.
             destruct H19; [exfalso; auto|].
             red; repeat ssplit; try assumption.
@@ -2513,11 +2546,11 @@ Section Coverage.
           specialize (H13 _ _ _ H23); clear H23.
           red in H13; dest.
           pose proof H13.
-          red in H29; rewrite Forall_forall in H29.
-          specialize (H29 _ Hosub).
-          red in H29; dest; clear H30.
+          red in H26; rewrite Forall_forall in H26.
+          specialize (H26 _ Hosub).
+          red in H26; dest; clear H28.
           assert (RqDownMsgTo (obj_idx obj) (rqFrom, rqfm)) by (red; auto).
-          specialize (H29 _ _ H30 H21); dest.
+          specialize (H26 _ _ H28 H21); dest.
 
           red; repeat ssplit.
           * (* [OutsInRoot] *)
@@ -2531,49 +2564,52 @@ Section Coverage.
               red; split; [|red; intros; disc_rule_conds; solve_midx_false].
               red; intros; disc_rule_conds; split.
               { eapply inside_child_in; [apply Hrrs|..]; eauto. }
-              { eapply outside_child_in in H31; [|apply Hrrs|eassumption].
-                destruct H31; auto; subst.
+              { destruct orcidx as [rcidx|]; [simpl in *; dest|auto].
+                eapply outside_child_in in H29; [|apply Hrrs|eassumption].
+                destruct H29; auto; subst.
                 red in H19; dest.
-                disc_rule_conds; simpl_locks.
+                disc_rule_conds.
               }
             }
 
-          * (* [DisjExceptUpLocked] *)
-            red; intros.
-            icase oidx; [assumption|].
-            eapply H23; eauto.
-            intro Hx; elim H33.
-            eapply upLockedNew_index_eq_1; [mred|eassumption].
-
-          * (* [UpLockCoverInv] *)
-            red; intros.
-            icase oidx; [exfalso; auto|].
-            mred; apply (DisjList_cons_inv idx_dec).
-            { eapply H24; eauto. }
-            { intro Hx.
-              eapply subtreeIndsOf_child_SubList in H36; [|apply Hrrs].
-              eapply subtreeIndsOf_SubList in H32; [|apply Hrrs].
-              apply H36, H32 in Hx; auto.
+          * destruct orcidx as [rcidx|]; [simpl in *; dest|auto].
+            repeat ssplit.
+            { (* [DisjExceptUpLocked] *)
+              red; intros.
+              icase oidx; [assumption|].
+              eapply H23; eauto.
+              intro Hx; elim H33.
+              eapply upLockedNew_index_eq_1; [mred|eassumption].
             }
-
-          * (* [UpLockedBound] *)
-            red; intros; icase oidx.
-            { exfalso.
-              eapply steps_not_in_history_no_new_uplocks
-                with (oidx:= obj_idx obj); eauto.
-              intro Hx; eapply DisjList_In_2 in Hx; [|eassumption].
-              elim Hx; apply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|..].
-              { congruence. }
-              { simpl; simpl_locks; assumption. }
+            { red; intros.
+              icase oidx; [exfalso; auto|].
+              mred; apply (DisjList_cons_inv idx_dec).
+              { eapply H30; eauto. }
+              { intro Hx.
+                eapply subtreeIndsOf_child_SubList in H36; [|apply Hrrs].
+                eapply subtreeIndsOf_SubList in H32; [|apply Hrrs].
+                apply H36, H32 in Hx; auto.
+              }
             }
-            { simpl_locks.
-              apply H26; assumption.
+            { (* [UpLockedBound] *)
+              red; intros; icase oidx.
+              { exfalso.
+                eapply steps_not_in_history_no_new_uplocks
+                  with (oidx:= obj_idx obj); eauto.
+                intro Hx; eapply DisjList_In_2 in Hx; [|eassumption].
+                elim Hx; apply rqEdgeUpFrom_subtreeIndsOf_self_in; [apply Hrrs|..].
+                { congruence. }
+                { simpl; simpl_locks; assumption. }
+              }
+              { simpl_locks.
+                apply H31; assumption.
+              }
             }
 
           * (* [NoDownLockOutside] *)
             red; intros; icase oidx.
-            { elim H33; eapply inside_child_in; [apply Hrrs|..]; eassumption. }
-            { simpl_locks; eapply H28; eauto. }
+            { elim H31; eapply inside_child_in; [apply Hrrs|..]; eassumption. }
+            { simpl_locks; eapply H24; eauto. }
     Qed.
 
     Lemma step_msg_outs_ok_RsBackRule:
@@ -2637,8 +2673,8 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; left; reflexivity].
-          destruct H10 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H11; [|rewrite <-H17; left; reflexivity].
+          destruct H11 as [cidx [down ?]]; dest.
           disc_rule_conds.
         }
         1: {
@@ -2646,8 +2682,8 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; left; reflexivity].
-          destruct H10 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H11; [|rewrite <-H17; left; reflexivity].
+          destruct H11 as [cidx [down ?]]; dest.
           disc_rule_conds.
           solve_midx_false.
         }
@@ -2659,33 +2695,33 @@ Section Coverage.
             { destruct rins as [|[rsUp rsum] ?]; [exfalso; auto|].
               do 2 eexists; left; reflexivity.
             }
-            destruct H16 as [rsUp [rsum ?]].
-            pose proof H16.
-            apply in_map with (f:= idOf) in H18; simpl in H18.
-            eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; eassumption].
-            destruct H10 as [cidx [down ?]]; dest.
-            apply Hosub in H16.
-            rewrite Forall_forall in H11; specialize (H11 _ H16).
-            destruct H11 as [oidx ?].
-            destruct H11; [destruct H11; disc_rule_conds; solve_midx_false|].
-            red in H11; dest; disc_rule_conds.
+            destruct H18 as [rsUp [rsum ?]].
+            pose proof H18.
+            apply in_map with (f:= idOf) in H19; simpl in H19.
+            eapply RqRsDownMatch_rs_rq in H11; [|rewrite <-H17; eassumption].
+            destruct H11 as [cidx [down ?]]; dest.
+            apply Hosub in H18.
+            rewrite Forall_forall in H13; specialize (H13 _ H18).
+            destruct H13 as [oidx ?].
+            destruct H13; [destruct H13; disc_rule_conds; solve_midx_false|].
+            red in H13; dest; disc_rule_conds.
             intro Hx.
             specialize (H25 _ i Hx).
             elim H25; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
           }
           assert (DownLocked orqs (obj_idx obj) rqi) by simpl_locks.
           assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
-                               (obj_idx obj) rqi (obj_idx upCObj)).
+                               (obj_idx obj) rqi (Some (obj_idx upCObj))).
           { red; repeat ssplit; try eassumption; congruence. }
-          specialize (H15 _ _ _ H19).
-          red in H15; dest.
-          specialize (H13 _ _ i H16 H18).
+          specialize (H16 _ _ _ H20).
+          red in H16; dest.
+          specialize (H15 _ _ i H18 H19).
           assert (SubList eouts rins).
           { eapply rsUp_outs_case_back; eauto.
             { apply HminsV. }
             { eapply rqDown_rsUp_inv_msg; eauto. }
           }
-          clear H19.
+          clear H20.
 
           rewrite SubList_NoDup_removeL_nil;
             [|assumption
@@ -2702,52 +2738,52 @@ Section Coverage.
                 [apply Hrrs|..]; eassumption.
             }
             { mred; apply (DisjList_cons_inv idx_dec).
-              { eapply H22; eauto. }
+              { eapply H23; eauto. }
               { apply subtreeIndsOf_child_SubList in H28; [|apply Hrrs].
-                apply subtreeIndsOf_SubList in H19; [|apply Hrrs].
-                intro Hx; apply H28, H19 in Hx.
+                apply subtreeIndsOf_SubList in H20; [|apply Hrrs].
+                intro Hx; apply H28, H20 in Hx.
                 eapply parent_not_in_subtree with (oidx:= obj_idx upCObj);
                   [apply Hrrs|..]; eassumption.
               }
             }
           * red; intros; icase oidx.
             { exfalso; simpl_locks. }
-            { simpl_locks; apply H23; assumption. }
+            { simpl_locks; apply H24; assumption. }
           * eapply noDownLockOutside_child_in; eauto; [|mred].
             intros.
-            pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H19).
+            pose proof (parentIdxOf_Some (proj1 (proj2 H)) _ H20).
             destruct H27 as [orqUp [orsUp [down ?]]]; dest.
             disc_rule_conds.
-            specialize (H13 _ _ _ H19 H28 H25).
+            specialize (H15 _ _ _ H20 H28 H25).
             destruct (in_dec idx_dec orsUp (map fst (rqi_rss rqi)));
-              [left|right; apply H13; [auto|congruence]].
-            eapply RqRsDownMatch_rs_rq in H10; [|eassumption].
-            destruct H10 as [cidx [odown ?]]; dest.
+              [left|right; apply H15; [auto|congruence]].
+            eapply RqRsDownMatch_rs_rq in H11; [|eassumption].
+            destruct H11 as [cidx [odown ?]]; dest.
             disc_rule_conds.
             rewrite <-H17 in i0.
             apply in_map_iff in i0.
             destruct i0 as [[orsUp' orsm] [? ?]]; simpl in *; subst.
             apply Hosub in H30.
-            rewrite Forall_forall in H11; specialize (H11 _ H30).
-            destruct H11 as [oidx ?].
-            destruct H11; [destruct H11; disc_rule_conds; solve_midx_false|].
-            red in H11; dest; disc_rule_conds.
+            rewrite Forall_forall in H13; specialize (H13 _ H30).
+            destruct H13 as [oidx ?].
+            destruct H13; [destruct H13; disc_rule_conds; solve_midx_false|].
+            red in H13; dest; disc_rule_conds.
 
         + (** If the history never visited the root *)
           assert (exists rsFrom rsfm, In (rsFrom, rsfm) rins).
           { destruct rins as [|[rsFrom rsfm] ?]; [exfalso; auto|].
             do 2 eexists; left; reflexivity.
           }
-          destruct H16 as [rsFrom [rsfm ?]].
+          destruct H18 as [rsFrom [rsfm ?]].
           rewrite Forall_forall in H8.
-          specialize (H8 _ H16); simpl in H8.
+          specialize (H8 _ H18); simpl in H8.
           assert (In rsFrom (idsOf rins))
-            by (apply in_map with (f:= idOf) in H16; assumption).
-          eapply RqRsDownMatch_rs_rq in H10; [|rewrite <-H17; eassumption]; clear H18.
-          destruct H10 as [ccidx [down ?]]; dest.
-          eapply Hosub in H16.
+            by (apply in_map with (f:= idOf) in H18; assumption).
+          eapply RqRsDownMatch_rs_rq in H11; [|rewrite <-H17; eassumption]; clear H19.
+          destruct H11 as [ccidx [down ?]]; dest.
+          eapply Hosub in H18.
           assert (In rsFrom (idsOf eouts))
-            by (apply in_map with (f:= idOf) in H16; assumption).
+            by (apply in_map with (f:= idOf) in H18; assumption).
           pose proof (atomic_rsUp_out_in_history
                         Hiorqs Hrrs Hatm Hrch Hsteps _ H21 H23); clear H23.
 
@@ -2769,10 +2805,10 @@ Section Coverage.
           }
 
           assert (RsUpMsgOutInv (oindsOf hst) (st_orqs st0) orqs ccidx (rsFrom, rsfm)).
-          { rewrite Forall_forall in H11.
-            specialize (H11 _ H16); destruct H11 as [oidx ?].
-            destruct H11; [destruct H11; disc_rule_conds|].
-            destruct H11; disc_rule_conds.
+          { rewrite Forall_forall in H13.
+            specialize (H13 _ H18); destruct H13 as [oidx ?].
+            destruct H13; [destruct H13; disc_rule_conds|].
+            destruct H13; disc_rule_conds.
             split; [red; auto|assumption].
           }
           assert (eouts = [(rsFrom, rsfm)]); subst.
@@ -2836,8 +2872,8 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          eapply RqRsDownMatch_rs_rq in H5; [|rewrite <-H17; left; reflexivity].
-          destruct H5 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H6; [|rewrite <-H17; left; reflexivity].
+          destruct H6 as [cidx [down ?]]; dest.
           disc_rule_conds.
         }
         1: {
@@ -2845,8 +2881,8 @@ Section Coverage.
           eapply SubList_singleton_NoDup in Hosub;
             [|apply idsOf_NoDup, HminsV].
           destruct Hosub; [exfalso; auto|subst].
-          eapply RqRsDownMatch_rs_rq in H5; [|rewrite <-H17; left; reflexivity].
-          destruct H5 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H6; [|rewrite <-H17; left; reflexivity].
+          destruct H6 as [cidx [down ?]]; dest.
           disc_rule_conds.
           solve_midx_false.
         }
@@ -2856,28 +2892,28 @@ Section Coverage.
         { destruct rins as [|[rsFrom rsfm] ?]; [exfalso; auto|].
           do 2 eexists; left; reflexivity.
         }
-        destruct H13 as [rsFrom [rsfm ?]].
+        destruct H15 as [rsFrom [rsfm ?]].
         pose proof H8.
-        rewrite Forall_forall in H15.
-        specialize (H15 _ H13); simpl in H15.
+        rewrite Forall_forall in H16.
+        specialize (H16 _ H15); simpl in H16.
         assert (In rsFrom (idsOf rins))
-          by (apply in_map with (f:= idOf) in H13; assumption).
-        pose proof H5.
-        eapply RqRsDownMatch_rs_rq in H18; [|rewrite <-H17; eassumption]; clear H16.
-        destruct H18 as [ccidx [down ?]]; dest.
-        eapply Hosub in H13.
+          by (apply in_map with (f:= idOf) in H15; assumption).
+        pose proof H6.
+        eapply RqRsDownMatch_rs_rq in H19; [|rewrite <-H17; eassumption]; clear H18.
+        destruct H19 as [ccidx [down ?]]; dest.
+        eapply Hosub in H15.
         assert (In rsFrom (idsOf eouts))
-          by (apply in_map with (f:= idOf) in H13; assumption).
+          by (apply in_map with (f:= idOf) in H15; assumption).
         pose proof (atomic_rsUp_out_in_history
                       Hiorqs Hrrs Hatm Hrch Hsteps _ H21 H23); clear H23.
 
         destruct (in_dec idx_dec (obj_idx obj) (oindsOf hst)).
         + (** If the history has visited the join *)
           assert (~ UpLockedNew (st_orqs st0) orqs (obj_idx obj)) as Hnul.
-          { rewrite Forall_forall in H9; specialize (H9 _ H13).
-            destruct H9 as [oidx ?].
-            destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
-            red in H9; dest; disc_rule_conds.
+          { rewrite Forall_forall in H10; specialize (H10 _ H15).
+            destruct H10 as [oidx ?].
+            destruct H10; [destruct H10; disc_rule_conds; solve_midx_false|].
+            red in H10; dest; disc_rule_conds.
             intro Hx.
             specialize (H25 _ i Hx).
             elim H25; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
@@ -2891,7 +2927,7 @@ Section Coverage.
             { apply HminsV. }
             { eapply rsUp_no_other_messages_in; eauto.
               { apply HminsV. }
-              { apply H10; [assumption|apply Hnul|simpl_locks]. }
+              { apply H11; [assumption|apply Hnul|simpl_locks]. }
               { congruence. }
               { eapply rqDown_rsUp_inv_msg; eassumption. }
             }
@@ -2903,7 +2939,7 @@ Section Coverage.
               apply removeL_In_NoDup in H23;
                 [|apply idsOf_NoDup, rqDownRsUpDisj_NoDup; auto;
                   eapply rqDown_rsUp_inv_msg; eauto]; dest.
-              rewrite Forall_forall in H9; pose proof (H9 _ H25).
+              rewrite Forall_forall in H10; pose proof (H10 _ H25).
               destruct H26 as [oidx ?]; destruct H26.
               { exists oidx; left.
                 red in H26; dest.
@@ -2950,25 +2986,25 @@ Section Coverage.
                   apply in_map_iff in i0.
                   destruct i0 as [[crsUp' crsm] [? ?]]; simpl in *; subst.
                   apply Hosub in H31.
-                  rewrite Forall_forall in H9; specialize (H9 _ H31).
-                  destruct H9 as [rcidx ?].
-                  destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
-                  red in H9; dest; disc_rule_conds.
+                  rewrite Forall_forall in H10; specialize (H10 _ H31).
+                  destruct H10 as [rcidx ?].
+                  destruct H10; [destruct H10; disc_rule_conds; solve_midx_false|].
+                  red in H10; dest; disc_rule_conds.
                   specialize (H30 _ H23 H26); dest.
                   split; simpl_locks.
                 }
                 { assert (DownLocked orqs (obj_idx obj) rqi) by simpl_locks.
                   assert (rqi_midx_rsb rqi <> Some cdown)
-                    by (intro Hx; rewrite Hx in *; inv H20; solve_midx_false).
-                  specialize (H10 _ _ i Hnul H30).
-                  specialize (H10 _ _ _ H25 H28 H29 n0 H31).
-                  exfalso; destruct (H10 oidx); eauto.
+                    by (intro Hx; rewrite Hx in *; inv H2; solve_midx_false).
+                  specialize (H11 _ _ i Hnul H30).
+                  specialize (H11 _ _ _ H25 H28 H29 n0 H31).
+                  exfalso; destruct (H11 oidx); eauto.
                 }
               }
-              { rewrite Forall_forall in H9; specialize (H9 _ H13).
-                destruct H9 as [oidx ?].
-                destruct H9; [destruct H9; disc_rule_conds; solve_midx_false|].
-                red in H9; dest; disc_rule_conds.
+              { rewrite Forall_forall in H10; specialize (H10 _ H15).
+                destruct H10 as [oidx ?].
+                destruct H10; [destruct H10; disc_rule_conds; solve_midx_false|].
+                red in H10; dest; disc_rule_conds.
                 red; intros; icase uidx; [simpl_locks|].
                 simpl_locks.
                 specialize (H25 _ H21 H27).
@@ -2980,7 +3016,7 @@ Section Coverage.
             red; intros; icase oidx; [exfalso; simpl_locks|].
             simpl_locks.
             red; intros.
-            specialize (H10 _ _ H23 H25 H26 _ _ _ H27 H28 H29 H30 H31).
+            specialize (H11 _ _ H23 H25 H26 _ _ _ H27 H28 H29 H30 H31).
             apply (DisjList_cons_inv idx_dec); [auto|].
             eapply outside_parent_out; [apply Hrrs| |eassumption].
             eapply DisjList_In_2; eassumption.
@@ -2993,7 +3029,7 @@ Section Coverage.
               simpl_locks; solve_midx_false.
             }
             assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
-                                 roidx rrqid rcidx).
+                                 roidx rrqid orcidx).
             { red in H23; dest.
               destruct H23; [exfalso; auto|].
               red; repeat ssplit; try assumption.
@@ -3003,14 +3039,14 @@ Section Coverage.
               }
               { simpl_locks. }
             }
-            specialize (H11 _ _ _ H25); clear H25.
-            red in H11; dest.
-            pose proof H11.
-            red in H29; rewrite Forall_forall in H29.
-            specialize (H29 _ H13).
-            red in H29; dest; clear H29.
+            specialize (H13 _ _ _ H25); clear H25.
+            red in H13; dest.
+            pose proof H13.
+            red in H27; rewrite Forall_forall in H27.
+            specialize (H27 _ H15).
+            red in H27; dest; clear H27.
             assert (RsUpMsgFrom ccidx (rsFrom, rsfm)) by (red; auto).
-            specialize (H30 _ _ H29 H18); dest.
+            specialize (H28 _ _ H27 H19); dest.
 
             red; repeat ssplit.
             { (* [OutsInRoot] *)
@@ -3024,37 +3060,43 @@ Section Coverage.
                   red in H22; dest.
                   simpl_locks.
                 }
-                { eapply outside_parent_out; [apply Hrrs|..]; eassumption. }
+                { destruct orcidx as [rcidx|]; [simpl in *|auto].
+                  eapply outside_parent_out; [apply Hrrs|..]; eassumption.
+                }
               }
             }
-            { (* [DisjExceptUpLocked] *)
-              red; intros; icase oidx;
-                [eapply outside_parent_out; [apply Hrrs|..]; eassumption|].
-              eapply H25; eauto.
-              intro Hx; elim H33.
-              eapply upLockedNew_index_eq_1; [mred|eassumption].
-            }
-            { (* [UpLockCoverInv] *)
-              red; intros; icase oidx;
-                [exfalso; eapply outside_parent_out; [apply Hrrs|..]; eauto|].
-              mred; apply (DisjList_cons_inv idx_dec).
-              { eapply H26; eauto. }
-              { intro Hx.
-                eapply subtreeIndsOf_child_SubList in H36; [|apply Hrrs].
-                eapply subtreeIndsOf_SubList in H32; [|apply Hrrs].
-                apply H36, H32 in Hx.
-                eapply outside_parent_out; [apply Hrrs|..]; eauto.
+
+            { destruct orcidx as [rcidx|]; [simpl in *; dest|auto].
+              repeat ssplit.
+              { (* [DisjExceptUpLocked] *)
+                red; intros; icase oidx;
+                  [eapply outside_parent_out; [apply Hrrs|..]; eassumption|].
+                eapply H25; eauto.
+                intro Hx; elim H33.
+                eapply upLockedNew_index_eq_1; [mred|eassumption].
               }
-            }
-            { (* [UpLockedBound] *)
-              red; intros; icase oidx; [simpl_locks|].
-              simpl_locks.
-              apply H27; assumption.
+              { (* [UpLockCoverInv] *)
+                red; intros; icase oidx;
+                  [exfalso; eapply outside_parent_out; [apply Hrrs|..]; eauto|].
+                mred; apply (DisjList_cons_inv idx_dec).
+                { eapply H30; eauto. }
+                { intro Hx.
+                  eapply subtreeIndsOf_child_SubList in H36; [|apply Hrrs].
+                  eapply subtreeIndsOf_SubList in H32; [|apply Hrrs].
+                  apply H36, H32 in Hx.
+                  eapply outside_parent_out; [apply Hrrs|..]; eauto.
+                }
+              }
+              { (* [UpLockedBound] *)
+                red; intros; icase oidx; [simpl_locks|].
+                simpl_locks.
+                apply H31; assumption.
+              }
             }
             { (* [NoDownLockOutside] *)
               red; intros; icase oidx; [simpl_locks|].
               simpl_locks.
-              eapply H28; eauto.
+              eapply H26; eauto.
             }
 
         + (** If the history never visited the join *)
@@ -3076,10 +3118,10 @@ Section Coverage.
           }
 
           assert (RsUpMsgOutInv (oindsOf hst) (st_orqs st0) orqs ccidx (rsFrom, rsfm)).
-          { rewrite Forall_forall in H9.
-            specialize (H9 _ H13); destruct H9 as [oidx ?].
-            destruct H9; [destruct H9; disc_rule_conds|].
-            destruct H9; disc_rule_conds.
+          { rewrite Forall_forall in H10.
+            specialize (H10 _ H15); destruct H10 as [oidx ?].
+            destruct H10; [destruct H10; disc_rule_conds|].
+            destruct H10; disc_rule_conds.
             split; [red; auto|assumption].
           }
           assert (eouts = [(rsFrom, rsfm)]); subst.
@@ -3130,7 +3172,7 @@ Section Coverage.
           * red; intros; icase oidx; [exfalso; simpl_locks|].
             simpl_locks.
             red; intros.
-            apply (DisjList_cons_inv idx_dec); [eapply H10; eauto|].
+            apply (DisjList_cons_inv idx_dec); [eapply H11; eauto|].
             apply H25 in H31.
             apply subtreeIndsOf_SubList in H31; [|apply Hrrs].
             apply subtreeIndsOf_child_SubList in H34; [|apply Hrrs].
@@ -3142,61 +3184,276 @@ Section Coverage.
             destruct (idx_dec (obj_idx obj) roidx); subst;
               [exfalso; red in H31; dest; simpl_locks|].
             assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
-                                 roidx rrqid rcidx).
+                                 roidx rrqid orcidx).
             { red in H31; dest.
               red; repeat ssplit; try eassumption; simpl_locks.
               destruct H31; [exfalso; auto|assumption].
             }
-            specialize (H11 _ _ _ H32); clear H31 H32.
+            specialize (H13 _ _ _ H32); clear H31 H32.
 
-            red in H11; dest.
-            pose proof H11.
-            red in H35; rewrite Forall_forall in H35.
-            specialize (H35 _ (or_introl eq_refl)).
-            red in H35; dest; clear H35.
+            red in H13; dest.
+            pose proof H13.
+            red in H33; rewrite Forall_forall in H33.
+            specialize (H33 _ (or_introl eq_refl)).
+            red in H33; dest; clear H33.
             assert (RsUpMsgFrom ccidx (rsFrom, rsfm)) by (red; auto).
-            specialize (H36 _ _ H35 H18); dest.
+            specialize (H34 _ _ H33 H19); dest.
 
             red; repeat ssplit.
             { constructor; [|constructor].
               red; split; [red; intros; disc_rule_conds|].
               red; intros; disc_rule_conds; split.
               { eapply inside_parent_in; [apply Hrrs|..]; try eassumption. }
-              { eapply outside_parent_out; [apply Hrrs|..]; eassumption. }
-            }
-            { red; intros; icase oidx;
-                [eapply outside_parent_out; [apply Hrrs|..]; eassumption|].
-              eapply H31; eauto.
-              intro Hx; elim H39.
-              eapply upLockedNew_index_eq_1; [mred|eassumption].
-            }
-            { red; intros; icase oidx;
-                [exfalso; eapply outside_parent_out; [apply Hrrs|..]; eauto|].
-              mred; apply (DisjList_cons_inv idx_dec).
-              { eapply H32; eauto. }
-              { intro Hx.
-                eapply subtreeIndsOf_child_SubList in H42; [|apply Hrrs].
-                eapply subtreeIndsOf_SubList in H38; [|apply Hrrs].
-                apply H42, H38 in Hx.
-                eapply outside_parent_out; [apply Hrrs|..]; eauto.
+              { destruct orcidx as [rcidx|]; [simpl in *|auto].
+                eapply outside_parent_out; [apply Hrrs|..]; eassumption.
               }
             }
-            { red; intros; exfalso.
-              icase oidx.
-              { eapply steps_not_in_history_no_new_uplocks with (oidx:= obj_idx obj); eauto.
-                { intro Hx; apply H25 in Hx.
-                  eapply parent_not_in_subtree; [apply Hrrs|..]; eassumption.
+
+            { destruct orcidx as [rcidx|]; [simpl in *; dest|auto].
+              repeat ssplit.
+              { red; intros; icase oidx;
+                  [eapply outside_parent_out; [apply Hrrs|..]; eassumption|].
+                eapply H31; eauto.
+                intro Hx; elim H39.
+                eapply upLockedNew_index_eq_1; [mred|eassumption].
+              }
+              { red; intros; icase oidx;
+                  [exfalso; eapply outside_parent_out; [apply Hrrs|..]; eauto|].
+                mred; apply (DisjList_cons_inv idx_dec).
+                { eapply H36; eauto. }
+                { intro Hx.
+                  eapply subtreeIndsOf_child_SubList in H42; [|apply Hrrs].
+                  eapply subtreeIndsOf_SubList in H38; [|apply Hrrs].
+                  apply H42, H38 in Hx.
+                  eapply outside_parent_out; [apply Hrrs|..]; eauto.
                 }
-                { simpl; simpl_locks; assumption. }
               }
-              { specialize (H29 _ H38 (H25 _ H38)); dest.
-                simpl_locks.
+              { red; intros; exfalso.
+                icase oidx.
+                { eapply steps_not_in_history_no_new_uplocks with (oidx:= obj_idx obj); eauto.
+                  { intro Hx; apply H25 in Hx.
+                    eapply parent_not_in_subtree; [apply Hrrs|..]; eassumption.
+                  }
+                  { simpl; simpl_locks; assumption. }
+                }
+                { specialize (H29 _ H38 (H25 _ H38)); dest.
+                  simpl_locks.
+                }
               }
             }
             { red; intros; icase oidx; [simpl_locks|].
               simpl_locks.
-              eapply H34; eauto.
+              eapply H32; eauto.
             }
+
+      - (** [RsUpUp-silent] *)
+        inv_MsgOutsInv.
+        1: { exfalso; apply SubList_nil_inv in Hosub; auto. }
+        1: {
+          exfalso.
+          eapply SubList_singleton_NoDup in Hosub;
+            [|apply idsOf_NoDup, HminsV].
+          destruct Hosub; [exfalso; auto|subst].
+          eapply RqRsDownMatch_rs_rq in H4; [|rewrite <-H17; left; reflexivity].
+          destruct H4 as [cidx [down ?]]; dest.
+          disc_rule_conds.
+        }
+        1: {
+          exfalso.
+          eapply SubList_singleton_NoDup in Hosub;
+            [|apply idsOf_NoDup, HminsV].
+          destruct Hosub; [exfalso; auto|subst].
+          eapply RqRsDownMatch_rs_rq in H4; [|rewrite <-H17; left; reflexivity].
+          destruct H4 as [cidx [down ?]]; dest.
+          disc_rule_conds.
+          solve_midx_false.
+        }
+
+        (** Need to have just one child of the incoming RsUp messages. *)
+        assert (exists rsFrom rsfm, In (rsFrom, rsfm) rins).
+        { destruct rins as [|[rsFrom rsfm] ?]; [exfalso; auto|].
+          do 2 eexists; left; reflexivity.
+        }
+        destruct H10 as [rsFrom [rsfm ?]].
+        pose proof H8.
+        rewrite Forall_forall in H11.
+        specialize (H11 _ H10); simpl in H11.
+        assert (In rsFrom (idsOf rins))
+          by (apply in_map with (f:= idOf) in H10; assumption).
+        pose proof H4.
+        eapply RqRsDownMatch_rs_rq in H15; [|rewrite <-H17; eassumption]; clear H13.
+        destruct H15 as [ccidx [down ?]]; dest.
+        eapply Hosub in H10.
+        assert (In rsFrom (idsOf eouts))
+          by (apply in_map with (f:= idOf) in H10; assumption).
+        pose proof (atomic_rsUp_out_in_history
+                      Hiorqs Hrrs Hatm Hrch Hsteps _ H18 H20); clear H20.
+
+        destruct (in_dec idx_dec (obj_idx obj) (oindsOf hst)).
+        + (** If the history has visited the join *)
+          assert (~ UpLockedNew (st_orqs st0) orqs (obj_idx obj)) as Hnul.
+          { rewrite Forall_forall in H6; specialize (H6 _ H10).
+            destruct H6 as [oidx ?].
+            destruct H6; [destruct H6; disc_rule_conds; solve_midx_false|].
+            red in H6; dest; disc_rule_conds.
+            intro Hx.
+            specialize (H22 _ i Hx).
+            elim H22; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+          }
+
+          rewrite app_nil_r.
+          eapply MsgOutsRqDownRsUp;
+            [apply rqDownRsUpDisj_removeL; auto|..].
+
+          * (** Invariant for each message *)
+            apply Forall_forall.
+            intros [midx msg] ?.
+            apply removeL_In_NoDup in H20;
+              [|apply idsOf_NoDup, rqDownRsUpDisj_NoDup; auto;
+                eapply rqDown_rsUp_inv_msg; eauto]; dest.
+            rewrite Forall_forall in H6; pose proof (H6 _ H22).
+            destruct H23 as [oidx ?]; destruct H23.
+            { exists oidx; left.
+              red in H23; dest.
+              red; repeat ssplit; [assumption|..].
+              { apply (DisjList_cons_inv idx_dec); [auto|].
+                eapply outside_parent_out; [apply Hrrs| |eassumption].
+                eapply rqDown_no_rsUp
+                  with (eouts:= eouts)
+                       (rqdm:= (midx, msg)) (orsum:= (rsFrom, rsfm)); eauto.
+                { eapply rqDown_rsUp_inv_msg, Forall_forall; eauto. }
+                { red; auto. }
+              }
+              { red; intros; icase uidx.
+                { simpl_locks. }
+                { simpl_locks; apply H25; assumption. }
+              }
+            }
+            { exists oidx; right.
+              red in H23; dest.
+              red; repeat ssplit; [assumption|..].
+              { red; intros; icase oidx0.
+                { split; simpl_locks. }
+                { specialize (H24 _ H26 H27); dest.
+                  split; simpl_locks.
+                }
+              }
+              { red; intros; icase uidx.
+                { simpl_locks. }
+                { simpl_locks; apply H25; assumption. }
+              }
+            }
+
+          * (** [DownLocksCoverInv] *)
+            red; intros; icase oidx; [exfalso; simpl_locks|].
+            simpl_locks.
+            red; intros.
+            specialize (H7 _ _ H20 H22 H23 _ _ _ H24 H25 H26 H27 H28).
+            apply (DisjList_cons_inv idx_dec); [auto|].
+            eapply outside_parent_out; [apply Hrrs| |eassumption].
+            eapply DisjList_In_2; eassumption.
+
+          * (** [DownLockRootInv] *)
+            intros.
+            destruct (idx_dec roidx (obj_idx obj)); subst.
+            1: {
+              red in H20; dest.
+              simpl_locks; solve_midx_false.
+            }
+            assert (DownLockRoot (oindsOf hst) (st_orqs st0) orqs
+                                 roidx rrqid orcidx).
+            { red in H20; dest.
+              destruct H20; [exfalso; auto|].
+              red; repeat ssplit; try assumption.
+              { intro Hx; elim H22.
+                eapply upLockedNew_index_eq_1 with (orqs2:= orqs);
+                  [mred|assumption].
+              }
+              { simpl_locks. }
+            }
+            specialize (H9 _ _ _ H22); clear H22.
+            red in H9; dest.
+            pose proof H9.
+            red in H24; rewrite Forall_forall in H24.
+            specialize (H24 _ H10).
+            red in H24; dest; clear H24.
+            assert (RsUpMsgFrom ccidx (rsFrom, rsfm)) by (red; auto).
+            specialize (H25 _ _ H24 H15); dest.
+
+            red; repeat ssplit.
+            { (* [OutsInRoot] *)
+              apply forall_removeL; assumption.
+            }
+
+            { destruct orcidx as [rcidx|]; [simpl in *; dest|auto].
+              repeat ssplit.
+              { (* [DisjExceptUpLocked] *)
+                red; intros; icase oidx;
+                  [eapply outside_parent_out; [apply Hrrs|..]; eassumption|].
+                eapply H22; eauto.
+                intro Hx; elim H30.
+                eapply upLockedNew_index_eq_1; [mred|eassumption].
+              }
+              { (* [UpLockCoverInv] *)
+                red; intros; icase oidx;
+                  [exfalso; eapply outside_parent_out; [apply Hrrs|..]; eauto|].
+                mred; apply (DisjList_cons_inv idx_dec).
+                { eapply H27; eauto. }
+                { intro Hx.
+                  eapply subtreeIndsOf_child_SubList in H33; [|apply Hrrs].
+                  eapply subtreeIndsOf_SubList in H29; [|apply Hrrs].
+                  apply H33, H29 in Hx.
+                  eapply outside_parent_out; [apply Hrrs|..]; eauto.
+                }
+              }
+              { (* [UpLockedBound] *)
+                red; intros; icase oidx; [simpl_locks|].
+                simpl_locks.
+                apply H28; assumption.
+              }
+            }
+            { (* [NoDownLockOutside] *)
+              red; intros; icase oidx; [simpl_locks|].
+              simpl_locks.
+              eapply H23; eauto.
+            }
+
+        + (** If the history never visited the join *)
+          eapply atomic_separation_ok in n; eauto; try apply Hiorqs.
+          destruct n.
+          2: {
+            exfalso.
+            eapply DisjList_In_2 in H20; [|eassumption].
+            elim H20; apply subtreeIndsOf_child_in; [apply Hrrs|assumption].
+          }
+          destruct H20 as [cidx [? ?]].
+          destruct (idx_dec cidx ccidx); subst.
+          2: {
+            apply H22 in H21.
+            exfalso.
+            eapply subtreeIndsOf_other_child_not_in
+              with (cidx1:= ccidx) (cidx2:= cidx) (pidx:= obj_idx obj);
+              try apply Hrrs; eauto.
+          }
+
+          assert (RsUpMsgOutInv (oindsOf hst) (st_orqs st0) orqs ccidx (rsFrom, rsfm)).
+          { rewrite Forall_forall in H6.
+            specialize (H6 _ H10); destruct H6 as [oidx ?].
+            destruct H6; [destruct H6; disc_rule_conds|].
+            destruct H6; disc_rule_conds.
+            split; [red; auto|assumption].
+          }
+          assert (eouts = [(rsFrom, rsfm)]); subst.
+          { eapply rsUp_outs_case_isolated; eauto.
+            eapply rqDown_rsUp_inv_msg; eauto.
+          }
+
+          destruct HminsV.
+          eapply SubList_singleton_NoDup in Hosub;
+            [|apply idsOf_NoDup, HminsV].
+          destruct Hosub; [exfalso; auto|subst].
+          rewrite removeL_nil in *; simpl in *.
+          constructor.
     Qed.
 
   End InternalStep.
