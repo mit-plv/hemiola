@@ -842,6 +842,60 @@ Section Coverage.
     - right; apply H.
   Qed.
 
+  Lemma rqDown_rsUp_inv_rqDown:
+    forall orqs1 orqs2 oinds eouts,
+      Forall (fun eout =>
+                exists oidx,
+                  RqDownMsgOutInv oinds orqs1 orqs2 oidx eout \/
+                  RsUpMsgOutInv oinds orqs1 orqs2 oidx eout) eouts ->
+      forall oidx rqDown,
+        In rqDown eouts ->
+        RqDownMsgTo oidx rqDown ->
+        RqDownMsgOutInv oinds orqs1 orqs2 oidx rqDown.
+  Proof.
+    intros.
+    rewrite Forall_forall in H.
+    specialize (H _ H0).
+    destruct H as [roidx ?].
+    destruct H.
+    - red in H; dest.
+      red in H, H1; dest.
+      destruct Hrrs; disc_rule_conds.
+      red; repeat ssplit; try assumption.
+      red; auto.
+    - exfalso.
+      red in H; dest.
+      red in H, H1; dest.
+      rewrite H in H1; discriminate.
+  Qed.
+
+  Lemma rqDown_rsUp_inv_rsUp:
+    forall orqs1 orqs2 oinds eouts,
+      Forall (fun eout =>
+                exists oidx,
+                  RqDownMsgOutInv oinds orqs1 orqs2 oidx eout \/
+                  RsUpMsgOutInv oinds orqs1 orqs2 oidx eout) eouts ->
+      forall oidx rsUp,
+        In rsUp eouts ->
+        RsUpMsgFrom oidx rsUp ->
+        RsUpMsgOutInv oinds orqs1 orqs2 oidx rsUp.
+  Proof.
+    intros.
+    rewrite Forall_forall in H.
+    specialize (H _ H0).
+    destruct H as [roidx ?].
+    destruct H.
+    - exfalso.
+      red in H; dest.
+      red in H, H1; dest.
+      rewrite H in H1; discriminate.
+    - red in H; dest.
+      red in H, H1; dest.
+      destruct Hrrs; disc_rule_conds.
+      red; repeat ssplit; try assumption.
+      red; auto.
+  Qed.
+
   Lemma rqDown_no_rqDown:
     forall eouts,
       Forall (fun eout => exists oidx, RqDownRsUpIdx oidx eout) eouts ->
@@ -1203,7 +1257,7 @@ Section Coverage.
           RqRsDownMatch dtr oidx rqTos rqid.(rqi_rss) P ->
           (st_orqs st2)@[oidx] = Some orq -> orq@[downRq] = Some rqid ->
           DownLockCoverInv (oindsOf hst) oidx rqid ->
-          rsEdgeUpFrom dtr oidx = rqid.(rqi_midx_rsb) ->
+          (rsEdgeUpFrom dtr oidx = rqid.(rqi_midx_rsb) \/ rqid.(rqi_midx_rsb) = None) ->
           idsOf rins = map fst rqid.(rqi_rss) ->
 
           Forall (fun eout => exists oidx, RqDownRsUpIdx oidx eout) eouts ->
@@ -1264,7 +1318,8 @@ Section Coverage.
 
       + rewrite H14 in n.
         assert (rqi_midx_rsb rqid <> Some down)
-          by (intro Hx; rewrite Hx in *; solve_midx_false).
+          by (intro Hx; rewrite Hx in *;
+              destruct H13; [solve_midx_false|discriminate]).
         specialize (H12 _ _ _ H19 H22 H23 n H24); clear H24.
 
         destruct H18.
@@ -2928,7 +2983,7 @@ Section Coverage.
             { eapply rsUp_no_other_messages_in; eauto.
               { apply HminsV. }
               { apply H11; [assumption|apply Hnul|simpl_locks]. }
-              { congruence. }
+              { left; congruence. }
               { eapply rqDown_rsUp_inv_msg; eassumption. }
             }
 
