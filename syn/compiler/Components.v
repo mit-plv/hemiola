@@ -599,10 +599,8 @@ Section MSHR.
           LET addr <- #msg!KMsg@."addr";
           LET cmmid <- (rqIter MaybeNone
                                (fun i m => MaybeSome $i)
-                               (fun m =>
-                                  (m!MSHR@."m_status" != mshrInvalid) &&
-                                  (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
-                                  m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                               (fun m => (m!MSHR@."m_status" != mshrInvalid) &&
+                                         m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                                #rqs);
           Assert !(#cmmid!(MaybeStr MshrId)@."valid"); (* No conflicts with the other MSHRs *)
           LET nrqs <-
@@ -646,6 +644,7 @@ Section MSHR.
           Assert (#mmid!(MaybeStr MshrId)@."valid");
           LET mid <- #mmid!(MaybeStr MshrId)@."data";
           Ret #mid
+
         with Method ("findDL"+o)(addr: KAddr): MshrId :=
           Read rqs <- "rqs"+o;
           LET mmid <- (rqIter MaybeNone

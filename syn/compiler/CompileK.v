@@ -456,7 +456,8 @@ Section Compile.
       Definition lrVictims: ActionT var Void :=
         (Call ir <- deqIR2LR();
         Assert (#ir!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."valid");
-        Call victim <- getVictim();
+        LET vidx <- #ir!IRElt@."ir_by_victim"!(MaybeStr (Bit victimIdxSz))@."data";
+        Call victim <- getVictim(#vidx);
         LET rinfo <- STRUCT { "info_index" ::= $$Default;
                               "info_hit" ::= $$Default;
                               "info_way" ::= $$Default;
