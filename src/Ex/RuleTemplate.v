@@ -121,7 +121,7 @@ Section Template.
       fst (trs ost) <> nil /\
       Forall (fun cidx => parentIdxOf dtr cidx = Some oidx) (fst (trs ost)).
 
-  Definition rqUpDownRuleS (oidx: IdxT) (prec: OState -> Prop)
+  Definition rqUpDownRuleS (prec: OState -> Prop)
              (trs: OState -> list IdxT * Miv): Rule :=
     rule[ridx]
     :requires (MsgsFrom nil /\ RqAccepting /\ DownLockFree /\
@@ -191,7 +191,7 @@ Section Template.
                    nst ::= trs st.(ost) msg;
                     return {{ nst, removeRq st.(orq) upRq, nil }}))).
 
-  Definition rsUpDownRule (rqId: IdxT)
+  Definition rsUpRule (rqId: IdxT)
              (prec: OPrec)
              (trs: OState ->
                    list (Id Msg) (* incoming messages *) ->
@@ -210,7 +210,7 @@ Section Template.
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
-  Definition rsUpDownRuleOne (rqId: IdxT)
+  Definition rsUpRuleOne (rqId: IdxT)
              (prec: OPrec)
              (trs: OState ->
                    Id Msg (* an incoming message *) ->
@@ -230,46 +230,7 @@ Section Template.
                               removeRq st.(orq) downRq,
                               [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
-  Definition rsUpUpRule (rqId: IdxT)
-             (prec: OPrec)
-             (trs: OState ->
-                   list (Id Msg) (* incoming messages *) ->
-                   Msg (* the original request *) ->
-                   IdxT (* response back to *) ->
-                   OState * Miv) :=
-    rule[ridx]
-    :requires (MsgsFromORq downRq /\ MsgIdFromEach msgId /\
-               DownLockMsgId MRq rqId /\ DownLockIdxBack /\
-               RsAccepting /\ prec)
-    :transition
-       (do (st --> (rq <-- getDownLockMsg st.(orq);
-                   rsbTo <-- getDownLockIdxBack st.(orq);
-                   nst ::= trs st.(ost) st.(msgs) rq rsbTo;
-                    return {{ fst nst,
-                              removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
-
-  Definition rsUpUpRuleOne (rqId: IdxT)
-             (prec: OPrec)
-             (trs: OState ->
-                   Id Msg (* an incoming message *) ->
-                   Msg (* the original request *) ->
-                   IdxT (* response back to *) ->
-                   OState * Miv) :=
-    rule[ridx]
-    :requires (MsgsFromORq downRq /\ MsgIdsFrom [msgId] /\
-               DownLockMsgId MRq rqId /\ DownLockIdxBack /\
-               RsAccepting /\ prec)
-    :transition
-       (do (st --> (idm <-- getFirstIdMsg st.(msgs);
-                   rq <-- getDownLockMsg st.(orq);
-                   rsbTo <-- getDownLockIdxBack st.(orq);
-                   nst ::= trs st.(ost) idm rq rsbTo;
-                    return {{ fst nst,
-                              removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
-
-  Definition rsUpUpRuleS (prec: OPrec)
+  Definition rsUpRuleS (prec: OPrec)
              (trs: OState ->
                    list (Id Msg) (* incoming messages *) ->
                    OState) :=
@@ -281,7 +242,7 @@ Section Template.
                               removeRq st.(orq) downRq,
                               nil }}))).
 
-  Definition rsUpUpRuleSOne (prec: OPrec)
+  Definition rsUpRuleSOne (prec: OPrec)
              (trs: OState ->
                    Id Msg (* an incoming message *) ->
                    OState) :=
@@ -357,29 +318,28 @@ Notation "'rule.rqsu' '[' RIDX ']' ':me' ME ':requires' PREC ':transition' TRS" 
   (rqUpUpRuleS RIDX ME PREC TRS%trs) (at level 5).
 Notation "'rule.rqud' '[' RIDX ']' ':accepts' MSGID ':from' FROM ':me' ME ':requires' PREC ':transition' TRS" :=
   (rqUpDownRule RIDX MSGID FROM ME PREC TRS%trs) (at level 5).
-Notation "'rule.rqsd' '[' RIDX ']' ':me' ME ':requires' PREC ':transition' TRS" :=
-  (rqUpDownRuleS RIDX ME PREC TRS%trs) (at level 5).
+Notation "'rule.rqsd' '[' RIDX ']' ':requires' PREC ':transition' TRS" :=
+  (rqUpDownRuleS RIDX PREC TRS%trs) (at level 5).
 Notation "'rule.rqdd' '[' RIDX ']' ':accepts' MSGID ':me' ME ':requires' PREC ':transition' TRS" :=
   (rqDownDownRule RIDX MSGID ME PREC TRS%trs) (at level 5).
 
 Notation "'rule.rsdd' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
   (rsDownDownRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
-Notation "'rule.rsd' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
+Notation "'rule.rsds' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
   (rsDownDownRuleS RIDX MSGID PREC TRS%trs) (at level 5).
+
 Notation "'rule.rsud' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpDownRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
+  (rsUpRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsudo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpDownRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
-
+  (rsUpRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsuu' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpUpRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
+  (rsUpRule RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsuuo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsUpUpRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
-
+  (rsUpRuleOne RIDX MSGID RQID PREC TRS%trs) (at level 5).
 Notation "'rule.rsus' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
-  (rsUpUpRuleS RIDX MSGID PREC TRS%trs) (at level 5).
+  (rsUpRuleS RIDX MSGID PREC TRS%trs) (at level 5).
 Notation "'rule.rsuso' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transition' TRS" :=
-  (rsUpUpRuleSOne RIDX MSGID PREC TRS%trs) (at level 5).
+  (rsUpRuleSOne RIDX MSGID PREC TRS%trs) (at level 5).
 
 Notation "'rule.rsrq' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':me' ME ':requires' PREC ':transition' TRS" :=
   (rsDownRqDownRule RIDX MSGID ME RQID PREC TRS%trs) (at level 5).
@@ -502,7 +462,7 @@ Section Facts.
     forall sys oidx ridx (prec: OState -> Prop)
            (trs: OState -> list IdxT * Miv),
       RqUpDownSoundS dtr oidx prec trs ->
-      RqFwdRule dtr sys oidx (rqUpDownRuleS ridx oidx prec trs).
+      RqFwdRule dtr sys oidx (rqUpDownRuleS ridx prec trs).
   Proof.
     unfold rqUpDownRuleS; intros; split.
     - repeat split; solve_rule_conds_ex.
@@ -585,58 +545,40 @@ Section Facts.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
   Qed.
 
-  Lemma rsUpDownRule_RsBackRule:
+  Lemma rsUpRule_RsBackRule:
     forall ridx msgId rqId prec trs,
-      RsBackRule (rsUpDownRule ridx msgId rqId prec trs).
+      RsBackRule (rsUpRule ridx msgId rqId prec trs).
   Proof.
-    unfold rsUpDownRule; intros; split.
+    unfold rsUpRule; intros; split.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
   Qed.
 
-  Lemma rsUpDownRuleOne_RsBackRule:
+  Lemma rsUpRuleOne_RsBackRule:
     forall ridx msgId rqId prec trs,
-      RsBackRule (rsUpDownRuleOne ridx msgId rqId prec trs).
+      RsBackRule (rsUpRuleOne ridx msgId rqId prec trs).
   Proof.
-    unfold rsUpDownRule; intros; split.
+    unfold rsUpRule; intros; split.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
   Qed.
 
-  Lemma rsUpUpRule_RsBackRule:
-    forall ridx msgId rqId prec trs,
-      RsBackRule (rsUpUpRule ridx msgId rqId prec trs).
-  Proof.
-    unfold rsUpUpRule; intros; split.
-    - right; repeat red; repeat ssplit; solve_rule_conds_ex.
-    - repeat red; repeat ssplit; solve_rule_conds_ex.
-  Qed.
-
-  Lemma rsUpUpRuleOne_RsBackRule:
-    forall ridx msgId rqId prec trs,
-      RsBackRule (rsUpUpRuleOne ridx msgId rqId prec trs).
-  Proof.
-    unfold rsUpUpRule; intros; split.
-    - right; repeat red; repeat ssplit; solve_rule_conds_ex.
-    - repeat red; repeat ssplit; solve_rule_conds_ex.
-  Qed.
-
-  Lemma rsUpUpRuleS_RsBackRule:
+  Lemma rsUpRuleS_RsBackRule:
     forall ridx msgId prec trs,
-      RsBackRule (rsUpUpRuleS ridx msgId prec trs).
+      RsBackRule (rsUpRuleS ridx msgId prec trs).
   Proof.
-    unfold rsUpUpRule; intros; split.
+    unfold rsUpRule; intros; split.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
       Unshelve.
       exact {| msg_id := 0; msg_type := false; msg_addr := tt; msg_value := t_default |}.
   Qed.
 
-  Lemma rsUpUpRuleSOne_RsBackRule:
+  Lemma rsUpRuleSOne_RsBackRule:
     forall ridx msgId prec trs,
-      RsBackRule (rsUpUpRuleSOne ridx msgId prec trs).
+      RsBackRule (rsUpRuleSOne ridx msgId prec trs).
   Proof.
-    unfold rsUpUpRule; intros; split.
+    unfold rsUpRule; intros; split.
     - right; repeat red; repeat ssplit; solve_rule_conds_ex.
     - repeat red; repeat ssplit; solve_rule_conds_ex.
       Unshelve.
@@ -774,6 +716,25 @@ Section DecValue.
       inv H1; apply rqEdgeUpFrom_rqUpFrom in H6; discriminate.
   Qed.
 
+  Lemma tree2Topo_rqUpDownRuleS_not_RqToUpRule:
+    forall tr bidx ridx oidx prec trs ost orq ins,
+      rule_precond (rqUpDownRuleS ridx prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpDownRuleS ridx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    red in H2; dest.
+    clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+    specialize (H5 _ _ _ H0).
+    disc_rule_conds_ex.
+    specialize (H5 _ _ _ eq_refl); dest.
+    destruct H4.
+    - dest; subst.
+      apply f_equal with (f:= fun m => m@[downRq]) in H6; mred.
+    - dest; disc_rule_conds_ex.
+      discriminate.
+  Qed.
+
   Lemma tree2Topo_rqDownDownRule_not_RqToUpRule:
     forall tr bidx oidx ridx msgId prec trs ost orq ins,
       rule_precond (rqDownDownRule ridx msgId oidx prec trs) ost orq ins ->
@@ -831,10 +792,10 @@ Section DecValue.
       apply f_equal with (f:= fun m => m@[upRq]) in H7; mred.
   Qed.
 
-  Lemma tree2Topo_rsUpDownRule_not_RqToUpRule:
+  Lemma tree2Topo_rsUpRule_not_RqToUpRule:
     forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-      rule_precond (rsUpDownRule ridx msgId rqId prec trs) ost orq ins ->
-      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpDownRule ridx msgId rqId prec trs).
+      rule_precond (rsUpRule ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpRule ridx msgId rqId prec trs).
   Proof.
     intros; intro.
     destruct H1.
@@ -846,10 +807,10 @@ Section DecValue.
     inv H3; discriminate.
   Qed.
 
-  Lemma tree2Topo_rsUpDownRuleOne_not_RqToUpRule:
+  Lemma tree2Topo_rsUpRuleOne_not_RqToUpRule:
     forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-      rule_precond (rsUpDownRuleOne ridx msgId rqId prec trs) ost orq ins ->
-      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpDownRuleOne ridx msgId rqId prec trs).
+      rule_precond (rsUpRuleOne ridx msgId rqId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpRuleOne ridx msgId rqId prec trs).
   Proof.
     intros; intro.
     destruct H1.
@@ -861,40 +822,10 @@ Section DecValue.
     inv H3; discriminate.
   Qed.
 
-  Lemma tree2Topo_rsUpUpRule_not_RqToUpRule:
-    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-      rule_precond (rsUpUpRule ridx msgId rqId prec trs) ost orq ins ->
-      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRule ridx msgId rqId prec trs).
-  Proof.
-    intros; intro.
-    destruct H1.
-    red in H1; dest.
-    clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
-    specialize (H3 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H3 _ _ _ eq_refl).
-    inv H3; discriminate.
-  Qed.
-
-  Lemma tree2Topo_rsUpUpRuleOne_not_RqToUpRule:
-    forall tr bidx oidx ridx msgId rqId prec trs ost orq ins,
-      rule_precond (rsUpUpRuleOne ridx msgId rqId prec trs) ost orq ins ->
-      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleOne ridx msgId rqId prec trs).
-  Proof.
-    intros; intro.
-    destruct H1.
-    red in H1; dest.
-    clear -H0 H3. (* [rule_precond] and [RqReleasing] *)
-    specialize (H3 _ _ _ H0).
-    disc_rule_conds_ex.
-    specialize (H3 _ _ _ eq_refl).
-    inv H3; discriminate.
-  Qed.
-
-  Lemma tree2Topo_rsUpUpRuleS_not_RqToUpRule:
+  Lemma tree2Topo_rsUpRuleS_not_RqToUpRule:
     forall tr bidx oidx ridx msgId prec trs ost orq ins,
-      rule_precond (rsUpUpRuleS ridx msgId prec trs) ost orq ins ->
-      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleS ridx msgId prec trs).
+      rule_precond (rsUpRuleS ridx msgId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpRuleS ridx msgId prec trs).
   Proof.
     intros; intro.
     destruct H1.
@@ -905,10 +836,10 @@ Section DecValue.
     discriminate.
   Qed.
 
-  Lemma tree2Topo_rsUpUpRuleSOne_not_RqToUpRule:
+  Lemma tree2Topo_rsUpRuleSOne_not_RqToUpRule:
     forall tr bidx oidx ridx msgId prec trs ost orq ins,
-      rule_precond (rsUpUpRuleSOne ridx msgId prec trs) ost orq ins ->
-      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpUpRuleSOne ridx msgId prec trs).
+      rule_precond (rsUpRuleSOne ridx msgId prec trs) ost orq ins ->
+      ~ RqToUpRule (fst (tree2Topo tr bidx)) oidx (rsUpRuleSOne ridx msgId prec trs).
   Proof.
     intros; intro.
     destruct H1.
@@ -1057,6 +988,29 @@ Section DecValue.
       apply f_equal with (f:= fun m => m@[upRq]) in H1; mred.
   Qed.
 
+  Lemma tree2Topo_rqUpDownRuleS_not_RsToUpRule:
+    forall tr bidx oidx ridx prec trs ost orq ins,
+      rule_precond (rqUpDownRuleS ridx prec trs) ost orq ins ->
+      ~ RsToUpRule (fst (tree2Topo tr bidx)) oidx (rqUpDownRuleS ridx prec trs).
+  Proof.
+    intros; intro.
+    destruct H1.
+    - red in H1; dest.
+      clear -H0 H5. (* [rule_precond] and [RulePostSat] *)
+      specialize (H5 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H5 _ _ _ eq_refl); dest.
+      subst; discriminate.
+    - dest.
+      red in H1; dest.
+      red in H1.
+      clear -H0 H1. (* [rule_precond] and [RulePostSat] *)
+      specialize (H1 _ _ _ H0).
+      disc_rule_conds_ex.
+      specialize (H1 _ _ _ eq_refl); dest.
+      apply f_equal with (f:= fun m => m@[downRq]) in H5; mred.
+  Qed.
+
   Lemma tree2Topo_rqDownDownRule_not_RsToUpRule:
     forall tr bidx oidx ridx msgId prec trs ost orq ins,
       rule_precond (rqDownDownRule ridx msgId oidx prec trs) ost orq ins ->
@@ -1156,3 +1110,132 @@ Section DecValue.
   Qed.
 
 End DecValue.
+
+Ltac rule_imm := left.
+Ltac rule_immd := left.
+Ltac rule_immu := right; left.
+
+Ltac rule_rquu := do 2 right; left.
+Ltac rule_rqsu := do 2 right; left.
+Ltac rule_rqud := do 2 right; left.
+Ltac rule_rqsd := do 2 right; left.
+Ltac rule_rqdd := do 2 right; left.
+
+Ltac rule_rsdd := do 3 right; left.
+Ltac rule_rsds := do 3 right; left.
+Ltac rule_rsud := do 3 right; left.
+Ltac rule_rsudo := do 3 right; left.
+Ltac rule_rsuu := do 3 right; left.
+Ltac rule_rsuuo := do 3 right; left.
+Ltac rule_rsus := do 3 right; left.
+Ltac rule_rsuso := do 3 right; left.
+
+Ltac rule_rsrq := do 4 right.
+
+Ltac solve_GoodRqRsRule_unfold := idtac.
+Ltac solve_GoodRqRsRule :=
+  solve_GoodRqRsRule_unfold;
+  repeat
+    match goal with
+    | |- GoodRqRsRule _ _ _ _ =>
+      match goal with
+      | |- context[immRule] => rule_imm; eapply immRule_ImmDownRule; eauto
+      | |- context[immDownRule] => rule_immd; eapply immDownRule_ImmDownRule; eauto
+      | |- context[immUpRule] => rule_immu; eapply immUpRule_ImmUpRule; eauto
+
+      | |- context[rqUpUpRule] => rule_rquu; eapply rqUpUpRule_RqFwdRule; eauto
+      | |- context[rqUpUpRuleS] => rule_rqsu; eapply rqUpUpRuleS_RqFwdRule; eauto
+      | |- context[rqUpDownRule] => rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto
+      | |- context[rqDownDownRule] => rule_rqdd; eapply rqDownDownRule_RqFwdRule; eauto
+      | |- context[rqUpDownRuleS] => rule_rqsd; eapply rqDownDownRule_RqFwdRule; eauto
+
+      | |- context[rsDownDownRule] => rule_rsdd; eapply rsDownDownRule_RsBackRule; eauto
+      | |- context[rsDownDownRuleS] => rule_rsds; eapply rsDownDownRuleS_RsBackRule; eauto
+      | |- context[rsUpRule] => rule_rsud; eapply rsUpRule_RsBackRule; eauto
+      | |- context[rsUpRuleOne] => rule_rsudo; eapply rsUpRuleOne_RsBackRule; eauto
+      | |- context[rsUpRuleS] => rule_rsus; eapply rsUpRuleS_RsBackRule; eauto
+      | |- context[rsUpRuleSOne] => rule_rsuso; eapply rsUpRuleSOne_RsBackRule; eauto
+
+      | |- context[rsDownRqDownRule] => rule_rsrq; eapply rsDownRqDownRule_RsDownRqDownRule; eauto
+      end
+    | |- parentIdxOf _ _ = Some _ =>
+      apply subtreeChildrenIndsOf_parentIdxOf; auto; fail
+    | |- parentIdxOf _ (l1ExtOf _) = Some _ =>
+      apply tree2Topo_l1_ext_parent; auto; fail
+    end.
+
+Ltac exfalso_RqToUpRule_unfold := idtac.
+Ltac exfalso_RqToUpRule :=
+  red; intros; exfalso;
+  exfalso_RqToUpRule_unfold;
+  match goal with
+  | [H: context[RqToUpRule] |- _] =>
+    match type of H with
+    | context [immRule] => eapply tree2Topo_immRule_not_RqToUpRule; eauto
+    | context [immDownRule] => eapply tree2Topo_immDownRule_not_RqToUpRule; eauto
+    | context [immUpRule] => eapply tree2Topo_immUpRule_not_RqToUpRule; eauto
+
+    | context [rqUpDownRule] => eapply tree2Topo_rqUpDownRule_not_RqToUpRule; eauto
+    | context [rqUpDownRuleS] => eapply tree2Topo_rqUpDownRuleS_not_RqToUpRule; eauto
+    | context [rqDownDownRule] => eapply tree2Topo_rqDownDownRule_not_RqToUpRule; eauto
+
+    | context [rsDownDownRule] => eapply tree2Topo_rsDownDownRule_not_RqToUpRule; eauto
+    | context [rsDownDownRuleS] => eapply tree2Topo_rsDownDownRuleS_not_RqToUpRule; eauto
+    | context [rsUpRule] => eapply tree2Topo_rsUpRule_not_RqToUpRule; eauto
+    | context [rsUpRuleOne] => eapply tree2Topo_rsUpRuleOne_not_RqToUpRule; eauto
+    | context [rsUpRuleS] => eapply tree2Topo_rsUpRuleS_not_RqToUpRule; eauto
+    | context [rsUpRuleSOne] => eapply tree2Topo_rsUpRuleSOne_not_RqToUpRule; eauto
+
+    | context [rsDownRqDownRule] => eapply tree2Topo_rsDownRqDownRule_not_RqToUpRule; eauto
+    end
+  end.
+
+Ltac exfalso_RsToUpRule_unfold := idtac.
+Ltac exfalso_RsToUpRule :=
+  red; intros; exfalso;
+  exfalso_RsToUpRule_unfold;
+  match goal with
+  | [H: context[RsToUpRule] |- _] =>
+    match type of H with
+    | context [immRule] => eapply tree2Topo_immRule_not_RsToUpRule; eauto
+    | context [immDownRule] => eapply tree2Topo_immDownRule_not_RsToUpRule; eauto
+
+    | context [rqUpUpRule] => eapply tree2Topo_rqUpUpRule_not_RsToUpRule; eauto
+    | context [rqUpUpRuleS] => eapply tree2Topo_rqUpUpRuleS_not_RsToUpRule; eauto
+    | context [rqUpDownRule] => eapply tree2Topo_rqUpDownRule_not_RsToUpRule; eauto
+    | context [rqUpDownRuleS] => eapply tree2Topo_rqUpDownRuleS_not_RsToUpRule; eauto
+    | context [rqDownDownRule] => eapply tree2Topo_rqDownDownRule_not_RsToUpRule; eauto
+
+    | context [rsDownDownRule] => eapply tree2Topo_rsDownDownRule_not_RsToUpRule; eauto
+    | context [rsDownDownRuleS] => eapply tree2Topo_rsDownDownRuleS_not_RsToUpRule; eauto
+
+    | context [rsDownRqDownRule] => eapply tree2Topo_rsDownRqDownRule_not_RsToUpRule; eauto
+    end
+  end.
+
+Ltac solve_GoodExtRssSys :=
+  repeat
+    match goal with
+    | [H: In ?oidx (c_l1_indices _) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
+      apply in_or_app; auto
+    | [H: In ?oidx (c_li_indices _) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
+      apply in_or_app; auto
+    | [H: In ?oidx (tl (c_li_indices _)) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
+      apply tl_In in H; apply in_or_app; auto
+    | [H: In ?oidx (tl (c_li_indices _)) |- In ?oidx (c_li_indices _)] =>
+      apply tl_In in H; assumption
+
+    | [H: In _ (subtreeChildrenIndsOf _ _) |- _] =>
+      apply subtreeChildrenIndsOf_parentIdxOf in H; [|apply tree2Topo_WfDTree];
+      eapply tree2Topo_li_child_li_l1; eauto
+    | |- In (rootOf _) (c_li_indices _) =>
+      rewrite c_li_indices_head_rootOf by assumption; left; reflexivity
+
+    | [H: In (rqUpFrom _) (c_merss _) |- MRq = MRs] =>
+      exfalso; eapply tree2Topo_obj_rqUpFrom_not_in_merss; eauto
+    | [H: In (rsUpFrom _) (c_merss _) |- MRq = MRs] =>
+      exfalso; eapply tree2Topo_obj_rsUpFrom_not_in_merss; eauto
+    | [H: In (downTo _) (c_merss _) |- MRq = MRs] =>
+      exfalso; eapply tree2Topo_obj_downTo_not_in_merss; eauto
+    | [H: False |- _] => exfalso; auto
+    end.

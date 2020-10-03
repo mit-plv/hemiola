@@ -229,7 +229,7 @@ Section System.
            (ost --> <| msiInvWRq; ost#[val] |>).
 
       Definition l1InvRsDownDown: Rule :=
-        rule.rsd[2~>2]
+        rule.rsds[2~>2]
         :accepts msiInvRs
         :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]
@@ -600,7 +600,7 @@ Section System.
         :transition (ost --> <| msiInvWRq; ost#[val] |>).
 
       Definition liInvRsDownDown: Rule :=
-        rule.rsd[2~>2]
+        rule.rsds[2~>2]
         :accepts msiInvRs
         :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]
@@ -681,7 +681,6 @@ Section System.
 
       Definition liBInvRqS: Rule :=
         rule.rqsd[3~>0~>0]
-        :me oidx
         :requires
            (fun ost =>
               ost#[dir].(dir_sharers) <> nil /\
@@ -691,7 +690,6 @@ Section System.
 
       Definition liBInvRqM: Rule :=
         rule.rqsd[3~>0~>1]
-        :me oidx
         :requires
            (fun ost =>
               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
@@ -894,7 +892,8 @@ End System.
 
 Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDown
      l1DownSImm l1GetMImm l1GetMRqUpUp l1GetMRsDownDown
-     l1DownIImmS l1DownIImmM l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MsiRules.
+     l1DownIImmS l1DownIImmM l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown
+     l1BInvImm: MsiRules.
 
 Hint Unfold liGetSImmS liGetSImmM
      liGetSRqUpUp liGetSRsDownDown
