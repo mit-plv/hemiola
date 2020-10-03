@@ -191,26 +191,27 @@ module mkCCTestCheck#(CC mem)(CCTest);
             if (rs.id == 6'b000001) begin
                 let caddr = getChkAddr(rs.addr);
                 let rvalue = refMem.sub(caddr);
-                // $display ("Load response %d: %x", i, rs.value);
                 if (rvalue != rs.value) begin
-                    $fwrite (stderr, "Verification failed (%d): load(%x,%x) mismatch %x",
-                       i, rs.addr, rs.value, rvalue);
+                    $display ("-- Verification failed at %t: value mismatch", $time);
+                    $display ("---- core index: %d", i);
+                    $display ("---- address: %x", rs.addr);
+                    $display ("---- response value: %x", rs.value);
+                    $display ("---- reference value: %x", rvalue);
                     check_succeed <= False;
                 end
             end
             else if (rs.id == 6'b001001) begin
-                // $display ("Store response %d", i);
                 let caddr = getChkAddr(rs.addr);
                 let sval <- sb[i].get(caddr);
                 if (sval matches tagged Valid .val) refMem.upd(caddr, val);
                 else begin
-                    $fwrite (stderr, "Verification failed (%d): cannot find a previous store: %x",
+                    $display ("Verification failed (%d): cannot find a previous store: %x",
                        i, caddr);
                     check_succeed <= False;
                 end
             end
             else begin
-                $fwrite (stderr, "Verification failed (%d): a wrong response ID: %b", i, rs.id);
+                $display (stderr, "Verification failed (%d): a wrong response ID: %b", i, rs.id);
                 check_succeed <= False;
             end
         endrule
