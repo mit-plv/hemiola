@@ -273,12 +273,12 @@ Section Compile.
       Local Notation getCRqSlot := (getCRqSlot oidx mshrNumPRqs mshrNumCRqs).
       Local Notation GetSlot := (GetSlot mshrNumPRqs mshrNumCRqs).
       Let GetSlotK := Struct GetSlot.
-      Local Notation findUL := (findUL oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation findDL := (findDL oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation addRs := (addRs oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation getRsReady := (getRsReady oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation RsReady := (RsReady mshrNumPRqs mshrNumCRqs).
-      Let RsReadyK := Struct RsReady.
+      Local Notation addRs := (addRs oidx).
+      Local Notation getULReady := (getULReady oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation DLReady := (DLReady mshrNumPRqs mshrNumCRqs).
+      Let DLReadyK := Struct DLReady.
+      Local Notation getDLReady := (getDLReady oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation startRelease := (startRelease oidx mshrNumPRqs mshrNumCRqs).
       Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation getWait := (getWait oidx mshrNumPRqs mshrNumCRqs).
       Local Notation PreMSHR := (PreMSHR mshrNumPRqs mshrNumCRqs).
@@ -311,7 +311,8 @@ Section Compile.
         Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
         LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" != $$invRsId);
-        Call mid <- findUL(#msg!KMsg@."addr");
+        Call mid <- getULReady(#msg!KMsg@."addr");
+        Call startRelease(#mid);
         Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;
                              "ir_msg" ::= #pelt!Input@."in_msg";
@@ -354,8 +355,7 @@ Section Compile.
         Assert (_truncLsb_ #mf == $rsUpIdx);
         LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type");
-        Call mid <- findDL(#msg!KMsg@."addr");
-        Call addRs(STRUCT { "r_id" ::= #mid; "r_midx" ::= _truncate_ #mf; "r_msg" ::= #msg });
+        Call addRs(STRUCT { "r_midx" ::= _truncate_ #mf; "r_msg" ::= #msg });
         Retv)%kami_action.
 
       Definition inputRetry: ActionT var Void :=
@@ -378,20 +378,23 @@ Section Compile.
         Assert (#mf == {$downIdx, compile_oidx_to_cidx oidx});
         LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" == $$invRsId);
-        Call vmid <- releaseVictim(#msg!KMsg@."addr");
+        Call vmid <- getULReady(#msg!KMsg@."addr");
+        (* Call vmid <- releaseVictim(#msg!KMsg@."addr"); *)
+        Call releaseVictim(#msg!KMsg@."addr");
         Call releaseMSHR(#vmid);
         Retv)%kami_action.
 
       Definition inputRsRel: ActionT var Void :=
-        (Call rsr <- getRsReady();
+        (Call rsr <- getDLReady();
+        Call startRelease(#rsr!DLReady@."r_id");
         LET msg: Struct KMsg <- STRUCT { "id" ::= $$Default;
                                          "type" ::= $$Default;
-                                         "addr" ::= #rsr!RsReady@."r_addr";
+                                         "addr" ::= #rsr!DLReady@."r_addr";
                                          "value" ::= $$Default };
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$true;
                              "ir_msg" ::= #msg;
                              "ir_msg_from" ::= $$Default;
-                             "ir_mshr_id" ::= #rsr!RsReady@."r_id";
+                             "ir_mshr_id" ::= #rsr!DLReady@."r_id";
                              "ir_by_victim" ::= MaybeNone };
         Call enqIN2IR(#nelt);
         Retv)%kami_action.

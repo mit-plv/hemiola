@@ -16,6 +16,15 @@ Instance MesiTopoConfig: TopoConfig :=
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
 
+(** FIXME:
+ * 1) Use [getIndex] instead of [UniBit ConstExtract].
+ * 2) Move to [MesiComp.v]. *)
+Definition mshrConflictF {indexSz} (var: Kind -> Type)
+           (addr1 addr2: Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz indexSz))))
+  : Expr var (SyntaxKind Bool) :=
+  (* (UniBit (ConstExtract _ _ _) addr1 == UniBit (ConstExtract _ _ _) addr2)%kami_expr. *)
+  (addr1 == addr2)%kami_expr.
+
 (***************
  *     Mem     *
  *      |      *
@@ -37,7 +46,8 @@ Definition l1PredNumVictim: nat := Nat.pred 4.
 Definition l1MshrSlotSz: nat := S (Nat.log2 (l1NumPRqs + l1NumCRqs - 1)).
 Definition l1Cache (oidx: IdxT): Modules :=
   mesiL1 oidx l1IndexSz l1LgWay l1PredNumVictim l1MshrSlotSz.
-Definition l1Mshrs (oidx: IdxT): Modules := mshrs oidx l1NumPRqs l1NumCRqs.
+Definition l1Mshrs (oidx: IdxT): Modules :=
+  mshrs oidx l1NumPRqs l1NumCRqs (mshrConflictF (indexSz:= l1IndexSz)).
 
 (* 128KB LL: 2^9 * 2^3 * 32B *)
 Definition llIndexSz: nat := 9.
@@ -49,7 +59,8 @@ Definition llPredNumVictim: nat := Nat.pred 8.
 Definition llMshrSlotSz: nat := S (Nat.log2 (llNumPRqs + llNumCRqs - 1)).
 Definition llCache (oidx: IdxT): Modules :=
   mesiLi oidx llIndexSz llLgWay llEDirLgWay llPredNumVictim llMshrSlotSz.
-Definition llMshrs (oidx: IdxT): Modules := mshrs oidx llNumPRqs llNumCRqs.
+Definition llMshrs (oidx: IdxT): Modules :=
+  mshrs oidx llNumPRqs llNumCRqs (mshrConflictF (indexSz:= llIndexSz)).
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((build_controller_l1
