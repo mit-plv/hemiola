@@ -407,6 +407,7 @@ Section MSHR.
 
   (** * TODO: should be better to separate the MSHR-status vector and the contents vector;
    * it is quite frequent to just change the status. *)
+  (** * FIXME: check all possible uses of [conflictF]; is [conflictF] really required? *)
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
         Register ("rqs"+o): Array (Struct MSHR) numSlots <- Default
@@ -424,6 +425,7 @@ Section MSHR.
           LET hasSlot <- #mmid!(MaybeStr MshrId)@."valid";
           LET mid <- #mmid!(MaybeStr MshrId)@."data";
           LET addr <- #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
+          (* Should not deal with the line under release ([mshrReleasing]). *)
           LET cmmid <- (rqIter MaybeNone
                                (fun i m => MaybeSome $i)
                                (fun m =>

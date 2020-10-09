@@ -1357,75 +1357,76 @@ module mkModule23
         ((((x_1)[(Bit#(4))'(4'h0)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h0)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h0)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h0)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h0)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h1)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h1)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h1)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h1)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h2)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h2)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h2)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h2)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h3)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h3)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h3)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h3)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h4)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h4)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h5)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h6)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h7)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h8)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'h9)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'ha)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(4))'(4'hb)]).m_is_ul)) ||
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) : (Struct17 {valid
-        : (Bool)'(False), data : unpack(0)})))))))))))))))))))))))));
+        ((((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) :
+        (Struct17 {valid : (Bool)'(False), data :
+        unpack(0)})))))))))))))))))))))))));
         Bool x_7 = ((x_6).valid);
         Struct5 x_8 = (Struct5 {s_has_slot : x_3, s_conflict : x_7, s_id :
         x_4});
@@ -1486,106 +1487,108 @@ module mkModule23
         ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h4)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'h4)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'h5)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'h6)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'h7)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'h8)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'h9)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'ha)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_next).valid))) &&
         (((x_1)[(Bit#(4))'(4'hb)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) : (Struct17 {valid
-        : (Bool)'(False), data : unpack(0)})))))))))))))))));
+        ((((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) :
+        (Struct17 {valid : (Bool)'(False), data :
+        unpack(0)})))))))))))))))));
         Struct17 x_7 = (((((! ((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
         ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h0)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h0)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h0)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h0)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h1)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h1)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h1)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h1)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h2)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h2)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h2)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h2)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h3)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h3)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h3)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h3)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h4)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h4)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h5)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h6)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h7)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h8)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'h9)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'ha)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
+        ((((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_next).valid))) && (!
         (((x_1)[(Bit#(4))'(4'hb)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr) == (x_5)) ? (Struct17
-        {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) : (Struct17 {valid
-        : (Bool)'(False), data : unpack(0)})))))))))))))))))))))))));
+        ((((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
+        (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) :
+        (Struct17 {valid : (Bool)'(False), data :
+        unpack(0)})))))))))))))))))))))))));
         Bool x_8 = ((x_6).valid);
         Bool x_9 = ((x_7).valid);
         Bool x_10 = ((x_8) || (x_9));
@@ -3066,39 +3069,39 @@ module mkModule41
         ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h0)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6 {valid :
-        (Bool)'(False), data : unpack(0)})))))))))))));
+        ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
+        {valid : (Bool)'(False), data : unpack(0)})))))))))))));
         Bool x_7 = ((x_6).valid);
         Struct41 x_8 = (Struct41 {s_has_slot : x_3, s_conflict : x_7, s_id :
         x_4});
@@ -3151,56 +3154,56 @@ module mkModule41
         ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6 {valid :
-        (Bool)'(False), data : unpack(0)})))))))));
+        ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
+        {valid : (Bool)'(False), data : unpack(0)})))))))));
         Struct6 x_7 = (((((! ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6 {valid :
-        (Bool)'(False), data : unpack(0)})))))))))))));
+        ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
+        {valid : (Bool)'(False), data : unpack(0)})))))))))))));
         Bool x_8 = ((x_6).valid);
         Bool x_9 = ((x_7).valid);
         Bool x_10 = ((x_8) || (x_9));
@@ -4512,39 +4515,39 @@ module mkModule59
         ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h0)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && ((!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul)) ||
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h6))))) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6 {valid :
-        (Bool)'(False), data : unpack(0)})))))))))))));
+        ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
+        {valid : (Bool)'(False), data : unpack(0)})))))))))))));
         Bool x_7 = ((x_6).valid);
         Struct41 x_8 = (Struct41 {s_has_slot : x_3, s_conflict : x_7, s_id :
         x_4});
@@ -4597,56 +4600,56 @@ module mkModule59
         ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) &&
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul)) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6 {valid :
-        (Bool)'(False), data : unpack(0)})))))))));
+        ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
+        {valid : (Bool)'(False), data : unpack(0)})))))))));
         Struct6 x_7 = (((((! ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
+        ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && (!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul))) &&
-        (((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr) == (x_5)) ? (Struct6 {valid
-        : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6 {valid :
-        (Bool)'(False), data : unpack(0)})))))))))))));
+        ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
+        (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
+        {valid : (Bool)'(False), data : unpack(0)})))))))))))));
         Bool x_8 = ((x_6).valid);
         Bool x_9 = ((x_7).valid);
         Bool x_10 = ((x_8) || (x_9));

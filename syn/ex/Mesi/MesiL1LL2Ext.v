@@ -22,8 +22,8 @@ Existing Instance MesiCompExtExp.
 Definition mshrConflictF {indexSz} (var: Kind -> Type)
            (addr1 addr2: Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz indexSz))))
   : Expr var (SyntaxKind Bool) :=
-  (* (UniBit (ConstExtract _ _ _) addr1 == UniBit (ConstExtract _ _ _) addr2)%kami_expr. *)
-  (addr1 == addr2)%kami_expr.
+  (* (addr1 == addr2)%kami_expr. *)
+  (UniBit (ConstExtract _ _ _) addr1 == UniBit (ConstExtract _ _ _) addr2)%kami_expr.
 
 (***************
  *     Mem     *
