@@ -75,7 +75,6 @@ Section ObjInv.
                       (ost#[dir].(dir_st) = msiM /\
                        In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
                        map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
-      | msiBInvRq: DownLockFromParent oidx rqid
       end).
 
   Definition MsiObjInvs (oidx: IdxT): ObjInv :=

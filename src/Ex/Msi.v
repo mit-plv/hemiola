@@ -27,10 +27,6 @@ Definition msiInvRq: IdxT := 2~>4.
 Definition msiInvWRq: IdxT := 2~>5.
 Definition msiInvRs: IdxT := 2~>6.
 
-(* Only used in inclusive cache-coherence protocols *)
-Definition msiBInvRq: IdxT := 3~>0.
-Definition msiBInvRs: IdxT := 3~>1.
-
 (** Cache Status *)
 
 Notation MSI := nat (only parsing).

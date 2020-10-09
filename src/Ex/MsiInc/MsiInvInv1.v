@@ -962,7 +962,6 @@ Section InvDirM.
           solve_by_child_downlock_to_parent oidx.
         }
         { solve_by_diff_dir. }
-        { split; [solve_NoRsSI_by_silent|assumption]. }
       }
 
       { (* [liDownIRsUpUpMS] *)
@@ -1030,56 +1029,14 @@ Section InvDirM.
         disc_ObjDirM; mred.
       }
 
-      { (* [liBInvRsS] *)
+      { (* [liBInvRsS0] *)
+        disc_rule_conds_ex; disc; [solve_valid|solve_by_diff_dir|solve_valid].
+      }
+      { (* [liBInvRsS1] *)
         disc_rule_conds_ex; disc; [solve_valid|solve_by_diff_dir|solve_valid].
       }
       { (* [liBInvRsM] *)
         disc_rule_conds_ex; disc; [solve_valid|solve_by_diff_dir|solve_valid].
-      }
-
-      { (* [liBInvImm] *)
-        disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
-        exfalso.
-        subst topo; disc_rule_conds_ex.
-        disc_ObjDirM.
-        remember (dir_excl _) as oidx; clear Heqoidx.
-        derive_parent_downlock_by_RqDown oidx.
-        auto.
-      }
-
-      { (* [liBInvRqDownDownS] *)
-        disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
-        disc_ObjDirM; mred.
-      }
-      { (* [liBInvRqDownDownM] *)
-        disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
-        disc_ObjDirM; mred.
-      }
-
-      { (* [liBInvRsUpUpS] *)
-        disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvDirM_msgs; disc.
-        { subst topo; disc_rule_conds_ex.
-          disc_ObjDirM.
-          remember (dir_excl _) as oidx; clear Heqoidx.
-          disc_MsgConflictsInv oidx.
-          solve_by_child_downlock_to_parent oidx.
-        }
-        { solve_by_diff_dir. }
-        { split; [solve_NoRsSI_by_silent|assumption]. }
-      }
-      { (* [liBInvRsUpUpM] *)
-        disc_rule_conds_ex.
-        disc_MsiDownLockInv oidx Hmdl.
-        simpl_InvDirM_msgs; disc.
-        { subst topo; disc_rule_conds_ex.
-          disc_ObjDirM.
-          remember (dir_excl _) as oidx; clear Heqoidx.
-          disc_MsgConflictsInv oidx.
-          solve_by_child_downlock_to_parent oidx.
-        }
-        { solve_by_diff_dir. }
       }
 
     - (*! Cases for L1 caches *)
@@ -1206,16 +1163,6 @@ Section InvDirM.
           auto.
         }
         { disc_ObjDirM; solve_msi. }
-      }
-
-      { (* [liBInvImm] *)
-        disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
-        exfalso.
-        subst topo; disc_rule_conds_ex.
-        disc_ObjDirM.
-        remember (dir_excl _) as oidx; clear Heqoidx.
-        derive_parent_downlock_by_RqDown oidx.
-        auto.
       }
 
       END_SKIP_PROOF_ON *) admit.
