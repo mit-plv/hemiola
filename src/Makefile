@@ -12,7 +12,7 @@ LIB_REPR_VO=RqRsLang.vo RqRsCorrect.vo
 EX_SPEC_REPR_VO=Ex/SpecSv.vo
 EX_MSI_REPR_VO=Ex/Msi/MsiSim.vo
 EX_MESI_REPR_VO=Ex/Mesi/MesiSim.vo
-EX_MSI_INC_REPR_VO=Ex/MsiInc/MsiInvInv1.vo
+EX_MSI_INC_REPR_VO=Ex/MsiInc/MsiInvExcl.vo
 
 lib: Makefile.coq
 	$(MAKE) -f Makefile.coq $(LIB_REPR_VO)
