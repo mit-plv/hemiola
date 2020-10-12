@@ -2781,8 +2781,6 @@ Section InvExcl.
   | [H: ValidMsgsIn _ _ |- _] => apply H
   end.
 
-  (*** TODO: fix the proofs from here *)
-
   Lemma msi_InvExcl_InvTrs_mem:
     forall ist1,
       Reachable (steps step_m) impl ist1 ->
@@ -3219,7 +3217,7 @@ Section InvExcl.
               AtomicInv InvExclMsgOutPred inits ist1 (RlblInt oidx ridx rins routs :: hst)
                         (removeL (id_dec msg_dec) eouts rins ++ routs) ist2 /\
               InvExcl topo cifc ist2.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -3850,62 +3848,6 @@ Section InvExcl.
         disc_rule_conds_ex.
         derive_child_st cidx.
         split; [solve_AtomicInv_rqUp|].
-        pose proof H4 as Hi; phide Hi; rename H35 into Hi.
-
-        case_InvExcl_me_others.
-        { disc_InvExcl_this.
-          { disc_InvObjExcl0_apply.
-            split; [solve_ObjsInvalid_trivial|solve_MsgsP].
-          }
-          { disc_InvObjOwned.
-            split; [solve_ObjsInvalid_trivial|solve_MsgsP].
-          }
-          { split_InvDirInv; [|exfalso; rewrite getDir_setDirI in H40; solve_msi].
-            case_idx_eq cidx0 cidx.
-            { disc_AtomicMsgOutsInv cidx.
-              disc_MsgPred.
-              eapply InvExcl_inv_ObjsInvalid; eauto.
-              preveal Hi; assumption.
-            }
-            { solve_ObjsInvalid_trivial.
-              apply H36.
-              eapply getDir_LastSharer_neq; eauto.
-            }
-          }
-        }
-
-        { disc_InvExcl_others.
-          { disc_InvObjExcl0_apply.
-            split; [|solve_MsgsP].
-            eapply ObjsInvalid_state_transition_sound; eauto; [|simpl; solve_msi].
-            solve_ObjsInvalid_trivial.
-          }
-          { disc_InvObjOwned.
-            split; [|solve_MsgsP].
-            eapply ObjsInvalid_state_transition_sound; eauto; [|simpl; solve_msi].
-            solve_ObjsInvalid_trivial.
-          }
-          { split_InvDirInv_apply.
-            { case_in_subtree oidx cidx0.
-              { eapply ObjsInvalid_state_transition_sound; eauto; [|simpl; solve_msi].
-                solve_ObjsInvalid_trivial.
-              }
-              { solve_ObjsInvalid_trivial. }
-            }
-            { case_in_subtree oidx cidx0.
-              { solve_ObjsInvalid_trivial. }
-              { eapply ObjsInvalid_state_transition_sound; eauto; [|simpl; solve_msi].
-                solve_ObjsInvalid_trivial.
-              }
-            }
-          }
-        }
-      }
-
-      { (* [liInvImmWBS1] *)
-        disc_rule_conds_ex.
-        derive_child_st cidx.
-        split; [solve_AtomicInv_rqUp|].
         pose proof H4 as Hi; phide Hi; rename H34 into Hi.
 
         case_InvExcl_me_others.
@@ -3965,7 +3907,7 @@ Section InvExcl.
         }
       }
 
-      { (* [liInvImmWBS] *)
+      { (* [liInvImmWBS1] *)
         disc_rule_conds_ex.
         derive_child_st cidx.
         derive_NoRsI_by_rqUp cidx msgs.
@@ -5635,7 +5577,7 @@ Section InvExcl.
       disc_MsiDownLockInv oidx Hdlinv.
       derive_footprint_info_basis oidx; [solve_midx_false|].
 
-      destruct H27; [solve_msi; fail|simpl in *; dest].
+      destruct H20; [solve_msi; fail|simpl in *; dest].
       rewrite H30 in *; simpl in *; disc_rule_conds.
 
       (** 1) Each RsUp message is from a child *)
@@ -5660,7 +5602,7 @@ Section InvExcl.
                  else getDir rcidx os#[dir] = msiI) as Hcs.
       { intros.
         find_if_inside; [auto|].
-        rewrite H30 in n.
+        rewrite <-H13 in n.
         eapply getDir_excl_neq; eauto.
         intro Hx; subst.
         elim n; left; reflexivity.
@@ -5680,13 +5622,13 @@ Section InvExcl.
                      (enqMP (rsUpFrom oidx) rsTo (deqMP (rsUpFrom ecidx) msgs)))
         as Hcsi.
       { intros.
-        specialize (Hcs _ H14); find_if_inside.
-        { rewrite H30 in i; dest_in; inv H17.
+        specialize (Hcs _ H30); find_if_inside.
+        { rewrite <-H13 in i; dest_in; inv H32.
           disc_AtomicMsgOutsInv rcidx.
-          specialize (H37 eq_refl H33 H32); dest.
+          specialize (H36 eq_refl H28 H27); dest.
           derive_child_st rcidx.
           disc_MsgConflictsInv rcidx.
-          rewrite H42 in H37; simpl in H37; dest.
+          rewrite H41 in H36; simpl in H36; dest.
           solve_ObjsInvalid_trivial.
 
           eapply ObjsInvalid_in_composed; eauto.
@@ -5700,10 +5642,10 @@ Section InvExcl.
           }
         }
         { disc_InvExcl oidx.
-          specialize (H34 (tl_In _ _ H8)).
-          move H34 at bottom.
-          specialize (H34 _ H14); destruct H34 as [? _].
-          specialize (H34 Hcs).
+          specialize (H33 (tl_In _ _ H8)).
+          move H33 at bottom.
+          specialize (H33 _ H30); destruct H33 as [? _].
+          specialize (H33 Hcs).
           solve_ObjsInvalid_trivial.
           eapply ObjsInvalid_this_rsUps_deqMsgs_silent with (pidx:= oidx) (rminds:= [_]); eauto.
           intro; solve_by_topo_false.
@@ -5723,8 +5665,8 @@ Section InvExcl.
 
       split.
       { solve_AtomicInv_rsUps_rsUp.
-        { simpl in *; inv H14; mred; simpl; intuition solve_msi. }
-        { simpl in *; inv H14; apply Hrc. }
+        { simpl in *; inv H30; mred; simpl; intuition solve_msi. }
+        { simpl in *; inv H30; apply Hrc. }
       }
 
       { case_InvExcl_me_others.
@@ -5734,13 +5676,13 @@ Section InvExcl.
           { split_InvDirInv.
             { eapply Hcsi; eauto. }
             { exfalso.
-              simpl in H37; rewrite getDir_setDirI in H37.
+              simpl in H36; rewrite getDir_setDirI in H36.
               solve_msi.
             }
           }
         }
 
-        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H14 into Hpmcf'.
+        { pose proof Hpmcf as Hpmcf'; phide Hpmcf'; rename H30 into Hpmcf'.
           disc_MsgConflictsInv oidx.
 
           (* discharge all predicates in [Forall] *)
@@ -6035,21 +5977,33 @@ Section InvExcl.
       }
     }
 
-    { (* [liDropImm] *)
+    { (* [liBInvRqS] *)
       disc_rule_conds_ex; split.
       { exfalso; destruct rins; [auto|discriminate]. }
-      { eapply InvExcl_state_transition_sound with (porqs:= orqs);
-          try eassumption.
-        { simpl; intuition solve_msi. }
-        { simpl; intuition. }
-        { reflexivity. }
-      }
+      { solve_InvExcl_trivial. }
+    }
+    { (* [liBInvRqM] *)
+      disc_rule_conds_ex; split.
+      { exfalso; destruct rins; [auto|discriminate]. }
+      { solve_InvExcl_trivial. }
+    }
+
+    { (* [liBInvRsS0] *)
+      admit.
+    }
+
+    { (* [liBInvRsS1] *)
+      admit.
+    }
+
+    { (* [liBInvRsM] *)
+      admit.
     }
 
     Unshelve.
     all: assumption.
 
-    END_SKIP_PROOF_ON *) admit.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma msi_InvExcl_InvTrs_l1:
