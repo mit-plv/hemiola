@@ -646,8 +646,8 @@ Section System.
         :transition
            (!|ost, _| --> (ost, <| msiInvRs; O |>)).
 
-      Definition liInvImmWBS1: Rule :=
-        rule.immd[2~>8~>1~~cidx]
+      Definition liInvImmWBS0: Rule :=
+        rule.immd[2~>8~~cidx]
         :accepts msiInvWRq
         :from cidx
         :requires
@@ -656,6 +656,18 @@ Section System.
         :transition
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            <| msiInvRs; O |>)).
+
+      Definition liInvImmWBS1: Rule :=
+        rule.immd[2~>9~~cidx]
+        :accepts msiInvWRq
+        :from cidx
+        :requires
+           (fun ost orq mins =>
+              ost#[owned] = true /\ ost#[status] = msiS /\
+              getDir cidx ost#[dir] = msiS /\ LastSharer ost#[dir] cidx)
+        :transition
+           (!|ost, msg| --> (ost +#[status <- msiM]
+                                 +#[dir <- setDirI], <| msiInvRs; O |>)).
 
       Definition liInvImmWBM: Rule :=
         rule.immd[2~>10~~cidx]
@@ -745,7 +757,7 @@ Section System.
       liGetSRqUpDownM oidx cidx; liGetMImm cidx; liGetMRqUpUp oidx cidx;
       liGetMRqUpDownM oidx cidx; liGetMRqUpDownS oidx cidx;
       liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
-      liInvImmWBI cidx; liInvImmWBS1 cidx; liInvImmWBM cidx].
+      liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx; liInvImmWBM cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -843,5 +855,5 @@ Hint Unfold liGetSImmS liGetSImmM
      liDownIRsUpUpS liDownIRsUpUpM liDownIRsUpUpMS
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
-     liInvImmWBI liInvImmWBS1 liInvImmWBM
+     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBM
      liBInvRqS liBInvRqM liBInvRsS0 liBInvRsS1 liBInvRsM: MsiRules.

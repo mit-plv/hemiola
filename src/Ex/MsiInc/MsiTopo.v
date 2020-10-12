@@ -355,6 +355,7 @@ Section System.
           f_equal; apply M.add_remove_comm; discriminate.
         }
         { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -384,6 +385,7 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_msi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
+        { clear; solve_rule_conds_ex; try solve_msi. }
         { clear; solve_rule_conds_ex; try solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
@@ -402,6 +404,7 @@ Section System.
           all: rewrite invalidate_I; solve_msi.
         }
         { clear; solve_rule_conds_const; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
@@ -428,6 +431,7 @@ Section System.
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; try intuition solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
 
