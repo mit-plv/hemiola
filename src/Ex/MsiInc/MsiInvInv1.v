@@ -181,6 +181,12 @@ Section InvDirS.
 
 End InvDirS.
 
+Ltac disc_InvDirS oidx :=
+  match goal with
+  | [Hi: InvDirS _, Hds: dir_st _ = msiS |- _] =>
+    specialize (Hi oidx); simpl in Hi; mred; specialize (Hi Hds)
+  end.
+
 Lemma getDir_I_ObjDirMTo_false:
   forall oidx (ost: OState) (orq: ORq Msg),
     getDir oidx (fst (snd (snd (snd ost)))) = msiI ->
@@ -870,12 +876,7 @@ Section InvDirM.
         disc_rule_conds_ex.
         derive_footprint_info_basis oidx.
         derive_child_chns cidx.
-        Ltac disc_ObjDirS oidx :=
-          match goal with
-          | [Hi: InvDirS _, Hds: dir_st _ = msiS |- _] =>
-            specialize (Hi oidx); simpl in Hi; mred; specialize (Hi Hds)
-          end.
-        disc_ObjDirS oidx.
+        disc_InvDirS oidx.
         disc_rule_conds_ex.
         simpl_InvDirM_msgs.
         disc.

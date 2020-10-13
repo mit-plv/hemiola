@@ -44,37 +44,48 @@ Section ObjInv.
   Definition MsiDownLockObjInv (oidx: IdxT): ObjInv :=
     fun ost orq =>
       (rqid <+- orq@[downRq];
-      rmsg <+- rqid.(rqi_msg);
-      match case rmsg.(msg_id) on idx_dec default True with
-      | msiRqS: DownLockFromChild oidx rqid /\
-                ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
-                In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
-      | msiRqM: DownLockFromChild oidx rqid /\
-                ost#[status] <= msiS /\
-                ((ost#[owned] = true /\ ost#[dir].(dir_st) = msiS /\
-                  SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                  (rsb <+- rqid.(rqi_midx_rsb);
-                  map fst rqid.(rqi_rss) =
-                  map rsUpFrom (remove idx_dec (objIdxOf rsb) ost#[dir].(dir_sharers)))) \/
-                 (ost#[dir].(dir_st) = msiM /\
-                  In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                  map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
-      | msiDownRqS: DownLockFromParent oidx rqid /\
-                    ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
-                    In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                    map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
-      | msiDownRqIS: DownLockFromParent oidx rqid /\
-                     ost#[dir].(dir_st) = msiS /\
+      match rqid.(rqi_msg) with
+      | None =>
+        (* NOTE: it is a bit too hacky, but back invalidation is the only case
+         * that [rqi_msg = None] holds. *)
+        ((ost#[dir].(dir_st) = msiS /\
+          SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+          map fst rqid.(rqi_rss) = map rsUpFrom (ost#[dir].(dir_sharers))) \/
+         (ost#[dir].(dir_st) = msiM /\
+          In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+          map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+      | Some rmsg =>
+        (match case rmsg.(msg_id) on idx_dec default True with
+         | msiRqS: DownLockFromChild oidx rqid /\
+                   ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
+                   In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                   map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+         | msiRqM: DownLockFromChild oidx rqid /\
+                   ost#[status] <= msiS /\
+                   ((ost#[owned] = true /\ ost#[dir].(dir_st) = msiS /\
                      SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                     map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)
-      | msiDownRqIM: DownLockFromParent oidx rqid /\
-                     ((ost#[dir].(dir_st) = msiS /\
-                       SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-                       map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
-                      (ost#[dir].(dir_st) = msiM /\
+                     (rsb <+- rqid.(rqi_midx_rsb);
+                     map fst rqid.(rqi_rss) =
+                     map rsUpFrom (remove idx_dec (objIdxOf rsb) ost#[dir].(dir_sharers)))) \/
+                    (ost#[dir].(dir_st) = msiM /\
+                     In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                     map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+         | msiDownRqS: DownLockFromParent oidx rqid /\
+                       ost#[status] <= msiI /\ ost#[dir].(dir_st) = msiM /\
                        In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-                       map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+                       map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]
+         | msiDownRqIS: DownLockFromParent oidx rqid /\
+                        ost#[dir].(dir_st) = msiS /\
+                        SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+                        map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)
+         | msiDownRqIM: DownLockFromParent oidx rqid /\
+                        ((ost#[dir].(dir_st) = msiS /\
+                          SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+                          map fst rqid.(rqi_rss) = map rsUpFrom ost#[dir].(dir_sharers)) \/
+                         (ost#[dir].(dir_st) = msiM /\
+                          In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                          map fst rqid.(rqi_rss) = [rsUpFrom ost#[dir].(dir_excl)]))
+         end)
       end).
 
   Definition MsiObjInvs (oidx: IdxT): ObjInv :=
