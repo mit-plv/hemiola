@@ -6113,32 +6113,31 @@ Section InvExcl.
 
       { disc_InvExcl_others.
         { disc_InvObjExcl0.
-          rewrite <-H13 in H35.
-          apply ObjExcl0_other_msg_id_deqMsgs_inv in H35; auto.
+          rewrite <-H13 in H34.
+          apply ObjExcl0_other_msg_id_deqMsgs_inv in H34; auto.
           2: { eapply Forall_impl; [|apply H14]; simpl; intros.
-               rewrite H36; discriminate.
+               rewrite H35; discriminate.
           }
-          specialize (H4 H35); dest.
+          specialize (H4 H34); dest.
           exfalso.
           disc_ObjsInvalid_by oidx.
-          rewrite H15 in H37; simpl in H37.
-          destruct H37.
-          { destruct H37 as [? [? ?]]; auto. }
+          rewrite H15 in H36; simpl in H36.
+          destruct H36.
+          { destruct H36 as [? [? ?]]; auto. }
           { eapply NoRsI_MsgExistsSig_InvRs_false; eauto. }
         }
 
         { red; intros [? ?].
           assert (NoRsI eidx msgs).
-          { disc_MsgsP H36.
-            rewrite <-H13 in H36; simpl in H36.
-            apply MsgsP_other_msg_id_deqMsgs_inv in H36; auto.
+          { rewrite <-H13 in H35; simpl in H35.
+            apply MsgsP_other_msg_id_deqMsgs_inv in H35; auto.
             simpl; apply (DisjList_spec_2 idx_dec); intros; dest_in.
             intro; dest_in.
-            apply in_map_iff in H27; destruct H27 as [[rmidx rmsg] [? ?]]; simpl in *.
+            apply in_map_iff in H36; destruct H36 as [[rmidx rmsg] [? ?]]; simpl in *.
             rewrite Forall_forall in H14; specialize (H14 _ H37); simpl in *.
-            rewrite H14 in H27; discriminate.
+            rewrite H14 in H36; discriminate.
           }
-          specialize (H33 (conj H35 H37)); dest.
+          specialize (H28 (conj H34 H36)); dest.
 
           case_in_subtree oidx eidx; [|solve_by_ObjsInvalid_dir_false oidx].
           split.
