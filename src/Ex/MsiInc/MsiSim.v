@@ -820,8 +820,8 @@ Section Sim.
               match goal with | [H: _ = cidx |- _] => clear H end.
               assert (NoRsI cidx msgs)
                 by (solve_NoRsI_base; solve_NoRsI_by_rqUp cidx).
-              disc_InvWB cidx H26.
-              disc_InvWBCoh_inv cidx H25.
+              disc_InvWB cidx H27.
+              disc_InvWBCoh_inv cidx H26.
               congruence.
             }
             { solve_MsgsCoh. }
@@ -1046,6 +1046,7 @@ Section Sim.
 
       { (* [liBInvRqM] *)
         disc_rule_conds_ex; spec_case_silent.
+        derive_child_idx_in (dir_excl (fst (snd (snd (snd pos))))).
         solve_sim_msi.
       }
 
