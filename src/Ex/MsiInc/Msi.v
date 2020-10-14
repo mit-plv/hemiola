@@ -17,7 +17,7 @@ Local Open Scope fmap.
  * - Directory (not snooping)
  * - Invalidate (not update)
  * - Write-back (not write-through)
- * - Non-inclusive
+ * - Inclusive
  *)
 
 Section System.
@@ -26,6 +26,8 @@ Section System.
 
   Let topo := fst (tree2Topo tr 0).
   Let cifc := snd (tree2Topo tr 0).
+
+  (** Cache states *)
 
   Instance ImplOStateIfc: OStateIfc :=
     {| ost_ty := [nat:Type; bool:Type; MSI:Type; DirT:Type]%vector |}.
@@ -106,11 +108,12 @@ Section System.
     simpl; icase oidx; mred.
   Qed.
 
+  (** Rules per cache *)
   Section Rules.
     Variables (oidx cidx: IdxT).
 
     Section L1.
-      (** NOTE: [cidx] will be instantiated to [l1ExtOf oidx]. *)
+      (** NOTE: for L1 caches [cidx] will be instantiated to [l1ExtOf oidx]. *)
 
       Definition l1GetSImm: Rule :=
         rule.immd[0~>0]
@@ -201,7 +204,7 @@ Section System.
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- invalidate ost#[status]],
-                             <| msiDownRsIM; O |>)).
+                             <| msiDownRsIM; ost#[val] |>)).
 
       Definition l1InvRqUpUp: Rule :=
         rule.rqsu[2~>0]
@@ -247,7 +250,7 @@ Section System.
            (!|ost, _| --> (ost +#[dir <- addSharer cidx ost#[dir]],
                            <| msiRsS; ost#[val] |>)).
 
-      (** NOTE: it is important to note that the "owned" bit is not changed. *)
+      (** NOTE: it is important to note that the "owned" bit is not changed at all. *)
       Definition liGetSImmM: Rule :=
         rule.immd[0~>0~>1~~cidx]
         :accepts msiRqS
@@ -381,9 +384,8 @@ Section System.
         :transition
            (!|ost, msg| --> <| msiRqM; O |>).
 
-      (** This is the case where it's possible to directly respond a [msiRsM]
-       * message back since there are no internal sharers to invalidate.
-       *)
+      (** A case where it's possible to directly respond a [msiRsM] message back
+       * since there are no internal sharers to invalidate. *)
       Definition liGetMRsDownDownDirI: Rule :=
         rule.rsdd[1~>2]
         :accepts msiRsM
@@ -400,9 +402,7 @@ Section System.
                      +#[dir <- setDirM (objIdxOf rsbTo)],
                  <| msiRsM; O |>)).
 
-      (** This is the case where internal invalidation is required
-       * due to sharers.
-       *)
+      (** A case where internal invalidation is required due to sharers. *)
       Definition liGetMRsDownRqDownDirS: Rule :=
         rule.rsrq[1~>3]
         :accepts msiRsM
@@ -494,7 +494,7 @@ Section System.
         :transition
            (!|ost, min| --> (ost +#[owned <- false]
                                  +#[status <- msiI],
-                             <| msiDownRsIM; O |>)).
+                             <| msiDownRsIM; ost#[val] |>)).
 
       Definition liDownIRqDownDownDirS: Rule :=
         rule.rqdd[1~>9~>0]
@@ -553,19 +553,19 @@ Section System.
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
-                 <| msiDownRsIM; O |>)).
+                 <| msiDownRsIM; ost#[val] |>)).
 
       Definition liDownIRsUpUpM: Rule :=
-        rule.rsuu[1~>10~>1]
+        rule.rsuuo[1~>10~>1]
         :accepts msiDownRsIM
         :holding msiDownRqIM
         :requires (fun ost orq mins => ost#[dir].(dir_st) = msiM)
         :transition
-           (!|ost, mins, rq, rsbTo|
+           (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
-                 <| msiDownRsIM; O |>)).
+                 <| msiDownRsIM; msg_value (valOf idm) |>)).
 
       Definition liInvRqUpUp: Rule :=
         rule.rqsu[2~>0]
@@ -577,8 +577,8 @@ Section System.
         :transition (ost --> <| msiInvRq; O |>).
 
       (** NOTE: ditto [l1InvRqUpUpWB]; a cache controller should not use this
-       * rule when [owned = false]; it's meaningless.
-       *)
+       * rule when [ost#[owned] = false /\ msiNP < ost#[status] <= msiS];
+       * it's meaningless. *)
       Definition liInvRqUpUpWB: Rule :=
         rule.rqsu[2~>1]
         :me oidx
@@ -595,12 +595,6 @@ Section System.
         :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]
                                         +#[status <- msiNP])).
-
-      Definition liDropImm: Rule :=
-        rule.imm[2~>3]
-        :requires
-           (fun ost orq mins => ost#[status] <= msiS /\ ost#[owned] = false)
-        :transition (ost --> ost +#[status <- msiNP]).
 
       Definition liInvImmI: Rule :=
         rule.immd[2~>5~~cidx]
@@ -653,18 +647,7 @@ Section System.
            (!|ost, _| --> (ost, <| msiInvRs; O |>)).
 
       Definition liInvImmWBS0: Rule :=
-        rule.immd[2~>8~>0~~cidx]
-        :accepts msiInvWRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[owned] = false /\
-              getDir cidx ost#[dir] = msiS /\ LastSharer ost#[dir] cidx)
-        :transition
-           (!|ost, _| --> (ost +#[dir <- setDirI], <| msiInvRs; O |>)).
-
-      Definition liInvImmWBS1: Rule :=
-        rule.immd[2~>8~>1~~cidx]
+        rule.immd[2~>8~~cidx]
         :accepts msiInvWRq
         :from cidx
         :requires
@@ -674,7 +657,7 @@ Section System.
            (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
                            <| msiInvRs; O |>)).
 
-      Definition liInvImmWBS: Rule :=
+      Definition liInvImmWBS1: Rule :=
         rule.immd[2~>9~~cidx]
         :accepts msiInvWRq
         :from cidx
@@ -697,6 +680,48 @@ Section System.
                                  +#[status <- msiM]
                                  +#[val <- msg_value msg],
                              <| msiInvRs; O |>)).
+
+      Definition liBInvRqS: Rule :=
+        rule.rqsd[3~>0~>0]
+        :requires
+           (fun ost =>
+              ost#[dir].(dir_sharers) <> nil /\
+              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[dir].(dir_st) = msiS)
+        :transition (ost --> (ost#[dir].(dir_sharers), <| msiDownRqIS; O |>)).
+
+      Definition liBInvRqM: Rule :=
+        rule.rqsd[3~>0~>1]
+        :requires
+           (fun ost =>
+              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+              ost#[dir].(dir_st) = msiM)
+        :transition (ost --> ([ost#[dir].(dir_excl)], <| msiDownRqIM; O |>)).
+
+      Definition liBInvRsS0: Rule :=
+        rule.rsus[3~>1~>0]
+        :accepts msiDownRsIS
+        :requires
+           (fun ost orq mins => ost#[owned] = false /\ ost#[dir].(dir_st) = msiS)
+        :transition (!|ost, _| --> (ost +#[dir <- setDirI])).
+
+      Definition liBInvRsS1: Rule :=
+        rule.rsus[3~>1~>1]
+        :accepts msiDownRsIS
+        :requires
+           (fun ost orq mins => ost#[owned] = true /\ ost#[dir].(dir_st) = msiS)
+        :transition (!|ost, _| --> (ost +#[dir <- setDirI]
+                                        +#[status <- msiM])).
+
+      Definition liBInvRsM: Rule :=
+        rule.rsuso[3~>1~>2]
+        :accepts msiDownRsIM
+        :requires
+           (fun ost orq mins => ost#[dir].(dir_st) = msiM)
+        :transition (!|ost, idm| --> (ost +#[dir <- setDirI]
+                                          +#[owned <- true]
+                                          +#[status <- msiM]
+                                          +#[val <- msg_value (valOf idm)])).
 
     End Li.
 
@@ -732,8 +757,7 @@ Section System.
       liGetSRqUpDownM oidx cidx; liGetMImm cidx; liGetMRqUpUp oidx cidx;
       liGetMRqUpDownM oidx cidx; liGetMRqUpDownS oidx cidx;
       liInvImmI cidx; liInvImmS00 cidx; liInvImmS01 cidx; liInvImmS1 cidx;
-      liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx;
-      liInvImmWBS cidx; liInvImmWBM cidx].
+      liInvImmWBI cidx; liInvImmWBS0 cidx; liInvImmWBS1 cidx; liInvImmWBM cidx].
 
     Definition liRulesFromChildren (coinds: list IdxT): list Rule :=
       List.concat (map liRulesFromChild coinds).
@@ -764,7 +788,9 @@ Section System.
                 liDownIRqDownDownDirMS oidx;
                 liDownIRsUpUpS; liDownIRsUpUpM; liDownIRsUpUpMS]
              (** rules involved with [Put] *)
-             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liDropImm];
+             ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown]
+             (** rules involved with [BInv] *)
+             ++ [liBInvRqS oidx; liBInvRqM oidx; liBInvRsS0; liBInvRsS1; liBInvRsM];
          obj_rules_valid := _ |}.
     Next Obligation.
       solve_inds_NoDup disc_child_inds_disj.
@@ -829,4 +855,5 @@ Hint Unfold liGetSImmS liGetSImmM
      liDownIRsUpUpS liDownIRsUpUpM liDownIRsUpUpMS
      liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
      liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
-     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBM liDropImm: MsiRules.
+     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBM
+     liBInvRqS liBInvRqM liBInvRsS0 liBInvRsS1 liBInvRsM: MsiRules.

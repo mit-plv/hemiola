@@ -75,57 +75,7 @@ Section System.
     - auto using mesi_ExtsOnDTree.
   Qed.
 
-  Ltac rule_immd := left.
-  Ltac rule_immu := right; left.
-  Ltac rule_rquu := do 2 right; left.
-  Ltac rule_rqsu := do 2 right; left.
-  Ltac rule_rqud := do 2 right; left.
-  Ltac rule_rqdd := do 2 right; left.
-  Ltac rule_rsdd := do 3 right; left.
-  Ltac rule_rsds := do 3 right; left.
-  Ltac rule_rsu := do 3 right; left.
-  Ltac rule_rsrq := do 4 right.
-
-  Ltac solve_GoodRqRsRule :=
-    autounfold with MesiRules;
-    repeat
-      match goal with
-      | |- GoodRqRsRule _ _ _ _ =>
-        match goal with
-        | |- context[immRule] =>
-          rule_immd; eapply immRule_ImmDownRule; eauto
-        | |- context[immDownRule] =>
-          rule_immd; eapply immDownRule_ImmDownRule; eauto
-        | |- context[immUpRule] =>
-          rule_immu; eapply immUpRule_ImmUpRule; eauto
-        | |- context[rqUpUpRule] =>
-          rule_rquu; eapply rqUpUpRule_RqFwdRule; eauto
-        | |- context[rqUpUpRuleS] =>
-          rule_rqsu; eapply rqUpUpRuleS_RqFwdRule; eauto
-        | |- context[rqUpDownRule] =>
-          rule_rqud; eapply rqUpDownRule_RqFwdRule; eauto
-        | |- context[rqDownDownRule] =>
-          rule_rqdd; eapply rqDownDownRule_RqFwdRule; eauto
-        | |- context[rsDownDownRule] =>
-          rule_rsdd; eapply rsDownDownRule_RsBackRule; eauto
-        | |- context[rsDownDownRuleS] =>
-          rule_rsds; eapply rsDownDownRuleS_RsBackRule; eauto
-        | |- context[rsUpDownRule] =>
-          rule_rsu; eapply rsUpDownRule_RsBackRule; eauto
-        | |- context[rsUpDownRuleOne] =>
-          rule_rsu; eapply rsUpDownRuleOne_RsBackRule; eauto
-        | |- context[rsUpUpRule] =>
-          rule_rsu; eapply rsUpUpRule_RsBackRule; eauto
-        | |- context[rsUpUpRuleOne] =>
-          rule_rsu; eapply rsUpUpRuleOne_RsBackRule; eauto
-        | |- context[rsDownRqDownRule] =>
-          rule_rsrq; eapply rsDownRqDownRule_RsDownRqDownRule; eauto
-        end
-      | |- parentIdxOf _ _ = Some _ =>
-        apply subtreeChildrenIndsOf_parentIdxOf; auto; fail
-      | |- parentIdxOf _ (l1ExtOf _) = Some _ =>
-        apply tree2Topo_l1_ext_parent; auto; fail
-      end.
+  Ltac solve_GoodRqRsRule_unfold ::= autounfold with MesiRules.
 
   Lemma mesi_GoodRqRsSys: GoodRqRsSys topo impl.
   Proof.
@@ -324,66 +274,8 @@ Section System.
       all: try (solve_GoodRqRsRule; fail).
   Qed.
 
-  Ltac exfalso_RqToUpRule :=
-    red; intros; exfalso;
-    repeat autounfold with MesiRules in *;
-    match goal with
-    | [H: context[RqToUpRule] |- _] =>
-      match type of H with
-      | context [immRule] =>
-        eapply tree2Topo_immRule_not_RqToUpRule; eauto
-      | context [immDownRule] =>
-        eapply tree2Topo_immDownRule_not_RqToUpRule; eauto
-      | context [immUpRule] =>
-        eapply tree2Topo_immUpRule_not_RqToUpRule; eauto
-      | context [rqUpDownRule] =>
-        eapply tree2Topo_rqUpDownRule_not_RqToUpRule; eauto
-      | context [rqDownDownRule] =>
-        eapply tree2Topo_rqDownDownRule_not_RqToUpRule; eauto
-      | context [rsDownDownRule] =>
-        eapply tree2Topo_rsDownDownRule_not_RqToUpRule; eauto
-      | context [rsDownDownRuleS] =>
-        eapply tree2Topo_rsDownDownRuleS_not_RqToUpRule; eauto
-      | context [rsUpDownRule] =>
-        eapply tree2Topo_rsUpDownRule_not_RqToUpRule; eauto
-      | context [rsUpDownRuleOne] =>
-        eapply tree2Topo_rsUpDownRuleOne_not_RqToUpRule; eauto
-      | context [rsUpUpRule] =>
-        eapply tree2Topo_rsUpUpRule_not_RqToUpRule; eauto
-      | context [rsUpUpRuleOne] =>
-        eapply tree2Topo_rsUpUpRuleOne_not_RqToUpRule; eauto
-      | context [rsDownRqDownRule] =>
-        eapply tree2Topo_rsDownRqDownRule_not_RqToUpRule; eauto
-      end
-    end.
-
-  Ltac exfalso_RsToUpRule :=
-    red; intros; exfalso;
-    repeat autounfold with MesiRules in *;
-    match goal with
-    | [H: context[RsToUpRule] |- _] =>
-      match type of H with
-      | context [immRule] =>
-        eapply tree2Topo_immRule_not_RsToUpRule; eauto
-      | context [immDownRule] =>
-        eapply tree2Topo_immDownRule_not_RsToUpRule; eauto
-      | context [rqUpUpRule] =>
-        eapply tree2Topo_rqUpUpRule_not_RsToUpRule; eauto
-      | context [rqUpUpRuleS] =>
-        eapply tree2Topo_rqUpUpRuleS_not_RsToUpRule; eauto
-      | context [rqUpDownRule] =>
-        eapply tree2Topo_rqUpDownRule_not_RsToUpRule; eauto
-      | context [rqDownDownRule] =>
-        eapply tree2Topo_rqDownDownRule_not_RsToUpRule; eauto
-      | context [rsDownDownRule] =>
-        eapply tree2Topo_rsDownDownRule_not_RsToUpRule; eauto
-      | context [rsDownDownRuleS] =>
-        eapply tree2Topo_rsDownDownRuleS_not_RsToUpRule; eauto
-      | context [rsDownRqDownRule] =>
-        eapply tree2Topo_rsDownRqDownRule_not_RsToUpRule; eauto
-      end
-    end.
-
+  Ltac exfalso_RqToUpRule_unfold ::= repeat autounfold with MesiRules in *.
+  Ltac exfalso_RsToUpRule_unfold ::= repeat autounfold with MesiRules in *.
   Ltac disc_rule_custom ::= disc_mesi_obj_invs.
 
   Lemma mesi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl (MesiObjInvs topo).
@@ -554,33 +446,6 @@ Section System.
 
         END_SKIP_PROOF_ON *) admit.
   Qed.
-
-  Ltac solve_GoodExtRssSys :=
-    repeat
-      match goal with
-      | [H: In ?oidx (c_l1_indices _) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
-        apply in_or_app; auto
-      | [H: In ?oidx (c_li_indices _) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
-        apply in_or_app; auto
-      | [H: In ?oidx (tl (c_li_indices _)) |- In ?oidx (c_li_indices _ ++ c_l1_indices _)] =>
-        apply tl_In in H; apply in_or_app; auto
-      | [H: In ?oidx (tl (c_li_indices _)) |- In ?oidx (c_li_indices _)] =>
-        apply tl_In in H; assumption
-
-      | [H: In _ (subtreeChildrenIndsOf _ _) |- _] =>
-        apply subtreeChildrenIndsOf_parentIdxOf in H; [|apply tree2Topo_WfDTree];
-        eapply tree2Topo_li_child_li_l1; eauto
-      | |- In (rootOf _) (c_li_indices _) =>
-        rewrite c_li_indices_head_rootOf by assumption; left; reflexivity
-
-      | [H: In (rqUpFrom _) (c_merss _) |- MRq = MRs] =>
-        exfalso; eapply tree2Topo_obj_rqUpFrom_not_in_merss; eauto
-      | [H: In (rsUpFrom _) (c_merss _) |- MRq = MRs] =>
-        exfalso; eapply tree2Topo_obj_rsUpFrom_not_in_merss; eauto
-      | [H: In (downTo _) (c_merss _) |- MRq = MRs] =>
-        exfalso; eapply tree2Topo_obj_downTo_not_in_merss; eauto
-      | [H: False |- _] => exfalso; auto
-      end.
 
   Lemma mesi_GoodExtRssSys: GoodExtRssSys impl.
   Proof. (* SKIP_PROOF_ON

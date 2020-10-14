@@ -114,7 +114,7 @@ Section RqRsInvLockEx.
         In rqDown eouts ->
         DLNewRec pidx /\ DownLockNotTo pidx (idOf rqDown).
 
-    (** This invariant is the only necessary condition to prove non-mergeability,
+    (** This invariant is the only necessary condition to prove nonmergeability,
      * used in [RqRsCorrect.v] *)
     Definition RsUpDLNew (eouts: list (Id Msg)) :=
       forall oidx rsUp pidx,
@@ -407,6 +407,20 @@ Section RqRsInvLockEx.
         eapply inside_child_in; [apply Hrrs|..]; eauto.
   Qed.
 
+  (* Lemma DLNewRec_orqs_step_remove_silent: *)
+  (*   forall orqs1 orqs2 cidx, *)
+  (*     DLNewRec orqs1 orqs2 cidx -> *)
+  (*     forall oidx porq, *)
+  (*       oidx <> cidx -> *)
+  (*       In cidx (subtreeIndsOf dtr oidx) -> *)
+  (*       orqs2@[oidx] = Some porq -> *)
+  (*       (porq@[downRq] >>=[True] (fun rqid => rqid.(rqi_midx_rsb) = None)) -> *)
+  (*       forall norq, *)
+  (*         (norq@[downRq] >>=[True] (fun rqid => rqid.(rqi_midx_rsb) = None)) -> *)
+  (*         DLNewRec orqs1 (orqs2 +[oidx <- norq]) cidx. *)
+  (* Proof. *)
+  (* Qed. *)
+
   Lemma DLNewBackUpLockedNew_orqs_step_remove:
     forall orqs1 orqs2,
       DLNewBackUpLockedNew orqs1 orqs2 ->
@@ -543,6 +557,17 @@ Section RqRsInvLockEx.
     - red; intros; apply removeL_In_2 in H4; eauto.
     - red; intros; apply removeL_In_2 in H5; eauto.
     - red; intros; apply removeL_In_2 in H5; eauto.
+  Qed.
+
+  Lemma DLOutsInv_nil:
+    forall orqs1 orqs2, DLOutsInv orqs1 orqs2 nil.
+  Proof.
+    intros; red; intros.
+    repeat ssplit.
+    - red; intros; elim H0.
+    - red; intros; elim H0.
+    - red; intros; elim H1.
+    - red; intros; elim H1.
   Qed.
 
   Ltac disc_rule_custom ::=
@@ -758,24 +783,35 @@ Section RqRsInvLockEx.
 
       + (** case [RsUpDown] *)
         red; intros; exfalso.
-        pose proof (RqRsDownMatch_rs_not_nil H21).
+        pose proof (RqRsDownMatch_rs_not_nil H22).
         destruct rins as [|rin rins];
           [apply eq_sym, map_eq_nil in H28; auto|].
         inv H17.
-        eapply RqRsDownMatch_rs_rq in H21; [|rewrite <-H28; left; reflexivity].
-        destruct H21 as [cidx [down ?]]; dest.
-        eapply H5; [|left; reflexivity].
+        eapply RqRsDownMatch_rs_rq in H22; [|rewrite <-H28; left; reflexivity].
+        destruct H22 as [cidx [down ?]]; dest.
+        eapply H6; [|left; reflexivity].
         right; red; eauto.
 
       + (** case [RsUpUp] *)
         red; intros; exfalso.
-        pose proof (RqRsDownMatch_rs_not_nil H6).
+        pose proof (RqRsDownMatch_rs_not_nil H7).
         destruct rins as [|rin rins];
           [apply eq_sym, map_eq_nil in H28; auto|].
         inv H17.
-        eapply RqRsDownMatch_rs_rq in H6; [|rewrite <-H28; left; reflexivity].
-        destruct H6 as [cidx [down ?]]; dest.
-        eapply H7; [|left; reflexivity].
+        eapply RqRsDownMatch_rs_rq in H7; [|rewrite <-H28; left; reflexivity].
+        destruct H7 as [cidx [down ?]]; dest.
+        eapply H10; [|left; reflexivity].
+        right; red; eauto.
+
+      + (** case [RsUpUp-silent] *)
+        red; intros; exfalso.
+        pose proof (RqRsDownMatch_rs_not_nil H5).
+        destruct rins as [|rin rins];
+          [apply eq_sym, map_eq_nil in H28; auto|].
+        inv H17.
+        eapply RqRsDownMatch_rs_rq in H5; [|rewrite <-H28; left; reflexivity].
+        destruct H5 as [cidx [down ?]]; dest.
+        eapply H6; [|left; reflexivity].
         right; red; eauto.
 
     - (** case [RsDownRqDown] *)
@@ -1198,32 +1234,32 @@ Section RqRsInvLockEx.
         1: {
           exfalso.
           assert (rqUp = (rsbTo0, rsm)); subst.
-          { destruct (removeL _ eouts rins); [inv H7; reflexivity|].
+          { destruct (removeL _ eouts rins); [inv H9; reflexivity|].
             destruct l; discriminate.
           }
           disc_rule_conds.
         }
         2: {
           exfalso.
-          apply rqDown_rsUp_inv_msg, Forall_app_inv in H26; dest.
-          inv H31; destruct H36 as [oidx ?].
-          destruct H31; disc_rule_conds; solve_midx_false.
+          apply rqDown_rsUp_inv_msg, Forall_app_inv in H28; dest.
+          inv H33; destruct H36 as [oidx ?].
+          destruct H33; disc_rule_conds; solve_midx_false.
         }
         destruct (removeL _ eouts rins); [|destruct l; discriminate].
-        inv H7.
+        inv H9.
 
         disc_rule_conds.
         red; intros.
-        specialize (IHAtomic H26); dest.
-        red in H33, H34; dest.
+        specialize (IHAtomic H28); dest.
+        red in H34, H35; dest.
 
         (* Below is used multiple times so prove it in advance. *)
         assert (DownLockedNew (st_orqs st1) orqs (obj_idx obj)) as Hdln.
-        { pose proof H25.
-          eapply RqRsDownMatch_rs_not_nil in H41.
+        { pose proof H26.
+          eapply RqRsDownMatch_rs_not_nil in H26.
           destruct rins as [|rin rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H25; [|rewrite <-H32; left; reflexivity].
-          destruct H25 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H41; [|rewrite <-H32; left; reflexivity].
+          destruct H41 as [cidx [down ?]]; dest.
           disc_rule_conds.
 
           assert (RsUpMsgFrom dtr cidx rin) by (red; eauto).
@@ -1258,15 +1294,15 @@ Section RqRsInvLockEx.
           destruct (removeL _ eouts rins); [|destruct l; discriminate].
           inv H14; disc_rule_conds; solve_midx_false.
         }
-        clear H25 H26. (* Clear useless invariants, except [RqDownRsUpDisj]. *)
-        apply rqDown_rsUp_inv_msg in H23.
-        apply Forall_app_inv in H23; dest; clear H25.
-        rewrite Forall_forall in H23.
-        rename H21 into Hrrd, H23 into Hrri.
+        clear H26 H28. (* Clear useless invariants, except [RqDownRsUpDisj]. *)
+        apply rqDown_rsUp_inv_msg in H25.
+        apply Forall_app_inv in H25; dest; clear H26.
+        rewrite Forall_forall in H25.
+        rename H21 into Hrrd, H25 into Hrri.
 
         red; intros.
         specialize (IHAtomic H21); dest.
-        red in H23, H24; dest.
+        red in H25; dest.
 
         (* Below is used multiple times so prove it in advance. *)
         assert (exists cidx rsUp,
@@ -1274,15 +1310,15 @@ Section RqRsInvLockEx.
                    RsUpMsgFrom dtr cidx rsUp /\
                    parentIdxOf dtr cidx = Some (obj_idx obj) /\
                    DLNewRec (st_orqs st1) orqs (obj_idx obj)) as Hdln.
-        { pose proof H9.
-          eapply RqRsDownMatch_rs_not_nil in H33.
+        { pose proof H12.
+          eapply RqRsDownMatch_rs_not_nil in H34.
           destruct rins as [|rin rins]; [exfalso; auto|].
-          eapply RqRsDownMatch_rs_rq in H9; [|rewrite <-H32; left; reflexivity].
-          destruct H9 as [cidx [down ?]]; dest.
+          eapply RqRsDownMatch_rs_rq in H12; [|rewrite <-H32; left; reflexivity].
+          destruct H12 as [cidx [down ?]]; dest.
           disc_rule_conds.
           assert (RsUpMsgFrom dtr cidx rin) by (red; eauto).
           assert (In rin eouts) by (apply H4; left; reflexivity).
-          specialize (H31 _ _ _ H17 H34 H39).
+          specialize (H33 _ _ _ H17 H35 H39).
           exists cidx, rin; repeat ssplit; try assumption.
           left; reflexivity.
         }
@@ -1316,10 +1352,10 @@ Section RqRsInvLockEx.
                 }
                 split.
                 { apply DLNewRec_orqs_step_intact; try assumption.
-                  eapply H30; eauto; eapply removeL_In_2; eauto.
+                  eapply H31; eauto; eapply removeL_In_2; eauto.
                 }
                 { red; smred.
-                  eapply H30; eauto; eapply removeL_In_2; eauto.
+                  eapply H31; eauto; eapply removeL_In_2; eauto.
                 }
               }
             }
@@ -1342,7 +1378,7 @@ Section RqRsInvLockEx.
                   eapply parent_subtreeIndsOf_self_in; eauto.
                 }
                 apply DLNewRec_orqs_step_intact; try assumption.
-                eapply H31; eauto; eapply removeL_In_2; eauto.
+                eapply H33; eauto; eapply removeL_In_2; eauto.
               }
             }
           }
@@ -1361,6 +1397,141 @@ Section RqRsInvLockEx.
 
         * inv H37; red; apply DLNewBackUpLockedNew_orqs_step_remove; try assumption; mred.
         * inv H37; apply DLOldPreserved_remove; try assumption; mred.
+
+      + (** case [RsUpUp-silent] *)
+        rewrite app_nil_r in *.
+        red; intros.
+        specialize (IHAtomic H9); dest.
+
+        (* Below is used multiple times so prove it in advance. *)
+        assert (exists cidx rsUp,
+                   In rsUp rins /\
+                   RsUpMsgFrom dtr cidx rsUp /\
+                   parentIdxOf dtr cidx = Some (obj_idx obj) /\
+                   DLNewRec (st_orqs st1) orqs (obj_idx obj)) as Hdnr.
+        { pose proof H7.
+          eapply RqRsDownMatch_rs_not_nil in H25.
+          destruct rins as [|rin rins]; [exfalso; auto|].
+          eapply RqRsDownMatch_rs_rq in H7; [|rewrite <-H32; left; reflexivity].
+          destruct H7 as [cidx [down ?]]; dest.
+          disc_rule_conds.
+          assert (RsUpMsgFrom dtr cidx rin) by (red; eauto).
+          assert (In rin eouts) by (apply H4; left; reflexivity).
+          red in H12; dest.
+          specialize (H39 _ _ _ H17 H26 H21).
+          exists cidx, rin; repeat ssplit; try assumption.
+          left; reflexivity.
+        }
+        destruct Hdnr as [cidx [rsUp ?]]; dest.
+
+        assert (DownLockedNew (st_orqs st1) orqs (obj_idx obj))
+          as Hdln by (inv H30; assumption).
+
+        inv Hmoinv.
+        1: { exfalso; apply SubList_nil_inv in H4; auto. }
+        1: { exfalso.
+             apply SubList_singleton_NoDup in H4; [|apply IndexSupport.idsOf_NoDup; apply H18].
+             destruct H4; [auto|subst].
+             dest_in; inv H21.
+             destruct H31; rewrite H4 in H37; discriminate.
+        }
+        1: { exfalso.
+             apply SubList_singleton_NoDup in H4; [|apply IndexSupport.idsOf_NoDup; apply H18].
+             destruct H4; [auto|subst].
+             dest_in; inv H21.
+             destruct H26, H31.
+             solve_midx_false.
+        }
+        pose proof H33 as Hrrd.
+        apply rqDown_rsUp_inv_msg in H33.
+        rewrite Forall_forall in H33; rename H33 into Hrri.
+
+        repeat ssplit.
+        * red; repeat ssplit.
+          { red; intros; exfalso.
+            apply removeL_In_2 in H36.
+            specialize (Hrri _ H36); destruct Hrri as [roidx ?].
+            destruct H37; disc_rule_conds; solve_midx_false.
+          }
+          { red; intros; exfalso.
+            apply removeL_In_2 in H36.
+            specialize (Hrri _ H36); destruct Hrri as [roidx ?].
+            destruct H37; disc_rule_conds; solve_midx_false.
+          }
+
+          { red; intros.
+            destruct (in_dec idx_dec pidx (subtreeIndsOf dtr (obj_idx obj))).
+            { exfalso.
+              assert (In (obj_idx obj) (oindsOf hst)) as Hoin
+                  by (eapply DownLockedNew_in_history; eauto).
+              eapply rsUp_no_other_messages_in in H7; try eassumption;
+                [|apply H18| |right; assumption|apply Forall_forall; assumption].
+              2: { apply H34; [assumption| |red; mred].
+                   intro Hx.
+                   apply removeL_In_2 in H37.
+                   eapply rqDown_rsUp_inv_rqDown in Hrrd; eauto.
+                   red in Hrrd; dest.
+                   red in H40.
+                   specialize (H40 _ Hoin Hx).
+                   elim H40.
+                   eapply inside_child_in; [apply Hrrs|eassumption..].
+              }
+              rewrite Forall_forall in H7.
+              specialize (H7 _ H37).
+              specialize (H7 _ (or_introl _ H33)).
+              elim H7.
+              eapply inside_child_in; [apply Hrrs|eassumption..].
+            }
+            { red in H12; dest.
+              assert (obj_idx obj <> pidx).
+              { intro Hx; subst; elim n.
+                eapply parent_subtreeIndsOf_self_in; eauto.
+              }
+              split.
+              { apply DLNewRec_orqs_step_intact; try assumption.
+                eapply H39; eauto; eapply removeL_In_2; eauto.
+              }
+              { red; smred.
+                eapply H39; eauto; eapply removeL_In_2; eauto.
+              }
+            }
+          }
+
+          { red; intros.
+            destruct (in_dec idx_dec pidx (subtreeIndsOf dtr (obj_idx obj))).
+            { exfalso.
+              assert (In (obj_idx obj) (oindsOf hst)) as Hoin
+                  by (eapply DownLockedNew_in_history; eauto).
+              eapply rsUp_no_other_messages_in in H7; try eassumption;
+                [|apply H18| |right; assumption|apply Forall_forall; assumption].
+              2: { apply H34; [assumption| |red; mred].
+                   intro Hx.
+                   apply removeL_In_2 in H37.
+                   eapply rqDown_rsUp_inv_rsUp in Hrrd; eauto.
+                   red in Hrrd; dest.
+                   red in H40.
+                   specialize (H40 _ Hoin Hx).
+                   elim H40.
+                   eapply inside_child_in; [apply Hrrs|eassumption..].
+              }
+              rewrite Forall_forall in H7.
+              specialize (H7 _ H37).
+              specialize (H7 _ (or_intror _ H33)).
+              elim H7.
+              eapply inside_child_in; [apply Hrrs|eassumption..].
+            }
+            { red in H12; dest.
+              assert (obj_idx obj <> pidx).
+              { intro Hx; subst; elim n.
+                eapply parent_subtreeIndsOf_self_in; eauto.
+              }
+              apply DLNewRec_orqs_step_intact; try assumption.
+              eapply H40; eauto; eapply removeL_In_2; eauto.
+            }
+          }
+
+        * apply DLNewBackUpLockedNew_orqs_step_remove; try assumption; mred.
+        * apply DLOldPreserved_remove; try assumption; mred.
 
     - (** case [RsDownRqDown] *)
       good_footprint_get (obj_idx obj).

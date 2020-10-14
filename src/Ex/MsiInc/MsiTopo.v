@@ -4,7 +4,7 @@ Require Import Syntax Topology Semantics Invariant.
 Require Import RqRsLang.
 
 Require Import Ex.Spec Ex.SpecInds Ex.Template Ex.Msi.
-Require Import Ex.Msi.Msi Ex.Msi.MsiObjInv.
+Require Import Ex.MsiInc.Msi Ex.MsiInc.MsiObjInv.
 
 Set Implicit Arguments.
 
@@ -187,7 +187,6 @@ Section System.
       { (* [liDownSRqDownDownM] *)
         rule_rqdd.
         eapply rqDownDownRule_RqFwdRule; eauto.
-
         (** [RqDownDownSound] *)
         red; simpl; intros; dest.
         repeat ssplit; [discriminate|].
@@ -197,7 +196,6 @@ Section System.
 
       { (* [liGetMRsDownRqDownDirS] *)
         rule_rsrq; eapply rsDownRqDownRule_RsDownRqDownRule; eauto.
-
         (** [RsDownRqDownSound] *)
         red; simpl; intros; dest.
         red in H1.
@@ -222,7 +220,6 @@ Section System.
       { (* [liDownIRqDownDownDirS] *)
         rule_rqdd.
         eapply rqDownDownRule_RqFwdRule; eauto.
-
         (** [RqDownDownSound] *)
         red; simpl; intros; dest.
         repeat ssplit; [assumption|].
@@ -234,7 +231,6 @@ Section System.
       { (* [liDownIRqDownDownDirM] *)
         rule_rqdd.
         eapply rqDownDownRule_RqFwdRule; eauto.
-
         (** [RqDownDownSound] *)
         red; simpl; intros; dest.
         repeat ssplit; [discriminate|].
@@ -245,13 +241,38 @@ Section System.
       { (* [liDownIRqDownDownDirMS] *)
         rule_rqdd.
         eapply rqDownDownRule_RqFwdRule; eauto.
-
         (** [RqDownDownSound] *)
         red; simpl; intros; dest.
         repeat ssplit; [assumption|].
         apply Forall_forall; intros.
         apply H2 in H4.
         eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+      }
+
+      { (* [liBInvRqS] *)
+        rule_rqsd.
+        eapply rqUpDownRuleS_RqFwdRule; eauto.
+        (** [RqUpDownSoundS] *)
+        red; simpl; intros; dest.
+        repeat ssplit.
+        { assumption. }
+        { apply Forall_forall; intros.
+          apply H2 in H4.
+          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        }
+      }
+
+      { (* [liBInvRqM] *)
+        rule_rqsd.
+        eapply rqUpDownRuleS_RqFwdRule; eauto.
+        (** [RqUpDownSoundS] *)
+        red; simpl; intros; dest.
+        repeat ssplit.
+        { discriminate. }
+        { apply Forall_forall; intros.
+          dest_in.
+          eapply subtreeChildrenIndsOf_parentIdxOf; eauto.
+        }
       }
 
     - (** L1 caches *)
@@ -318,21 +339,23 @@ Section System.
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; auto.
-          { destruct H17; dest; try solve [congruence|solve_msi]. }
-          { destruct H17; dest; try solve [congruence|solve_msi]. }
+          all: try (destruct H17; dest; try solve [congruence|solve_msi]).
         }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_ex; auto.
-          { solve_msi. }
-          { f_equal; apply M.add_remove_comm; discriminate. }
+        { clear; solve_rule_conds_ex; try solve_msi.
+          f_equal; apply M.add_remove_comm; discriminate.
         }
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_ex; auto.
-          { solve_msi. }
-          { f_equal; apply M.add_remove_comm; discriminate. }
+        { clear; solve_rule_conds_ex; try solve_msi.
+          f_equal; apply M.add_remove_comm; discriminate.
         }
+        { clear; solve_rule_conds_ex; try solve_msi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -359,6 +382,11 @@ Section System.
         { clear; solve_rule_conds_ex; try solve_msi.
           f_equal; apply M.add_remove_comm; discriminate.
         }
+        { clear; solve_rule_conds_ex; try solve_msi.
+          f_equal; apply M.add_remove_comm; discriminate.
+        }
+        { clear; solve_rule_conds_ex; try solve_msi. }
+        { clear; solve_rule_conds_ex; try solve_msi. }
 
       + simpl in H2; apply in_app_or in H2; destruct H2;
           [unfold liRulesFromChildren in H;
@@ -368,14 +396,17 @@ Section System.
         all: try (exfalso_RsToUpRule; fail).
 
         { clear; solve_rule_conds_ex; solve_msi. }
-        { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_const; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_const; try solve_msi.
           all: rewrite invalidate_I; solve_msi.
         }
-        { clear; solve_rule_conds_const; try solve_msi. }
+        { clear; solve_rule_conds_const; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; solve_msi. }
@@ -400,6 +431,9 @@ Section System.
         { clear; solve_rule_conds_ex; solve_msi. }
         { clear; solve_rule_conds_ex; try intuition solve_msi. }
         { clear; solve_rule_conds_ex; try intuition solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
+        { clear; solve_rule_conds_ex; solve_msi. }
 
     - (** L1 cache *)
       apply Forall_forall; intros.
@@ -496,6 +530,12 @@ Section System.
           red; simpl; disc_rule_conds_ex.
           apply in_map_iff in H2; dest; subst.
           apply H4 in H7.
+          simpl in *; solve_GoodExtRssSys.
+        }
+        { (* [liBInvRqS] *)
+          red; simpl; disc_rule_conds_ex.
+          apply in_map_iff in H2; dest; subst.
+          apply H6 in H8.
           simpl in *; solve_GoodExtRssSys.
         }
 

@@ -570,7 +570,7 @@ Section System.
            (ost --> <| mesiInvWRq; ost#[val] |>).
 
       Definition l1InvRsDownDown: Rule :=
-        rule.rsd[2~>2]
+        rule.rsds[2~>2]
         :accepts mesiInvRs
         :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]
@@ -952,7 +952,7 @@ Section System.
         :transition (ost --> <| mesiInvWRq; ost#[val] |>).
 
       Definition liInvRsDownDown: Rule :=
-        rule.rsd[2~>2]
+        rule.rsds[2~>2]
         :accepts mesiInvRs
         :requires (fun _ _ _ => True)
         :transition (!|ost, _| --> (ost +#[owned <- false]

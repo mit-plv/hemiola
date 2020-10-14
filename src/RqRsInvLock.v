@@ -63,7 +63,7 @@ Section RqRsDown.
                    rsEdgeUpFrom dtr cidx = Some rsUp ->
                    In rsUp (map fst rqid.(rqi_rss)) ->
                    rqsQ msgs down <> nil)).
-  
+
   Definition NoRqRsDown (st: State) :=
     forall cobj pobj,
       In cobj sys.(sys_objs) ->
@@ -77,7 +77,7 @@ Section RqRsDown.
           ONoDownLock st.(st_orqs) (obj_idx pobj) \/
           (ODownRq st.(st_orqs) st.(st_msgs) (obj_idx pobj) down /\
            FirstMP st.(st_msgs) down rsdm).
-  
+
   Lemma noRqRsDown_InvInit:
     InvInit sys NoRqRsDown.
   Proof.
@@ -123,7 +123,7 @@ Section RqRsDown.
         apply in_map; assumption.
       }
     }
-    
+
     apply InMP_enqMsgs_or in H7; destruct H7.
     - exfalso.
       apply in_map with (f:= idOf) in H7; simpl in H7; auto.
@@ -165,7 +165,7 @@ Section RqRsDown.
         apply in_map; assumption.
       }
     }
-    
+
     dest; right; split.
     - red in H; red.
       destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
@@ -176,7 +176,7 @@ Section RqRsDown.
       assumption.
     - apply FirstMP_deqMsgs; assumption.
   Qed.
-  
+
   Ltac disc_rule_custom ::=
     try disc_footprints_ok;
     try disc_NoRqRsDown.
@@ -387,7 +387,7 @@ Section RqRsDown.
             }
             { apply FirstMP_enqMP; assumption. }
           }
-      
+
       + apply InMP_enqMP_or in H28; destruct H28;
           [exfalso; dest; subst; disc_rule_conds; auto|].
         apply InMP_deqMP in H11.
@@ -472,7 +472,7 @@ Section RqRsDown.
             solve_q; assumption.
           }
           { apply FirstMP_enqMsgs; assumption. }
-          
+
       + apply InMP_enqMsgs_or in H30; destruct H30.
         1:{ exfalso.
             rewrite Forall_forall in H29; specialize (H29 _ H2).
@@ -575,7 +575,7 @@ Section RqRsDown.
               apply H28.
             }
           }
-          
+
         * destruct (idx_dec (obj_idx obj) (obj_idx cobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             disc_rule_conds.
@@ -656,7 +656,7 @@ Section RqRsDown.
               }
             }
           }
-      
+
       + destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * apply InMP_deqMP in H23.
           specialize (H0 H23).
@@ -696,8 +696,8 @@ Section RqRsDown.
         * dest; subst; disc_rule_conds.
           eapply obj_same_id_in_system_same in H20; eauto; subst.
           left; red; repeat (simpl; mred).
-        * apply InMP_deqMsgs in H3.
-          specialize (H0 H3).
+        * apply InMP_deqMsgs in H4.
+          specialize (H0 H4).
           destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
           { eapply obj_same_id_in_system_same in e; eauto; subst.
             left; red; repeat (simpl; mred).
@@ -720,11 +720,11 @@ Section RqRsDown.
               }
             }
           }
-            
+
       + apply InMP_enqMP_or in H24; destruct H24;
           [dest; subst; solve_midx_false|].
-        apply InMP_deqMsgs in H19.
-        specialize (H0 H19).
+        apply InMP_deqMsgs in H24.
+        specialize (H0 H24).
         destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
         * eapply obj_same_id_in_system_same in e; eauto; subst.
           left; red; repeat (simpl; mred).
@@ -734,12 +734,32 @@ Section RqRsDown.
             { red in H0; red; mred.
               destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
               destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
-              intros; specialize (H0 _ _ H25 H28 H30).
+              intros; specialize (H0 _ _ H27 H29 H30).
               disc_rule_conds.
               solve_q; assumption.
             }
             { apply FirstMP_enqMP.
               apply FirstMP_deqMsgs; [|eassumption].
+              solve_midx_disj.
+            }
+          }
+
+      + apply InMP_deqMsgs in H24.
+        specialize (H0 H24).
+        destruct (idx_dec (obj_idx obj) (obj_idx pobj)).
+        * eapply obj_same_id_in_system_same in e; eauto; subst.
+          left; red; repeat (simpl; mred).
+        * destruct H0.
+          { left; red; repeat (simpl; mred). }
+          { dest; right; split.
+            { red in H0; red; mred.
+              destruct (orqs@[obj_idx pobj]) eqn:Horq; simpl in *; auto.
+              destruct (o@[downRq]) eqn:Hrqid; simpl in *; auto.
+              intros; specialize (H0 _ _ H19 H25 H27).
+              disc_rule_conds.
+              solve_q; assumption.
+            }
+            { apply FirstMP_deqMsgs; [|eassumption].
               solve_midx_disj.
             }
           }
@@ -813,7 +833,7 @@ Section RqRsDown.
             solve_midx_neq.
           }
   Qed.
-  
+
   Lemma noRqRsDown_InvStep:
     InvStep sys step_m NoRqRsDown.
   Proof.
@@ -1143,7 +1163,7 @@ Section Corollaries.
     { red; rewrite H8.
       apply in_or_app; right; left; reflexivity.
     }
-    
+
     red in Hrrinv.
     specialize (Hrrinv _ _ H0 H1 H2 _ H3 _ H7 H4); clear H4.
     destruct Hrrinv; dest.
@@ -1401,4 +1421,3 @@ End Corollaries.
 
 Close Scope list.
 Close Scope fmap.
-

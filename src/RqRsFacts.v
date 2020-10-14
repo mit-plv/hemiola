@@ -233,7 +233,21 @@ Section RqRsDTree.
         destruct IHrqTos as [cidx [down ?]]; dest.
         eauto 8.
   Qed.
-  
+
+  Lemma RqRsDownMatch_has_child:
+    forall oidx rqTos rssFrom P,
+      RqRsDownMatch dtr oidx rqTos rssFrom P ->
+      exists cidx, parentIdxOf dtr cidx = Some oidx.
+  Proof.
+    intros.
+    red in H; dest.
+    destruct rqTos as [|rqTo rqTos]; [exfalso; auto|clear H].
+    destruct rssFrom as [|rsFrom rssFrom]; [discriminate|].
+    simpl in H1; inv H1.
+    destruct H3 as [cidx ?]; dest.
+    exists cidx; assumption.
+  Qed.
+
   Lemma rqrsDTree_rqEdgeUpFrom_sys_minds:
     forall oidx midx,
       In oidx (map obj_idx sys.(sys_objs)) ->
@@ -336,7 +350,7 @@ Section RqRsDTree.
       + apply in_or_app; auto.
       + apply in_or_app; auto.
   Qed.
-  
+
   Lemma rqrsDTree_rqUp_down_not_eq:
     forall oidx1 oidx2 rqUp1 down2,
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
@@ -501,7 +515,7 @@ Section RqRsDTree.
     destruct H0 as [cidx [down ?]]; dest.
     elim (rqrsDTree_rsUp_down_not_eq _ _ H3 H); reflexivity.
   Qed.
-  
+
   Lemma rqrsDTree_rqUp_downs_not_in:
     forall oidx1 oidx2 rqUp1 downs2 ups2 P,
       rqEdgeUpFrom dtr oidx1 = Some rqUp1 ->
@@ -604,7 +618,7 @@ Section RqRsDTree.
     - rewrite H4 in H8; inv H8; auto.
     - elim (rqrsDTree_rsUp_rsUp_not_eq n H6 H10); reflexivity.
   Qed.
-  
+
   Lemma rqrsDTree_down_downs_not_in_child:
     forall cidx oidx down rsUp downs ups P,
       parentIdxOf dtr cidx = Some oidx ->
@@ -684,7 +698,7 @@ Section RqRsDTree.
   Proof.
     unfold RqRsDownMatch; intros; dest; assumption.
   Qed.
-    
+
   Lemma RqRsDownMatch_rs_not_nil:
     forall oidx rqTos rssFrom P,
       RqRsDownMatch dtr oidx rqTos rssFrom P ->
@@ -745,7 +759,7 @@ Section RqRsDTree.
       simpl in *; [|discriminate].
     eapply parentChnsOf_child_indsOf; eauto.
   Qed.
-    
+
   Lemma rsEdgeUpFrom_indsOf:
     forall oidx rsUp,
       rsEdgeUpFrom dtr oidx = Some rsUp ->
@@ -756,7 +770,7 @@ Section RqRsDTree.
       simpl in *; [|discriminate].
     eapply parentChnsOf_child_indsOf; eauto.
   Qed.
-  
+
   Lemma edgeDownTo_indsOf:
     forall oidx down,
       edgeDownTo dtr oidx = Some down ->
@@ -767,7 +781,7 @@ Section RqRsDTree.
       simpl in *; [|discriminate].
     eapply parentChnsOf_child_indsOf; eauto.
   Qed.
-  
+
 End RqRsDTree.
 
 Section RqRsChnsOnDTree.
@@ -917,19 +931,19 @@ Ltac disc_rule_conds_unit_rule_preds_red :=
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
     destruct H as [rssFrom [rsbTo ?]]; dest
-  | [H: match rqi_midx_rsb ?rqi with
-        | Some _ => idsOf _ = _
-        | None => _ = nil
-        end |- _] =>
-    let rsbTo := fresh "rsbTo" in
-    let Hrqi := fresh "H" in
-    destruct (rqi_midx_rsb rqi) as [rsbTo|] eqn:Hrqi; subst
-                                         
   | [H: FootprintReleasingDownPost _ _ _ _ _ _ |- _] =>
     let rssFrom := fresh "rssFrom" in
     let rsbTo := fresh "rsbTo" in
     let rsm := fresh "rsm" in
     destruct H as [rssFrom [rsbTo [rsm ?]]]; dest
+  | [H: match rqi_midx_rsb ?rqi with
+        | Some _ => _ = _
+        | None => _ = nil
+        end |- _] =>
+    let rsbTo := fresh "rsbTo" in
+    let Hrqi := fresh "H" in
+    destruct (rqi_midx_rsb rqi) as [rsbTo|] eqn:Hrqi; subst
+
   | [H: ImmDownOk _ _ _ _ _ _ _ _ |- _] =>
     let Hr := fresh "H" in
     destruct H as [|Hr];
@@ -994,7 +1008,7 @@ Ltac disc_rule_conds_unit_rule_preds_inst :=
     pose proof (H1 _ _ _ H2 _ _ _ H3) as Hp;
     pmark2 H1 H3
   end.
-           
+
 Ltac disc_rule_conds_rule_preds_clear :=
   match goal with
   | [H: RulePrecSat _ _ |- _] => clear H
@@ -1470,7 +1484,7 @@ Ltac solve_midx_neq_unit :=
       by (intro; subst;
           rewrite <-Hp1, <-Hp2 in Hneq;
           elim Hneq; reflexivity)
-                               
+
   | [H: Some _ = rqEdgeUpFrom _ _ |- _] => apply eq_sym in H
   | [H: Some _ = rsEdgeUpFrom _ _ |- _] => apply eq_sym in H
   | [H: Some _ = edgeDownTo _ _ |- _] => apply eq_sym in H
@@ -1585,7 +1599,6 @@ Ltac solve_q_unit :=
     let midx := fresh "midx" in
     let msg := fresh "msg" in
     destruct idm as [midx msg]; simpl in *
-                                         
   | [ |- context[findQ _ (enqMsgs _ _)] ] =>
     rewrite findQ_not_In_enqMsgs; [|solve_midx_neq]
   | [ |- context[findQ _ (deqMsgs _ _)] ] =>
@@ -1630,4 +1643,3 @@ Ltac solve_midx_false :=
 
 Close Scope list.
 Close Scope fmap.
-
