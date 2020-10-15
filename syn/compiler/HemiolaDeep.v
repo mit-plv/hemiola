@@ -802,8 +802,8 @@ Ltac renote_rule_init :=
   intros; repeat autounfold with MesiRules;
   cbv [immRule immDownRule immUpRule
                rqUpUpRule rqUpUpRuleS rqUpDownRule rqUpDownRuleS rqDownDownRule
-               rsDownDownRule rsDownDownRuleS rsUpDownRule rsUpDownRuleOne
-               rsUpUpRule rsUpUpRuleOne rsDownRqDownRule];
+               rsDownDownRule rsDownDownRuleS rsUpRule rsUpRuleOne rsUpRuleS rsUpRuleSOne
+               rsDownRqDownRule];
   cbv [rsTakeOne rsRelease rsReleaseOne];
   cbv [rule_precond rule_trs].
 
