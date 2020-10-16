@@ -1439,13 +1439,13 @@ Section Cache.
                                       "acc_reps" ::= #lw!LineWrite@."reps";
                                       "acc_index" ::= #index;
                                       "acc_way" ::= #info_way });
-
-              (** Update the value if necessary *)
-              If (#lw!LineWrite@."value_write")
-              then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
-                                        "datain" ::= #lw!LineWrite@."value" };
-                   Call dataWrReq(#drq); Retv);
               Retv);
+
+        (** Update the value if necessary *)
+        If (#lw!LineWrite@."value_write")
+        then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
+                                  "datain" ::= #lw!LineWrite@."value" };
+             Call dataWrReq(#drq); Retv);
         Ret #value
     }.
 
@@ -1554,13 +1554,6 @@ Section Cache.
                                          "acc_index" ::= #index;
                                          "acc_way" ::= #info_way });
 
-                 (** Update the value if necessary *)
-                 If (#lw!LineWrite@."value_write")
-                 then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
-                                           "datain" ::= #lw!LineWrite@."value" };
-                      Call dataWrReq(#drq); Retv);
-                 Retv);
-
            (** 2) Cases that write to the edir cache, either an update or an invalidation *)
            If ((!(#lw!LineWrite@."info_hit")) &&
                #justDir &&
@@ -1581,6 +1574,13 @@ Section Cache.
                       Retv);
                  Retv);
            Retv);
+        Retv);
+
+        (** Update the value if necessary *)
+        If (#lw!LineWrite@."value_write")
+        then (LET drq <- STRUCT { "addr" ::= {#info_way, getIndex addr};
+                                  "datain" ::= #lw!LineWrite@."value" };
+             Call dataWrReq(#drq); Retv);
         Ret #value
     }.
 

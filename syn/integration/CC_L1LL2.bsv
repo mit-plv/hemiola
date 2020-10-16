@@ -8,7 +8,7 @@ import HCCIfc::*;
 
 interface CC;
     interface Vector#(L1Num, MemRqRs#(Struct1)) l1Ifc;
-    interface DMA#(Bit#(12), Struct36, Vector#(4, Bit#(64))) llDma;
+    interface DMA#(Bit#(12), Struct37, Vector#(4, Bit#(64))) llDma;
 endinterface
 
 typedef struct { Bit#(6) id; Bool type_; Bit#(64) addr; Vector#(4, Bit#(64)) value;  } Struct1 deriving(Eq, Bits);
@@ -40,8 +40,8 @@ typedef struct { Bit#(3) mesi_edir_st; Bit#(2) mesi_edir_sharers;  } Struct32 de
 typedef struct { Bool tm_hit; Bit#(2) tm_way; Struct32 tm_value;  } Struct33 deriving(Eq, Bits);
 typedef struct { Bit#(9) addr; Struct29 datain;  } Struct34 deriving(Eq, Bits);
 typedef struct { Bit#(1) acc_type; Vector#(8, Bit#(8)) acc_reps; Bit#(9) acc_index; Bit#(3) acc_way;  } Struct35 deriving(Eq, Bits);
-typedef struct { Bit#(12) addr; Vector#(4, Bit#(64)) datain;  } Struct36 deriving(Eq, Bits);
-typedef struct { Bit#(9) addr; Struct31 datain;  } Struct37 deriving(Eq, Bits);
+typedef struct { Bit#(9) addr; Struct31 datain;  } Struct36 deriving(Eq, Bits);
+typedef struct { Bit#(12) addr; Vector#(4, Bit#(64)) datain;  } Struct37 deriving(Eq, Bits);
 typedef struct { Bool valid; Struct16 data;  } Struct38 deriving(Eq, Bits);
 typedef struct { Bit#(9) addr; Vector#(8, Bit#(8)) datain;  } Struct39 deriving(Eq, Bits);
 typedef struct { Bit#(4) r_id; Struct1 r_msg; Bit#(3) r_msg_from;  } Struct4 deriving(Eq, Bits);
@@ -1099,7 +1099,7 @@ endmodule
 
 interface Module17;
     method Action rdReq_edirRam__00__3 (Bit#(9) x_0);
-    method Action wrReq_edirRam__00__3 (Struct37 x_0);
+    method Action wrReq_edirRam__00__3 (Struct36 x_0);
     method ActionValue#(Struct31) rdResp_edirRam__00__3 ();
 endinterface
 
@@ -1119,7 +1119,7 @@ module mkModule17 (Module17);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_edirRam__00__3 (Struct37 x_0) if(initDone);
+    method Action wrReq_edirRam__00__3 (Struct36 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -1134,7 +1134,7 @@ endmodule
 
 interface Module18;
     method Action rdReq_edirRam__00__2 (Bit#(9) x_0);
-    method Action wrReq_edirRam__00__2 (Struct37 x_0);
+    method Action wrReq_edirRam__00__2 (Struct36 x_0);
     method ActionValue#(Struct31) rdResp_edirRam__00__2 ();
 endinterface
 
@@ -1154,7 +1154,7 @@ module mkModule18 (Module18);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_edirRam__00__2 (Struct37 x_0) if(initDone);
+    method Action wrReq_edirRam__00__2 (Struct36 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -1169,7 +1169,7 @@ endmodule
 
 interface Module19;
     method Action rdReq_edirRam__00__1 (Bit#(9) x_0);
-    method Action wrReq_edirRam__00__1 (Struct37 x_0);
+    method Action wrReq_edirRam__00__1 (Struct36 x_0);
     method ActionValue#(Struct31) rdResp_edirRam__00__1 ();
 endinterface
 
@@ -1189,7 +1189,7 @@ module mkModule19 (Module19);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_edirRam__00__1 (Struct37 x_0) if(initDone);
+    method Action wrReq_edirRam__00__1 (Struct36 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -1204,7 +1204,7 @@ endmodule
 
 interface Module20;
     method Action rdReq_edirRam__00__0 (Bit#(9) x_0);
-    method Action wrReq_edirRam__00__0 (Struct37 x_0);
+    method Action wrReq_edirRam__00__0 (Struct36 x_0);
     method ActionValue#(Struct31) rdResp_edirRam__00__0 ();
 endinterface
 
@@ -1224,7 +1224,7 @@ module mkModule20 (Module20);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_edirRam__00__0 (Struct37 x_0) if(initDone);
+    method Action wrReq_edirRam__00__0 (Struct36 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -1239,7 +1239,7 @@ endmodule
 
 interface Module21;
     method Action rdReq_dataRam__00 (Bit#(12) x_0);
-    method Action wrReq_dataRam__00 (Struct36 x_0);
+    method Action wrReq_dataRam__00 (Struct37 x_0);
     method ActionValue#(Vector#(4, Bit#(64))) rdResp_dataRam__00 ();
 endinterface
 
@@ -1259,7 +1259,7 @@ module mkModule21 (Module21);
         bram.rdReq(x_0);
     endmethod
 
-    method Action wrReq_dataRam__00 (Struct36 x_0) if(initDone);
+    method Action wrReq_dataRam__00 (Struct37 x_0) if(initDone);
         bram.wrReq(x_0.addr, x_0.datain);
     endmethod
 
@@ -1354,74 +1354,86 @@ module mkModule23
         Bit#(64) x_5 = (((x_0).r_msg).addr);
         Struct17 x_6 = (((((! ((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
         ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h0)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h0)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h0)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h0)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h0)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h0)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h1)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h1)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h1)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h1)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h2)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h2)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h2)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h2)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h3)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h3)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h3)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h3)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h4)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h4)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h4)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h5)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h5)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h5)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h6)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h6)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h6)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h7)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h7)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h7)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h8)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h8)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h8)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'h9)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'h9)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'h9)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'ha)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'ha)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'ha)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) : (((((!
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(4))'(4'hb)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(4))'(4'hb)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(4))'(4'hb)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'hb)}) :
@@ -1915,62 +1927,74 @@ module mkModule23
 
     method ActionValue#(Bit#(4)) getULReady_00 (Bit#(64) x_0);
         let x_1 = (rqs_00);
-        Struct17 x_2 = ((((((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
+        Struct17 x_2 = (((((((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
         ((Bit#(3))'(3'h5))) || ((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
+        ((Bit#(3))'(3'h4)))) || ((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
         ((Bit#(3))'(3'h6)))) && (! (((x_1)[(Bit#(4))'(4'h0)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h0)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h1)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h1)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h1)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h2)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h2)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h2)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h3)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h3)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h3)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h4)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h4)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h4)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h5)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h5)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h5)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h6)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h6)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h6)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h7)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h7)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h7)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h8)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h8)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h8)}) :
-        ((((((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'h9)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'h9)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'h9)}) :
-        ((((((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'ha)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'ha)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
         (Struct17 {valid : (Bool)'(True), data : (Bit#(4))'(4'ha)}) :
-        ((((((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(4))'(4'hb)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(4))'(4'hb)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr)[13:5]) == ((x_0)[13:5])) ?
@@ -2083,41 +2107,53 @@ module mkModule23
         Bit#(4) x_3 = ((x_2).data);
         Struct18 x_4 = ((x_1)[x_3]);
         Bit#(64) x_5 = (((x_4).m_msg).addr);
-        Bool x_6 = ((((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        Bool x_6 = (((((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h0)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h0)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h1)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h1)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h1)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h1)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h2)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h2)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h2)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h2)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h3)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h3)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h3)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h3)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h4)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h4)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h4)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h4)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h5)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h5)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h5)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h5)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h6)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h6)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h6)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h6)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h7)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h7)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h7)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h7)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h8)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h8)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h8)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h8)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'h9)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'h9)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'h9)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'h9)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'ha)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'ha)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'ha)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'ha)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(4))'(4'hb)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(4))'(4'hb)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(4))'(4'hb)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(4))'(4'hb)]).m_msg).addr)[13:5]) == ((x_5)[13:5])) ?
         ((Bool)'(True)) : ((Bool)'(False))))))))))))))))))))))))));
         when (! (x_6), noAction);
@@ -3105,38 +3141,44 @@ module mkModule41
         Bit#(64) x_5 = (((x_0).r_msg).addr);
         Struct6 x_6 = (((((! ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h0)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h0)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
@@ -3476,32 +3518,38 @@ module mkModule41
 
     method ActionValue#(Bit#(3)) getULReady_000 (Bit#(64) x_0);
         let x_1 = (rqs_000);
-        Struct6 x_2 = ((((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        Struct6 x_2 = (((((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h5))) || ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        ((Bit#(3))'(3'h4)))) || ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h6)))) && (! (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
@@ -3567,23 +3615,29 @@ module mkModule41
         Bit#(3) x_3 = ((x_2).data);
         Struct49 x_4 = ((x_1)[x_3]);
         Bit#(64) x_5 = (((x_4).m_msg).addr);
-        Bool x_6 = ((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        Bool x_6 = (((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h1)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h1)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h1)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h2)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h2)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h2)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h3)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h3)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h3)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h4)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h4)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h4)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h5)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h5)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h5)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         ((Bool)'(True)) : ((Bool)'(False))))))))))))));
         when (! (x_6), noAction);
@@ -4571,38 +4625,44 @@ module mkModule59
         Bit#(64) x_5 = (((x_0).r_msg).addr);
         Struct6 x_6 = (((((! ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h0)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h0)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h0)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h1)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h2)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h3)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h4)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) : (((((!
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h0)))) && (!
-        ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && ((!
+        ((((x_1)[(Bit#(3))'(3'h5)]).m_next).valid))) && (((!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul)) ||
+        ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h6))))) &&
         ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h5)}) : (Struct6
@@ -4942,32 +5002,38 @@ module mkModule59
 
     method ActionValue#(Bit#(3)) getULReady_001 (Bit#(64) x_0);
         let x_1 = (rqs_001);
-        Struct6 x_2 = ((((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        Struct6 x_2 = (((((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h5))) || ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        ((Bit#(3))'(3'h4)))) || ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
         ((Bit#(3))'(3'h6)))) && (! (((x_1)[(Bit#(3))'(3'h0)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h0)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h1)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h1)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h1)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h2)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h2)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h2)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h3)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h3)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h3)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h4)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h4)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
         (Struct6 {valid : (Bool)'(True), data : (Bit#(3))'(3'h4)}) :
-        ((((((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        (((((((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h5))) ||
+        ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h4)))) ||
         ((((x_1)[(Bit#(3))'(3'h5)]).m_status) == ((Bit#(3))'(3'h6)))) && (!
         (((x_1)[(Bit#(3))'(3'h5)]).m_is_ul))) &&
         ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_0)[12:5])) ?
@@ -5033,23 +5099,29 @@ module mkModule59
         Bit#(3) x_3 = ((x_2).data);
         Struct49 x_4 = ((x_1)[x_3]);
         Bit#(64) x_5 = (((x_4).m_msg).addr);
-        Bool x_6 = ((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        Bool x_6 = (((((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h0)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h0)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h1)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h1)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h1)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h1)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h2)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h2)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h2)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h2)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h3)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h3)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h3)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h3)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h4)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h4)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h4)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h4)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
-        ((Bool)'(True)) : ((((((x_1)[(Bit#(3))'(3'h5)]).m_status) ==
-        ((Bit#(3))'(3'h6))) &&
+        ((Bool)'(True)) : (((((((x_1)[(Bit#(3))'(3'h5)]).m_status) ==
+        ((Bit#(3))'(3'h4))) || ((((x_1)[(Bit#(3))'(3'h5)]).m_status) ==
+        ((Bit#(3))'(3'h6)))) &&
         ((((((x_1)[(Bit#(3))'(3'h5)]).m_msg).addr)[12:5]) == ((x_5)[12:5])) ?
         ((Bool)'(True)) : ((Bool)'(False))))))))))))));
         when (! (x_6), noAction);
@@ -5630,11 +5702,11 @@ interface Module74;
     (Struct20 x_0);
 endinterface
 
-module mkModule74#(function Action wrReq_edirRam__00__3(Struct37 _),
-    function Action wrReq_edirRam__00__2(Struct37 _),
-    function Action wrReq_edirRam__00__1(Struct37 _),
-    function Action wrReq_edirRam__00__0(Struct37 _),
-    function Action wrReq_dataRam__00(Struct36 _),
+module mkModule74#(function Action wrReq_dataRam__00(Struct37 _),
+    function Action wrReq_edirRam__00__3(Struct36 _),
+    function Action wrReq_edirRam__00__2(Struct36 _),
+    function Action wrReq_edirRam__00__1(Struct36 _),
+    function Action wrReq_edirRam__00__0(Struct36 _),
     function Action repAccess__00(Struct35 _),
     function Action victims__00__registerVictim(Struct16 _),
     function Action wrReq_infoRam__00__7(Struct34 _),
@@ -5918,76 +5990,77 @@ module mkModule74#(function Action wrReq_edirRam__00__3(Struct37 _),
                 ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))), acc_reps :
                 (x_0).reps, acc_index : x_3, acc_way :
                 x_4});
-                if ((x_0).value_write) begin
-                    Struct36 x_32 = (Struct36 {addr : {(x_4),((x_2)[13:5])},
-                    datain : (x_0).value});
-                    let x_33 <- wrReq_dataRam__00(x_32);
-                end else begin
+                if (((! ((x_0).info_hit)) && (x_6)) && (((x_0).edir_hit) ||
+                    (x_8))) begin
+                    Bit#(2) x_32 = (((x_0).edir_hit ? ((x_0).edir_way) :
+                    (x_9)));
+                    Struct36 x_33 = (Struct36 {addr : (x_2)[13:5], datain :
+                    Struct31 {tag : (x_2)[63:14], value : Struct32
+                    {mesi_edir_st : (x_5).mesi_dir_st, mesi_edir_sharers :
+                    (x_5).mesi_dir_sharers}}});
+                    if ((x_32) == ((Bit#(2))'(2'h0))) begin
+                        let x_34 <- wrReq_edirRam__00__0(x_33);
+                    end else begin
 
+                    end
+                    if ((x_32) == ((Bit#(2))'(2'h1))) begin
+                        let x_36 <- wrReq_edirRam__00__1(x_33);
+                    end else begin
+
+                    end
+                    if ((x_32) == ((Bit#(2))'(2'h2))) begin
+                        let x_38 <- wrReq_edirRam__00__2(x_33);
+                    end else begin
+
+                    end
+                    if ((x_32) == ((Bit#(2))'(2'h3))) begin
+                        let x_40 <- wrReq_edirRam__00__3(x_33);
+                    end else begin
+
+                    end
+                end else
+                    begin
+                    if ((x_0).edir_hit) begin
+                        Bit#(2) x_42 = ((x_0).edir_way);
+                        Struct36 x_43 = (Struct36 {addr : (x_2)[13:5], datain
+                        : Struct31 {tag : (x_2)[63:14], value : Struct32
+                        {mesi_edir_st : (x_5).mesi_dir_st, mesi_edir_sharers
+                        :
+                        (x_5).mesi_dir_sharers}}});
+                        if ((x_42) == ((Bit#(2))'(2'h0))) begin
+                            let x_44 <- wrReq_edirRam__00__0(x_43);
+                        end else begin
+
+                        end
+                        if ((x_42) == ((Bit#(2))'(2'h1))) begin
+                            let x_46 <- wrReq_edirRam__00__1(x_43);
+                        end else begin
+
+                        end
+                        if ((x_42) == ((Bit#(2))'(2'h2))) begin
+                            let x_48 <- wrReq_edirRam__00__2(x_43);
+                        end else begin
+
+                        end
+                        if ((x_42) == ((Bit#(2))'(2'h3))) begin
+                            let x_50 <- wrReq_edirRam__00__3(x_43);
+                        end else begin
+
+                        end
+                    end else begin
+
+                    end
                 end
             end else begin
 
             end
-            if (((! ((x_0).info_hit)) && (x_6)) && (((x_0).edir_hit) ||
-                (x_8))) begin
-                Bit#(2) x_36 = (((x_0).edir_hit ? ((x_0).edir_way) :
-                (x_9)));
-                Struct37 x_37 = (Struct37 {addr : (x_2)[13:5], datain :
-                Struct31 {tag : (x_2)[63:14], value : Struct32 {mesi_edir_st
-                : (x_5).mesi_dir_st, mesi_edir_sharers :
-                (x_5).mesi_dir_sharers}}});
-                if ((x_36) == ((Bit#(2))'(2'h0))) begin
-                    let x_38 <- wrReq_edirRam__00__0(x_37);
-                end else begin
+        end else begin
 
-                end
-                if ((x_36) == ((Bit#(2))'(2'h1))) begin
-                    let x_40 <- wrReq_edirRam__00__1(x_37);
-                end else begin
-
-                end
-                if ((x_36) == ((Bit#(2))'(2'h2))) begin
-                    let x_42 <- wrReq_edirRam__00__2(x_37);
-                end else begin
-
-                end
-                if ((x_36) == ((Bit#(2))'(2'h3))) begin
-                    let x_44 <- wrReq_edirRam__00__3(x_37);
-                end else begin
-
-                end
-            end else
-                begin
-                if ((x_0).edir_hit) begin
-                    Bit#(2) x_46 = ((x_0).edir_way);
-                    Struct37 x_47 = (Struct37 {addr : (x_2)[13:5], datain :
-                    Struct31 {tag : (x_2)[63:14], value : Struct32
-                    {mesi_edir_st : (x_5).mesi_dir_st, mesi_edir_sharers :
-                    (x_5).mesi_dir_sharers}}});
-                    if ((x_46) == ((Bit#(2))'(2'h0))) begin
-                        let x_48 <- wrReq_edirRam__00__0(x_47);
-                    end else begin
-
-                    end
-                    if ((x_46) == ((Bit#(2))'(2'h1))) begin
-                        let x_50 <- wrReq_edirRam__00__1(x_47);
-                    end else begin
-
-                    end
-                    if ((x_46) == ((Bit#(2))'(2'h2))) begin
-                        let x_52 <- wrReq_edirRam__00__2(x_47);
-                    end else begin
-
-                    end
-                    if ((x_46) == ((Bit#(2))'(2'h3))) begin
-                        let x_54 <- wrReq_edirRam__00__3(x_47);
-                    end else begin
-
-                    end
-                end else begin
-
-                end
-            end
+        end
+        if ((x_0).value_write) begin
+            Struct37 x_56 = (Struct37 {addr : {(x_4),((x_2)[13:5])}, datain :
+            (x_0).value});
+            let x_57 <- wrReq_dataRam__00(x_56);
         end else begin
 
         end
@@ -6138,15 +6211,14 @@ module mkModule75#(function Action wrReq_dataRam__000(Struct58 _),
             ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
             (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ? ((Bit#(1))'(1'h1))
             : ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
-            acc_way :
-            x_4});
-            if ((x_0).value_write) begin
-                Struct58 x_20 = (Struct58 {addr : {(x_4),((x_2)[12:5])},
-                datain : (x_0).value});
-                let x_21 <- wrReq_dataRam__000(x_20);
-            end else begin
+            acc_way : x_4});
+        end else begin
 
-            end
+        end
+        if ((x_0).value_write) begin
+            Struct58 x_21 = (Struct58 {addr : {(x_4),((x_2)[12:5])}, datain :
+            (x_0).value});
+            let x_22 <- wrReq_dataRam__000(x_21);
         end else begin
 
         end
@@ -6297,15 +6369,14 @@ module mkModule76#(function Action wrReq_dataRam__001(Struct58 _),
             ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
             (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ? ((Bit#(1))'(1'h1))
             : ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
-            acc_way :
-            x_4});
-            if ((x_0).value_write) begin
-                Struct58 x_20 = (Struct58 {addr : {(x_4),((x_2)[12:5])},
-                datain : (x_0).value});
-                let x_21 <- wrReq_dataRam__001(x_20);
-            end else begin
+            acc_way : x_4});
+        end else begin
 
-            end
+        end
+        if ((x_0).value_write) begin
+            Struct58 x_21 = (Struct58 {addr : {(x_4),((x_2)[12:5])}, datain :
+            (x_0).value});
+            let x_22 <- wrReq_dataRam__001(x_21);
         end else begin
 
         end
@@ -12718,9 +12789,9 @@ function Action enq_fifo000(Struct1 _)) (CC);
     m47.enq_fifo0010);
     Module73 m73 <- mkModule73 (m58.wrReq_repRam__001,
     m58.rdResp_repRam__001, m58.rdReq_repRam__001);
-    Module74 m74 <- mkModule74 (m17.wrReq_edirRam__00__3,
-    m18.wrReq_edirRam__00__2, m19.wrReq_edirRam__00__1,
-    m20.wrReq_edirRam__00__0, m21.wrReq_dataRam__00, m65.repAccess__00,
+    Module74 m74 <- mkModule74 (m21.wrReq_dataRam__00,
+    m17.wrReq_edirRam__00__3, m18.wrReq_edirRam__00__2,
+    m19.wrReq_edirRam__00__1, m20.wrReq_edirRam__00__0, m65.repAccess__00,
     m8.victims__00__registerVictim, m9.wrReq_infoRam__00__7,
     m10.wrReq_infoRam__00__6, m11.wrReq_infoRam__00__5,
     m12.wrReq_infoRam__00__4, m13.wrReq_infoRam__00__3,
