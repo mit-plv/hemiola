@@ -5901,17 +5901,17 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct37 _),
         Struct29 x_52 = ((x_19)[x_50]);
         Bit#(50) x_53 = ((x_52).tag);
         Struct13 x_54 = ((x_52).value);
-        Struct11 x_55 = (Struct11 {info_index : x_2, info_hit :
-        (x_20).tm_hit, info_way : (x_20).tm_way, edir_hit : (x_30).tm_hit,
-        edir_way : (x_30).tm_way, edir_slot : x_32, info : ((x_20).tm_hit ?
+        Bit#(3) x_55 = (((x_20).tm_hit ? ((x_20).tm_way) : (x_50)));
+        Struct11 x_56 = (Struct11 {info_index : x_2, info_hit :
+        (x_20).tm_hit, info_way : x_55, edir_hit : (x_30).tm_hit, edir_way :
+        (x_30).tm_way, edir_slot : x_32, info : ((x_20).tm_hit ?
         ((x_20).tm_value) : (Struct13 {mesi_owned : (Bool)'(False),
         mesi_status : (Bit#(3))'(3'h1), mesi_dir_st : (x_31).mesi_edir_st,
         mesi_dir_sharers : (x_31).mesi_edir_sharers})), may_victim : Struct14
         {mv_addr : {(x_53),({(x_2),((Bit#(5))'(5'h0))})}, mv_info : x_54},
         reps : x_33});
-        let x_56 <- rdReq_dataRam__00({(((x_20).tm_hit ? ((x_20).tm_way) :
-        (x_50))),(x_2)});
-        return x_55;
+        let x_57 <- rdReq_dataRam__00({(x_55),(x_2)});
+        return x_56;
     endmethod
 
     method ActionValue#(Vector#(4, Bit#(64))) cache__00__valueRsLineRq
@@ -6154,15 +6154,14 @@ module mkModule75#(function Action wrReq_dataRam__000(Struct58 _),
         Struct54 x_24 = ((x_11)[x_22]);
         Bit#(51) x_25 = ((x_24).tag);
         Struct13 x_26 = ((x_24).value);
-        Struct45 x_27 = (Struct45 {info_index : x_2, info_hit :
-        (x_12).tm_hit, info_way : (x_12).tm_way, edir_hit : unpack(0),
-        edir_way : unpack(0), edir_slot : unpack(0), info : (x_12).tm_value,
-        may_victim : Struct14 {mv_addr :
-        {(x_25),({(x_2),((Bit#(5))'(5'h0))})}, mv_info : x_26}, reps :
-        x_13});
-        let x_28 <- rdReq_dataRam__000({(((x_12).tm_hit ? ((x_12).tm_way) :
-        (x_22))),(x_2)});
-        return x_27;
+        Bit#(2) x_27 = (((x_12).tm_hit ? ((x_12).tm_way) : (x_22)));
+        Struct45 x_28 = (Struct45 {info_index : x_2, info_hit :
+        (x_12).tm_hit, info_way : x_27, edir_hit : unpack(0), edir_way :
+        unpack(0), edir_slot : unpack(0), info : (x_12).tm_value, may_victim
+        : Struct14 {mv_addr : {(x_25),({(x_2),((Bit#(5))'(5'h0))})}, mv_info
+        : x_26}, reps : x_13});
+        let x_29 <- rdReq_dataRam__000({(x_27),(x_2)});
+        return x_28;
     endmethod
 
     method ActionValue#(Vector#(4, Bit#(64))) cache__000__valueRsLineRq
@@ -6312,15 +6311,14 @@ module mkModule76#(function Action wrReq_dataRam__001(Struct58 _),
         Struct54 x_24 = ((x_11)[x_22]);
         Bit#(51) x_25 = ((x_24).tag);
         Struct13 x_26 = ((x_24).value);
-        Struct45 x_27 = (Struct45 {info_index : x_2, info_hit :
-        (x_12).tm_hit, info_way : (x_12).tm_way, edir_hit : unpack(0),
-        edir_way : unpack(0), edir_slot : unpack(0), info : (x_12).tm_value,
-        may_victim : Struct14 {mv_addr :
-        {(x_25),({(x_2),((Bit#(5))'(5'h0))})}, mv_info : x_26}, reps :
-        x_13});
-        let x_28 <- rdReq_dataRam__001({(((x_12).tm_hit ? ((x_12).tm_way) :
-        (x_22))),(x_2)});
-        return x_27;
+        Bit#(2) x_27 = (((x_12).tm_hit ? ((x_12).tm_way) : (x_22)));
+        Struct45 x_28 = (Struct45 {info_index : x_2, info_hit :
+        (x_12).tm_hit, info_way : x_27, edir_hit : unpack(0), edir_way :
+        unpack(0), edir_slot : unpack(0), info : (x_12).tm_value, may_victim
+        : Struct14 {mv_addr : {(x_25),({(x_2),((Bit#(5))'(5'h0))})}, mv_info
+        : x_26}, reps : x_13});
+        let x_29 <- rdReq_dataRam__001({(x_27),(x_2)});
+        return x_28;
     endmethod
 
     method ActionValue#(Vector#(4, Bit#(64))) cache__001__valueRsLineRq

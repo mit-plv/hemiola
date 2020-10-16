@@ -172,13 +172,13 @@ module mkCCTestCheck#(CC mem)(CCTest);
 
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_load if (memInit && onTest && !rq_type[i]);
-            // $display ("Load request %d", i);
+            // $display ("-- %d: load requested (%x)", i, rq_addr[i]);
             mem.l1Ifc[i].mem_enq_rq(ldReq(i));
         endrule
     end
     for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
         rule request_store if (memInit && onTest && rq_type[i]);
-            // $display ("Store request %d", i);
+            // $display ("-- %d: store requested (%x : %x)", i, rq_addr[i], rq_value);
             mem.l1Ifc[i].mem_enq_rq(stReq(i));
             sb[i].set(getChkAddr(rq_addr[i]), rq_value);
         endrule

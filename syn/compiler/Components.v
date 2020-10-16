@@ -1389,10 +1389,15 @@ Section Cache.
         LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
         LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
 
+        (** On cache hit, the way is determined; otherwise, it is the one from the victim. *)
+        LET nway <- (IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
+                     then (#itm!(TagMatch infoK lgWay)@."tm_way")
+                     else #repWay);
+
         LET linfo: InfoReadK <-
                    STRUCT { "info_index" ::= #index;
                             "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
-                            "info_way" ::= #itm!(TagMatch infoK lgWay)@."tm_way";
+                            "info_way" ::= #nway;
                             "edir_hit" ::= $$Default;
                             "edir_way" ::= $$Default;
                             "edir_slot" ::= $$Default;
@@ -1401,10 +1406,7 @@ Section Cache.
                               STRUCT { "mv_addr" ::= buildAddr repTag index;
                                        "mv_info" ::= #repInfo };
                             "reps" ::= #reps };
-        (** On cache hit, request the line value; otherwise, request the victim line value. *)
-        Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
-                         then (#itm!(TagMatch infoK lgWay)@."tm_way")
-                         else #repWay), #index});
+        Call dataRdReq({#nway, #index});
         Ret #linfo
 
       with Method valueRsLineRqN (lw: LineWriteK): valueK :=
@@ -1480,10 +1482,14 @@ Section Cache.
         LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
         LET repInfo <- #repTagInfo!(TagValue infoK)@."value";
 
+        (** On cache hit, the way is determined; otherwise, it is the one from the victim. *)
+        LET nway <- (IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
+                     then (#itm!(TagMatch infoK lgWay)@."tm_way")
+                     else #repWay);
         LET linfo: InfoReadK <-
                    STRUCT { "info_index" ::= #index;
                             "info_hit" ::= #itm!(TagMatch infoK lgWay)@."tm_hit";
-                            "info_way" ::= #itm!(TagMatch infoK lgWay)@."tm_way";
+                            "info_way" ::= #nway;
                             "edir_hit" ::= #etm!(TagMatch edirK edirLgWay)@."tm_hit";
                             "edir_way" ::= #etm!(TagMatch edirK edirLgWay)@."tm_way";
                             "edir_slot" ::= #ees;
@@ -1497,9 +1503,7 @@ Section Cache.
                             "reps" ::= #reps };
 
         (** On cache hit, request the line value; otherwise, request the victim line value. *)
-        Call dataRdReq({(IF (#itm!(TagMatch infoK lgWay)@."tm_hit")
-                         then (#itm!(TagMatch infoK lgWay)@."tm_way")
-                         else #repWay), #index});
+        Call dataRdReq({#nway, #index});
         Ret #linfo
 
       (** Cache-write cases:
