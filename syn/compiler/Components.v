@@ -407,7 +407,7 @@ Section MSHR.
 
   (** * TODO: should be better to separate the MSHR-status vector and the contents vector;
    * it is quite frequent to just change the status. *)
-  (** * FIXME: check all possible uses of [conflictF]; is [conflictF] really required? *)
+  (** * TODO: [conflictF] should be used only when comparing with *releasing* slots. *)
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
         Register ("rqs"+o): Array (Struct MSHR) numSlots <- Default
@@ -431,7 +431,9 @@ Section MSHR.
                                (fun m =>
                                   (m!MSHR@."m_status" != mshrInvalid) &&
                                   (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
-                                  ((!(m!MSHR@."m_is_ul")) || m!MSHR@."m_status" == mshrReleasing) &&
+                                  ((!(m!MSHR@."m_is_ul")) ||
+                                   (m!MSHR@."m_status" == mshrOwned) ||
+                                   (m!MSHR@."m_status" == mshrReleasing)) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
           LET conflict <- #cmmid!(MaybeStr MshrId)@."valid";
@@ -690,8 +692,11 @@ Section MSHR.
           LET mmidDL <- (rqIter MaybeNone
                                 (fun n _ => MaybeSome $n)
                                 (fun m =>
-                                   (m!MSHR@."m_status" == mshrValid || m!MSHR@."m_status" == mshrReleasing) &&
-                                   (!(m!MSHR@."m_is_ul")) && m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                                   ((m!MSHR@."m_status" == mshrValid) ||
+                                    (m!MSHR@."m_status" == mshrOwned) ||
+                                    (m!MSHR@."m_status" == mshrReleasing)) &&
+                                   (!(m!MSHR@."m_is_ul")) &&
+                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                 #rqs);
           Assert !(#mmidDL!(MaybeStr MshrId)@."valid");
           (* [crqIter] is used below, since PRq cannot make any uplocks. *)
@@ -717,8 +722,20 @@ Section MSHR.
           Assert (#mmid!(MaybeStr MshrId)@."valid");
           LET mid <- #mmid!(MaybeStr MshrId)@."data";
           LET pmshr <- #rqs#[#mid];
-          LET ret: DLReadyK <- STRUCT { "r_id" ::= #mid;
-                                        "r_addr" ::= #pmshr!MSHR@."m_msg"!KMsg@."addr" };
+
+          LET addr <- #pmshr!MSHR@."m_msg"!KMsg@."addr";
+          (* There should be no other "releasing" locks (with an equivalent index)
+           * in order to release a downlock. *)
+          LET conflict <- (rqIter $$false
+                                  (fun _ _ => $$true)
+                                  (fun m =>
+                                     ((m!MSHR@."m_status" == mshrOwned) ||
+                                      (m!MSHR@."m_status" == mshrReleasing)) &&
+                                     conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
+                                  #rqs);
+          Assert !#conflict;
+
+          LET ret: DLReadyK <- STRUCT { "r_id" ::= #mid; "r_addr" ::= #addr };
           Ret #ret
 
         with Method ("startRelease"+o)(mid: MshrId): Void :=
