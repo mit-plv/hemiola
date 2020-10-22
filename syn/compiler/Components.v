@@ -258,7 +258,7 @@ Section MSHR.
   Definition mshrInvalid {var}: Expr var (SyntaxKind MSHRStatus) := ($0)%kami_expr.
   Definition mshrWaiting {var}: Expr var (SyntaxKind MSHRStatus) := ($1)%kami_expr.
   Definition mshrFirstWait {var}: Expr var (SyntaxKind MSHRStatus) := ($2)%kami_expr.
-  Definition mshrRetrying {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr.
+  (* Definition mshrRetrying {var}: Expr var (SyntaxKind MSHRStatus) := ($3)%kami_expr. *)
   Definition mshrOwned {var}: Expr var (SyntaxKind MSHRStatus) := ($4)%kami_expr.
   Definition mshrValid {var}: Expr var (SyntaxKind MSHRStatus) := ($5)%kami_expr.
   Definition mshrReleasing {var}: Expr var (SyntaxKind MSHRStatus) := ($6)%kami_expr.
@@ -432,6 +432,7 @@ Section MSHR.
                                   ((m!MSHR@."m_status" == mshrOwned) ||
                                    (m!MSHR@."m_status" == mshrReleasing)) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
+                                  (* m!MSHR@."m_msg"!KMsg@."addr" == #addr) *)
                                #rqs);
 
           LET cmmid <- (rqIter MaybeNone
@@ -565,7 +566,7 @@ Section MSHR.
           then (LET mid <- #mwait!(MaybeStr MshrId)@."data";
                LET mshr <- #rqs#[#mid];
                Write "rqs"+o <- #rqs#[#mid <-
-                                      STRUCT { "m_status" ::= mshrRetrying;
+                                      STRUCT { "m_status" ::= mshrOwned;
                                                "m_next" ::= #mshr!MSHR@."m_next";
                                                "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
                                                "m_msg" ::= #mshr!MSHR@."m_msg";
@@ -719,7 +720,7 @@ Section MSHR.
           LET mmidDL <- (rqIter MaybeNone
                                 (fun n _ => MaybeSome $n)
                                 (fun m =>
-                                   (m!MSHR@."m_status" != mshrInvalid) &&
+                                   (m!MSHR@."m_status" >= mshrOwned) &&
                                    (!(m!MSHR@."m_is_ul")) &&
                                    m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                                 #rqs);
@@ -750,14 +751,14 @@ Section MSHR.
           LET addr <- #pmshr!MSHR@."m_msg"!KMsg@."addr";
 
           (* Should stall when an index-equivalent line is in the pipeline *)
-          LET stall <- (rqIter $$false
-                               (fun _ _ => $$true)
-                               (fun m =>
-                                  ((m!MSHR@."m_status" == mshrOwned) ||
-                                   (m!MSHR@."m_status" == mshrReleasing)) &&
-                                  conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
-                               #rqs);
-          Assert !#stall;
+          (* LET stall <- (rqIter $$false *)
+          (*                      (fun _ _ => $$true) *)
+          (*                      (fun m => *)
+          (*                         ((m!MSHR@."m_status" == mshrOwned) || *)
+          (*                          (m!MSHR@."m_status" == mshrReleasing)) && *)
+          (*                         conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr)) *)
+          (*                      #rqs); *)
+          (* Assert !#stall; *)
 
           LET ret: DLReadyK <- STRUCT { "r_id" ::= #mid; "r_addr" ::= #addr };
           Ret #ret
