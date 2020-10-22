@@ -751,14 +751,14 @@ Section MSHR.
           LET addr <- #pmshr!MSHR@."m_msg"!KMsg@."addr";
 
           (* Should stall when an index-equivalent line is in the pipeline *)
-          (* LET stall <- (rqIter $$false *)
-          (*                      (fun _ _ => $$true) *)
-          (*                      (fun m => *)
-          (*                         ((m!MSHR@."m_status" == mshrOwned) || *)
-          (*                          (m!MSHR@."m_status" == mshrReleasing)) && *)
-          (*                         conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr)) *)
-          (*                      #rqs); *)
-          (* Assert !#stall; *)
+          LET stall <- (rqIter $$false
+                               (fun _ _ => $$true)
+                               (fun m =>
+                                  ((m!MSHR@."m_status" == mshrOwned) ||
+                                   (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
+                               #rqs);
+          Assert !#stall;
 
           LET ret: DLReadyK <- STRUCT { "r_id" ::= #mid; "r_addr" ::= #addr };
           Ret #ret
