@@ -93,6 +93,159 @@ module mkStoreBuffer(StoreBuffer);
     endmethod
 endmodule
 
+typedef 9 IndexSz;
+typedef TAdd#(AddrOffset, IndexSz) IEAddrOffset;
+module mkCCTestCheckIdxEquiv#(CC mem)(CCTest);
+    Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bool) onTest <- mkReg(False);
+    Reg#(CycleCnt) maxCycle <- mkReg(0);
+    Reg#(CycleCnt) curCycle <- mkReg(0);
+    Vector#(L1Num, Reg#(Bit#(64))) numResps <- replicateM(mkReg(0));
+
+    Vector#(L1Num, StoreBuffer) sb <- replicateM(mkStoreBuffer);
+    RegFile#(Bit#(ChkAddrSz), CCValue) refMem <- mkRegFileFull;
+
+    Vector#(L1Num, LFSR#(Bit#(4))) rq_type_rand <- replicateM(mkLFSR_4);
+    Vector#(L1Num, LFSR#(Bit#(16))) rq_baddr_rand <- replicateM(mkLFSR_16);
+    LFSR#(Bit#(32)) rq_value_rand_high <- mkLFSR_32;
+    LFSR#(Bit#(32)) rq_value_rand_low <- mkLFSR_32;
+
+    Vector#(L1Num, Reg#(Bool)) rq_type <- replicateM(mkReg(False));
+    Vector#(L1Num, Reg#(Bit#(64))) rq_addr <- replicateM(mkReg(0));
+    Reg#(CCValue) rq_value <- mkReg(replicate(0));
+    Reg#(Bit#(3)) rq_value_idx <- mkReg(0);
+
+    Reg#(Bool) check_succeed <- mkReg(True);
+
+    function Bit#(64) getAddr (Bit#(ChkAddrSz) baddr);
+        Bit#(IEAddrOffset) pad = 0;
+        Bit#(64) addr = zeroExtend({baddr >> valueOf(IndexSz), pad});
+        return addr;
+    endfunction
+
+    function Bit#(ChkAddrSz) getChkAddr (Bit#(64) addr);
+        return truncate(addr >> valueOf(AddrOffset));
+    endfunction
+
+    // FIXME: may have to wait for a while, for caches to be initialized
+    rule mem_init_done (!memInit);
+        memInit <= True;
+    endrule
+
+    rule inc_cycle (memInit && onTest);
+        curCycle <= curCycle + 1;
+        if (curCycle == maxCycle) onTest <= False;
+    endrule
+
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule rq_type_upd (onTest);
+            let t = rq_type_rand[i].value;
+            rq_type_rand[i].next();
+            Bit#(LgRWRatio) rz = 0;
+            rq_type[i] <= (truncate(t) == rz ? True : False);
+        endrule
+    end
+    for (Integer i = 0; i < valueOf(L1Num); i=i+1) begin
+        rule rq_addr_upd;
+            Bit#(ChkAddrSz) baddr = truncate(rq_baddr_rand[i].value);
+            rq_baddr_rand[i].next();
+            let addr = getAddr(baddr);
+            rq_addr[i] <= addr;
+        endrule
+    end
+    rule rq_value_upd;
+        rq_value[rq_value_idx] <= {rq_value_rand_high.value, rq_value_rand_low.value};
+        rq_value_rand_high.next();
+        rq_value_rand_low.next();
+        rq_value_idx <= rq_value_idx + 1;
+    endrule
+
+    let getRqId = 6'b000000;
+    let setRqId = 6'b001000;
+    let getRsId = 6'b000001;
+    let setRsId = 6'b001001;
+
+    function CCMsg ldReq(Integer i);
+        return CCMsg { id : getRqId, type_ : False, addr : rq_addr[i], value : unpack(0) };
+    endfunction
+    function CCMsg stReq(Integer i);
+        return CCMsg { id : setRqId, type_ : False, addr : rq_addr[i], value : rq_value };
+    endfunction
+
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule request_load if (memInit && onTest && !rq_type[i]);
+            // $display ("-- %d: load requested (%x)", i, rq_addr[i]);
+            mem.l1Ifc[i].mem_enq_rq(ldReq(i));
+        endrule
+    end
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule request_store if (memInit && onTest && rq_type[i]);
+            // $display ("-- %d: store requested (%x : %x)", i, rq_addr[i], rq_value);
+            mem.l1Ifc[i].mem_enq_rq(stReq(i));
+            sb[i].set(getChkAddr(rq_addr[i]), rq_value);
+        endrule
+    end
+
+    for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+        rule response;
+            numResps[i] <= numResps[i] + 1;
+            let rs <- mem.l1Ifc[i].mem_deq_rs ();
+            if (rs.id == 6'b000001) begin
+                let caddr = getChkAddr(rs.addr);
+                let rvalue = refMem.sub(caddr);
+                if (rvalue != rs.value) begin
+                    $display ("-- Verification failed at %t: value mismatch", $time);
+                    $display ("---- core index: %d", i);
+                    $display ("---- address: %x", rs.addr);
+                    $display ("---- response value: %x", rs.value);
+                    $display ("---- reference value: %x", rvalue);
+                    check_succeed <= False;
+                end
+            end
+            else if (rs.id == 6'b001001) begin
+                let caddr = getChkAddr(rs.addr);
+                let sval <- sb[i].get(caddr);
+                if (sval matches tagged Valid .val) refMem.upd(caddr, val);
+                else begin
+                    $display ("Verification failed (%d): cannot find a previous store: %x",
+                       i, caddr);
+                    check_succeed <= False;
+                end
+            end
+            else begin
+                $display (stderr, "Verification failed (%d): a wrong response ID: %b", i, rs.id);
+                check_succeed <= False;
+            end
+        endrule
+    end
+
+    method Action start(CycleCnt _maxCycle) if (!onTest);
+        maxCycle <= _maxCycle;
+        onTest <= True;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            rq_type_rand[i].seed(fromInteger(valueOf(RqTypeSeed) + i));
+            rq_baddr_rand[i].seed(fromInteger(valueOf(RqBAddrSeed) + i));
+        end
+        rq_value_rand_high.seed(fromInteger(valueOf(RqValueSeed)));
+        rq_value_rand_low.seed(fromInteger(valueOf(RqValueSeed) + 1));
+    endmethod
+
+    method Bool isEnd();
+        return !onTest;
+    endmethod
+
+    method Bit#(64) getThroughput();
+        Bit#(64) sum = 0;
+        for (Integer i = 0; i < valueOf(L1Num); i = i+1) begin
+            sum = sum + numResps[i];
+        end
+        return sum;
+    endmethod
+    method Bit#(64) getMark();
+        return (check_succeed ? 1 : 0);
+    endmethod
+endmodule
+
 module mkCCTestCheck#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
     Reg#(Bool) onTest <- mkReg(False);

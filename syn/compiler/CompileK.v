@@ -359,9 +359,7 @@ Section Compile.
         Retv)%kami_action.
 
       Definition inputRetry: ActionT var Void :=
-        (Call mpmshr <- getWait();
-        Assert (#mpmshr!(MaybeStr PreMSHRK)@."valid");
-        LET pmshr <- #mpmshr!(MaybeStr PreMSHRK)@."data";
+        (Call pmshr <- getWait();
         LET msg <- #pmshr!PreMSHR@."r_msg";
         Call mv <- findVictim(#msg!KMsg@."addr");
         LET nelt <- STRUCT { "ir_is_rs_rel" ::= $$false;

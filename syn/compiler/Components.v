@@ -302,7 +302,7 @@ Section MSHR.
   Definition getPRqSlot: Attribute SignatureT := MethodSig ("getPRqSlot"+o)(PreMSHRK): GetSlotK.
   Definition getCRqSlot: Attribute SignatureT := MethodSig ("getCRqSlot"+o)(PreMSHRK): GetSlotK.
 
-  Definition getWait: Attribute SignatureT := MethodSig ("getWait"+o)(): Maybe PreMSHRK.
+  Definition getWait: Attribute SignatureT := MethodSig ("getWait"+o)(): PreMSHRK.
 
   Definition RegUL :=
     STRUCT { "r_id" :: MshrId;
@@ -556,32 +556,42 @@ Section MSHR.
                Retv);
           Ret #ret
 
-        with Method ("getWait"+o)(): Maybe PreMSHRK :=
+        with Method ("getWait"+o)(): PreMSHRK :=
           Read rqs <- "rqs"+o;
+
           LET mwait <- (rqIter MaybeNone
                                (fun i _ => MaybeSome $i)
                                (fun m => m!MSHR@."m_status" == mshrFirstWait)
                                #rqs);
-          If (#mwait!(MaybeStr MshrId)@."valid")
-          then (LET mid <- #mwait!(MaybeStr MshrId)@."data";
-               LET mshr <- #rqs#[#mid];
-               Write "rqs"+o <- #rqs#[#mid <-
-                                      STRUCT { "m_status" ::= mshrOwned;
-                                               "m_next" ::= #mshr!MSHR@."m_next";
-                                               "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
-                                               "m_msg" ::= #mshr!MSHR@."m_msg";
-                                               "m_qidx" ::= #mshr!MSHR@."m_qidx";
-                                               "m_rsb" ::= #mshr!MSHR@."m_rsb";
-                                               "m_dl_rss_from" ::= #mshr!MSHR@."m_dl_rss_from";
-                                               "m_dl_rss_recv" ::= #mshr!MSHR@."m_dl_rss_recv";
-                                               "m_dl_rss" ::= #mshr!MSHR@."m_dl_rss" }];
-               LET pre: PreMSHRK <- STRUCT { "r_id" ::= #mid;
-                                             "r_msg" ::= #mshr!MSHR@."m_msg";
-                                             "r_msg_from" ::= #mshr!MSHR@."m_qidx" };
-               Ret (MaybeSome #pre))
-          else (Ret MaybeNone)
-          as ret;
-          Ret #ret
+          Assert (#mwait!(MaybeStr MshrId)@."valid");
+          LET mid <- #mwait!(MaybeStr MshrId)@."data";
+          LET mshr <- #rqs#[#mid];
+
+          (* Should stall when an index-equivalent line is in the pipeline *)
+          LET addr <- #mshr!MSHR@."m_msg"!KMsg@."addr";
+          LET stall <- (rqIter $$false
+                               (fun _ _ => $$true)
+                               (fun m =>
+                                  ((m!MSHR@."m_status" == mshrOwned) ||
+                                   (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
+                               #rqs);
+          Assert !#stall;
+
+          Write "rqs"+o <- #rqs#[#mid <-
+                                 STRUCT { "m_status" ::= mshrOwned;
+                                          "m_next" ::= #mshr!MSHR@."m_next";
+                                          "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
+                                          "m_msg" ::= #mshr!MSHR@."m_msg";
+                                          "m_qidx" ::= #mshr!MSHR@."m_qidx";
+                                          "m_rsb" ::= #mshr!MSHR@."m_rsb";
+                                          "m_dl_rss_from" ::= #mshr!MSHR@."m_dl_rss_from";
+                                          "m_dl_rss_recv" ::= #mshr!MSHR@."m_dl_rss_recv";
+                                          "m_dl_rss" ::= #mshr!MSHR@."m_dl_rss" }];
+          LET pre: PreMSHRK <- STRUCT { "r_id" ::= #mid;
+                                        "r_msg" ::= #mshr!MSHR@."m_msg";
+                                        "r_msg_from" ::= #mshr!MSHR@."m_qidx" };
+          Ret #pre
 
         with Method ("registerUL"+o)(ul: RegULK): Void :=
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;

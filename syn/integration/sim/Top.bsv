@@ -18,7 +18,8 @@ module mkTop(Empty);
     // CCTest tester <- mkCCTestIsolated(mem);
     // CCTest tester <- mkCCTestShared(mem);
     // CCTest tester <- mkCCTestRandom(mem);
-    CCTest tester <- mkCCTestCheck(mem);
+    // CCTest tester <- mkCCTestCheck(mem);
+    CCTest tester <- mkCCTestCheckIdxEquiv(mem);
 
     Reg#(Bool) started <- mkReg(False);
     Reg#(Bool) ended <- mkReg(False);
