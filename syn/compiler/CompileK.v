@@ -669,7 +669,14 @@ Section Compile.
                   then (Call setVictim
                              (STRUCT { "victim_idx" ::= #mvi!(MaybeStr (Bit victimIdxSz))@."data";
                                        "victim_info" ::= #nline!(LineWrite infoK)@."info";
-                                       "victim_value" ::= #nline!(LineWrite infoK)@."value" });
+                                       "victim_value" ::=
+                                         (** [valueRsLineRq] checks whether to update the value
+                                          * by [value_write], but [setVictim] always tries to write
+                                          * with [victim_value]. Thus we need to check here whether
+                                          * to update the value or not. *)
+                                         (IF (#nline!(LineWrite infoK)@."value_write")
+                                          then #nline!(LineWrite infoK)@."value"
+                                          else #victimVal) });
                        Ret #victimVal)
                   else (Call val <- valueRsLineRq(#nline); Ret #val)
                    as nvalue; cont nvalue))

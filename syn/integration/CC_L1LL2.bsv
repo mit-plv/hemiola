@@ -6664,11 +6664,6 @@ module mkModule76#(function Action wrReq_dataRam__001(Struct56 _),
 
         end
         if ((x_0).value_write) begin
-            $display ("---- 001: valueRsLineRq value_write: %x %d %d %d (%d %d %d %d)",
-               x_2, x_0.info_hit, x_0.info_way, x_0.info_write,
-               x_0.info.mesi_owned, x_0.info.mesi_status,
-               x_0.info.mesi_dir_st, x_0.info.mesi_dir_sharers);
-            $display ("---- 001: valueRsLineRq value: %x", x_0.value);
             Struct56 x_21 = (Struct56 {addr : {(x_4),((x_2)[12:5])}, datain :
             (x_0).value});
             let x_22 <- wrReq_dataRam__001(x_21);
@@ -6848,14 +6843,10 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_lr_cache_00;
+        $display ("Rule fired: rule_lr_cache_00 at %t", $time);
         let x_0 <- deq_fifoI2L_00();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__00__infoRsValueRq(((x_0).ir_msg).addr);
-        $display ("-- Rule fired: rule_lr_cache_00 (%x): (%d %d) (%d %d %d %d)",
-           x_0.ir_msg.addr,
-           x_1.info_hit, x_1.edir_hit,
-           x_1.info.mesi_owned, x_1.info.mesi_status,
-           x_1.info.mesi_dir_st, x_1.info.mesi_dir_sharers);
         Struct14 x_2 = (Struct14 {lr_ir_pp : x_0, lr_ir : x_1, lr_value :
         unpack(0)});
         let x_3 <- enq_fifoL2E_00(x_2);
@@ -6940,7 +6931,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -7021,7 +7012,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -7225,7 +7216,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_20 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_19).info, victim_value :
-            (x_19).value});
+            ((x_19).value_write ? ((x_19).value) : (x_9))});
             x_22 = x_9;
         end else begin
             let x_21 <- cache__00__valueRsLineRq(x_19);
@@ -7526,7 +7517,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -7615,7 +7606,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -7701,7 +7692,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -7787,7 +7778,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -7922,7 +7913,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -8008,7 +7999,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -8097,7 +8088,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -8197,7 +8188,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_21 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__00__valueRsLineRq(x_20);
@@ -8277,7 +8268,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -8358,7 +8349,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -8562,7 +8553,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_20 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_19).info, victim_value :
-            (x_19).value});
+            ((x_19).value_write ? ((x_19).value) : (x_9))});
             x_22 = x_9;
         end else begin
             let x_21 <- cache__00__valueRsLineRq(x_19);
@@ -8863,7 +8854,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -8952,7 +8943,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -9038,7 +9029,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -9124,7 +9115,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -9259,7 +9250,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -9345,7 +9336,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_18 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__00__valueRsLineRq(x_17);
@@ -9434,7 +9425,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -9534,7 +9525,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_21 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__00__valueRsLineRq(x_20);
@@ -9644,7 +9635,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_23 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_22).info, victim_value :
-            (x_22).value});
+            ((x_22).value_write ? ((x_22).value) : (x_9))});
             x_25 = x_9;
         end else begin
             let x_24 <- cache__00__valueRsLineRq(x_22);
@@ -9746,7 +9737,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_23 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_22).info, victim_value :
-            (x_22).value});
+            ((x_22).value_write ? ((x_22).value) : (x_9))});
             x_25 = x_9;
         end else begin
             let x_24 <- cache__00__valueRsLineRq(x_22);
@@ -9856,7 +9847,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_23 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_22).info, victim_value :
-            (x_22).value});
+            ((x_22).value_write ? ((x_22).value) : (x_9))});
             x_25 = x_9;
         end else begin
             let x_24 <- cache__00__valueRsLineRq(x_22);
@@ -9930,7 +9921,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -10097,7 +10088,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_23 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_22).info, victim_value :
-            (x_22).value});
+            ((x_22).value_write ? ((x_22).value) : (x_9))});
             x_25 = x_9;
         end else begin
             let x_24 <- cache__00__valueRsLineRq(x_22);
@@ -10196,7 +10187,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_22 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_21).info, victim_value :
-            (x_21).value});
+            ((x_21).value_write ? ((x_21).value) : (x_9))});
             x_24 = x_9;
         end else begin
             let x_23 <- cache__00__valueRsLineRq(x_21);
@@ -10268,7 +10259,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -10356,7 +10347,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_21 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__00__valueRsLineRq(x_20);
@@ -10428,7 +10419,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -10502,7 +10493,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_19 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__00__valueRsLineRq(x_18);
@@ -10749,7 +10740,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_21 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__00__valueRsLineRq(x_20);
@@ -10838,7 +10829,7 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         if ((x_8).valid) begin
             let x_21 <- victims__00__setVictim(Struct20 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__00__valueRsLineRq(x_20);
@@ -11124,14 +11115,10 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
     endrule
 
     rule rule_lr_cache_000;
+        $display ("Rule fired: rule_lr_cache_000 at %t", $time);
         let x_0 <- deq_fifoI2L_000();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__000__infoRsValueRq(((x_0).ir_msg).addr);
-        $display ("-- Rule fired: rule_lr_cache_000 (%x): (%d %d) (%d %d %d %d)",
-           x_0.ir_msg.addr,
-           x_1.info_hit, x_1.edir_hit,
-           x_1.info.mesi_owned, x_1.info.mesi_status,
-           x_1.info.mesi_dir_st, x_1.info.mesi_dir_sharers);
         Struct45 x_2 = (Struct45 {lr_ir_pp : x_0, lr_ir : x_1, lr_value :
         unpack(0)});
         let x_3 <- enq_fifoL2E_000(x_2);
@@ -11316,7 +11303,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_21 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__000__valueRsLineRq(x_20);
@@ -11393,7 +11380,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_21 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__000__valueRsLineRq(x_20);
@@ -11466,7 +11453,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_19 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__000__valueRsLineRq(x_18);
@@ -11544,7 +11531,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_20 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_19).info, victim_value :
-            (x_19).value});
+            ((x_19).value_write ? ((x_19).value) : (x_9))});
             x_22 = x_9;
         end else begin
             let x_21 <- cache__000__valueRsLineRq(x_19);
@@ -11606,7 +11593,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_18 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__000__valueRsLineRq(x_17);
@@ -11744,7 +11731,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_22 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_21).info, victim_value :
-            (x_21).value});
+            ((x_21).value_write ? ((x_21).value) : (x_9))});
             x_24 = x_9;
         end else begin
             let x_23 <- cache__000__valueRsLineRq(x_21);
@@ -11816,7 +11803,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_19 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__000__valueRsLineRq(x_18);
@@ -11889,7 +11876,7 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_19 <- victims__000__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__000__valueRsLineRq(x_18);
@@ -12137,27 +12124,24 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
     endrule
 
     rule rule_ir_victims_001;
+        $display ("Rule fired: rule_ir_victims_001 at %t", $time);
         let x_0 <- deq_fifoN2I_001();
         when (((x_0).ir_by_victim).valid, noAction);
-        $display ("-- Rule fired: rule_ir_victims_001 (%x)", x_0.ir_msg.addr);
         let x_1 <- enq_fifoI2L_001(x_0);
     endrule
 
     rule rule_lr_cache_001;
+        $display ("Rule fired: rule_lr_cache_001 at %t", $time);
         let x_0 <- deq_fifoI2L_001();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__001__infoRsValueRq(((x_0).ir_msg).addr);
-        $display ("-- Rule fired: rule_lr_cache_001 (%x): (%d %d) (%d %d %d %d)",
-           x_0.ir_msg.addr,
-           x_1.info_hit, x_1.edir_hit,
-           x_1.info.mesi_owned, x_1.info.mesi_status,
-           x_1.info.mesi_dir_st, x_1.info.mesi_dir_sharers);
         Struct45 x_2 = (Struct45 {lr_ir_pp : x_0, lr_ir : x_1, lr_value :
         unpack(0)});
         let x_3 <- enq_fifoL2E_001(x_2);
     endrule
 
     rule rule_lr_victims_001;
+        $display ("Rule fired: rule_lr_victims_001 at %t", $time);
         let x_0 <- deq_fifoI2L_001();
         when (((x_0).ir_by_victim).valid, noAction);
         Bit#(2) x_1 = (((x_0).ir_by_victim).data);
@@ -12168,11 +12152,6 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         may_victim : unpack(0), reps : unpack(0)});
         Struct45 x_4 = (Struct45 {lr_ir_pp : x_0, lr_ir : x_3, lr_value :
         (x_2).victim_value});
-        $display ("-- Rule fired: rule_lr_victims_001 (%x) (%d %d %d %d) (%x)",
-           x_0.ir_msg.addr,
-           x_2.victim_info.mesi_owned, x_2.victim_info.mesi_status,
-           x_2.victim_info.mesi_dir_st, x_2.victim_info.mesi_dir_sharers,
-           x_2.victim_value);
         let x_5 <- enq_fifoL2E_001(x_4);
     endrule
 
@@ -12340,7 +12319,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_21 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__001__valueRsLineRq(x_20);
@@ -12417,7 +12396,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_21 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_20).info, victim_value :
-            (x_20).value});
+            ((x_20).value_write ? ((x_20).value) : (x_9))});
             x_23 = x_9;
         end else begin
             let x_22 <- cache__001__valueRsLineRq(x_20);
@@ -12490,7 +12469,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_19 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__001__valueRsLineRq(x_18);
@@ -12568,7 +12547,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_20 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_19).info, victim_value :
-            (x_19).value});
+            ((x_19).value_write ? ((x_19).value) : (x_9))});
             x_22 = x_9;
         end else begin
             let x_21 <- cache__001__valueRsLineRq(x_19);
@@ -12630,7 +12609,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_18 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_17).info, victim_value :
-            (x_17).value});
+            ((x_17).value_write ? ((x_17).value) : (x_9))});
             x_20 = x_9;
         end else begin
             let x_19 <- cache__001__valueRsLineRq(x_17);
@@ -12768,7 +12747,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_22 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_21).info, victim_value :
-            (x_21).value});
+            ((x_21).value_write ? ((x_21).value) : (x_9))});
             x_24 = x_9;
         end else begin
             let x_23 <- cache__001__valueRsLineRq(x_21);
@@ -12840,7 +12819,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_19 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__001__valueRsLineRq(x_18);
@@ -12913,7 +12892,7 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         if ((x_8).valid) begin
             let x_19 <- victims__001__setVictim(Struct50 {victim_idx :
             (x_8).data, victim_info : (x_18).info, victim_value :
-            (x_18).value});
+            ((x_18).value_write ? ((x_18).value) : (x_9))});
             x_21 = x_9;
         end else begin
             let x_20 <- cache__001__valueRsLineRq(x_18);
