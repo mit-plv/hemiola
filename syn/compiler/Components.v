@@ -438,7 +438,8 @@ Section MSHR.
           LET cmmid <- (rqIter MaybeNone
                                (fun i m => MaybeSome $i)
                                (fun m =>
-                                  (m!MSHR@."m_status" != mshrInvalid) &&
+                                  (* (m!MSHR@."m_status" != mshrInvalid) && *)
+                                  (m!MSHR@."m_status" >= mshrOwned) &&
                                   (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
                                   (!(m!MSHR@."m_is_ul")) &&
                                   m!MSHR@."m_msg"!KMsg@."addr" == #addr)
