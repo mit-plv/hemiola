@@ -425,24 +425,26 @@ Section MSHR.
           LET mid <- #mmid!(MaybeStr MshrId)@."data";
           LET addr <- #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
 
-          (* Should stall when an index-equivalent line is in the pipeline *)
+          (* Stall when either
+           * 1) an index-equivalent releasing line is in the pipeline or
+           * 2) a same-address line is in the pipeline. *)
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  ((m!MSHR@."m_status" == mshrOwned) ||
-                                   (m!MSHR@."m_status" == mshrReleasing)) &&
-                                  conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
-                                  (* m!MSHR@."m_msg"!KMsg@."addr" == #addr) *)
+                                  ((m!MSHR@."m_status" == mshrReleasing) &&
+                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr)) ||
+                                  (((m!MSHR@."m_status" == mshrOwned) ||
+                                    (m!MSHR@."m_status" == mshrReleasing)) &&
+                                   (m!MSHR@."m_msg"!KMsg@."addr" == #addr)))
                                #rqs);
 
+          (* Conflict when a valid downlock exists ([cmmid]).
+           * Find the last of the chain when conflict ([pmid]). *)
           LET cmmid <- (rqIter MaybeNone
                                (fun i m => MaybeSome $i)
-                               (fun m =>
-                                  (* (m!MSHR@."m_status" != mshrInvalid) && *)
-                                  (m!MSHR@."m_status" >= mshrOwned) &&
-                                  (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
-                                  (!(m!MSHR@."m_is_ul")) &&
-                                  m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                               (fun m => (m!MSHR@."m_status" == mshrValid) &&
+                                         (!(m!MSHR@."m_is_ul")) &&
+                                         m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                                #rqs);
           LET conflict <- #cmmid!(MaybeStr MshrId)@."valid";
           LET ret: GetSlotK <- STRUCT { "s_has_slot" ::= #hasSlot && !#stall;
@@ -461,7 +463,14 @@ Section MSHR.
                                        "m_dl_rss_recv" ::= $$Default;
                                        "m_dl_rss" ::= $$Default }];
                If (#conflict)
-               then (LET pmid <- #cmmid!(MaybeStr MshrId)@."data";
+               then (LET pmid: MshrId <-
+                               (rqIter $$Default
+                                       (fun i m => $i)
+                                       (fun m =>
+                                          (m!MSHR@."m_status" != mshrInvalid) &&
+                                          (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                          m!MSHR@."m_msg"!KMsg@."addr" == #addr)
+                                       #rqs);
                     LET pslot <- #rqs#[#pmid];
                     LET urqs <-
                     #nrqs#[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
@@ -495,8 +504,7 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  ((m!MSHR@."m_status" == mshrOwned) ||
-                                   (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  (m!MSHR@."m_status" == mshrReleasing) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
 
@@ -573,9 +581,10 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  ((m!MSHR@."m_status" == mshrOwned) ||
-                                   (m!MSHR@."m_status" == mshrReleasing)) &&
-                                  conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
+                                  ((m!MSHR@."m_status" >= mshrOwned) &&
+                                   (m!MSHR@."m_msg"!KMsg@."addr" == #addr)) ||
+                                  ((m!MSHR@."m_status" == mshrReleasing) &&
+                                   (conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))))
                                #rqs);
           Assert !#stall;
 
@@ -721,8 +730,7 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  ((m!MSHR@."m_status" == mshrOwned) ||
-                                   (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  (m!MSHR@."m_status" == mshrReleasing) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
           Assert !#stall;
@@ -736,6 +744,7 @@ Section MSHR.
                                    m!MSHR@."m_msg"!KMsg@."addr" == #addr)
                                 #rqs);
           Assert !(#mmidDL!(MaybeStr MshrId)@."valid");
+
           (* [crqIter] is used below, since PRq cannot make any uplocks. *)
           LET mmidUL <- (crqIter MaybeNone
                                  (fun n _ => MaybeSome $n)
@@ -765,8 +774,7 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  ((m!MSHR@."m_status" == mshrOwned) ||
-                                   (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  (m!MSHR@."m_status" == mshrReleasing) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
           Assert !#stall;
