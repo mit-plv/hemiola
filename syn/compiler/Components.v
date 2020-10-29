@@ -730,7 +730,8 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  (m!MSHR@."m_status" == mshrReleasing) &&
+                                  ((m!MSHR@."m_status" == mshrOwned) ||
+                                   m!MSHR@."m_status" == mshrReleasing) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
           Assert !#stall;
@@ -774,7 +775,8 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  (m!MSHR@."m_status" == mshrReleasing) &&
+                                  ((m!MSHR@."m_status" == mshrOwned) ||
+                                   m!MSHR@."m_status" == mshrReleasing) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
           Assert !#stall;
