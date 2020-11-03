@@ -18,11 +18,12 @@ MESI_EXT_VO=$(MESI_EXT).vo
 
 BSV_EXT_HEADER_REL=./predefs/Header.bsv
 
-# BSV_EXT_INIT_REL=./predefs/ImplL1L2LL4.bsv
-BSV_EXT_INIT_REL=./predefs/ImplL1LL2.bsv
+BSV_EXT_IMPL_REL=./predefs/ImplL1LL2.bsv
+BSV_EXT_IFC_REL=./predefs/Ifc.bsv
 
 BSV_EXT_HEADER=$(realpath $(BSV_EXT_HEADER_REL))
-BSV_EXT_INIT=$(realpath $(BSV_EXT_INIT_REL))
+BSV_EXT_IMPL=$(realpath $(BSV_EXT_IMPL_REL))
+BSV_EXT_IFC=$(realpath $(BSV_EXT_IFC_REL))
 
 msi_comp: Makefile.coq
 	touch $(MSI_EXT_V)
@@ -42,7 +43,7 @@ msi_bsv: msi_comp
 	mv Target.ml* $(BSV_EXT)
 	$(MAKE) -C $(BSV_EXT)
 	cd $(BSV_EXT); ./Main.native $(BSV_EXT_FLAGS) \
-	-header $(BSV_EXT_HEADER) -top $(BSV_TOP_NAME) -top-impl $(BSV_EXT_INIT) \
+	-header $(BSV_EXT_HEADER) -top $(BSV_TOP_NAME) -top-ifc $(BSV_EXT_IFC) -top-impl $(BSV_EXT_IMPL) \
 	$(MSI_EXT_BSV_NAME)
 	mv $(BSV_EXT)/$(MSI_EXT_BSV_NAME) ./
 
@@ -50,7 +51,7 @@ mesi_bsv: mesi_comp
 	mv Target.ml* $(BSV_EXT)
 	$(MAKE) -C $(BSV_EXT)
 	cd $(BSV_EXT); ./Main.native $(BSV_EXT_FLAGS) \
-	-header $(BSV_EXT_HEADER) -top $(BSV_TOP_NAME) -top-impl $(BSV_EXT_INIT) \
+	-header $(BSV_EXT_HEADER) -top $(BSV_TOP_NAME) -top-ifc $(BSV_EXT_IFC) -top-impl $(BSV_EXT_IMPL) \
 	$(MESI_EXT_BSV_NAME)
 	mv $(BSV_EXT)/$(MESI_EXT_BSV_NAME) ./
 

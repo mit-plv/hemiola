@@ -146,7 +146,9 @@ Section Instances.
     (LET value <- $$Default;
     LET owned <- #pinfo!MesiInfo@."mesi_owned";
     LET status: KMesi <- #pinfo!MesiInfo@."mesi_status";
-    LET dir <- STRUCT { "dir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+    LET dir <- STRUCT { "dir_st" ::=
+                          (IF (#pinfo!MesiInfo@."mesi_dir_st" == mesiNP)
+                           then mesiI else #pinfo!MesiInfo@."mesi_dir_st");
                         "dir_excl" ::= bvFirstSet (#pinfo!MesiInfo@."mesi_dir_sharers");
                         "dir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" };
     cont (value, (owned, (status, (dir, tt)))))%kami_action.
@@ -270,14 +272,15 @@ Section Cache.
     {#tag, {#index, $0}}%kami_expr.
 
   Definition MesiEDir :=
-    STRUCT { "mesi_edir_st" :: KMesi;
+    STRUCT { "mesi_edir_owned" :: Bool;
+             "mesi_edir_st" :: KMesi;
              "mesi_edir_sharers" :: Bit hcfg_children_max }.
   Let MesiEDirK := Struct MesiEDir.
 
   Definition edirToInfo (var: Kind -> Type)
              (edir: fullType var (SyntaxKind MesiEDirK))
     : Expr var (SyntaxKind (Struct MesiInfo)) :=
-    (STRUCT { "mesi_owned" ::= $$false;
+    (STRUCT { "mesi_owned" ::= #edir!MesiEDir@."mesi_edir_owned";
               "mesi_status" ::= mesiI;
               "mesi_dir_st" ::= #edir!MesiEDir@."mesi_edir_st";
               "mesi_dir_sharers" ::= #edir!MesiEDir@."mesi_edir_status" })%kami_expr.
@@ -285,23 +288,25 @@ Section Cache.
   Definition edirFromInfo (var: Kind -> Type)
              (pinfo: fullType var (SyntaxKind (Struct MesiInfo)))
     : Expr var (SyntaxKind MesiEDirK) :=
-    (STRUCT { "mesi_edir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
+    (STRUCT { "mesi_edir_owned" ::= #pinfo!MesiInfo@."mesi_owned";
+              "mesi_edir_st" ::= #pinfo!MesiInfo@."mesi_dir_st";
               "mesi_edir_sharers" ::= #pinfo!MesiInfo@."mesi_dir_sharers" })%kami_expr.
 
   Definition isJustDir (var: Kind -> Type)
              (pinfo: fullType var (SyntaxKind (Struct MesiInfo)))
     : Expr var (SyntaxKind Bool) :=
-    ((!(#pinfo!MesiInfo@."mesi_owned")) && #pinfo!MesiInfo@."mesi_status" == mesiI)%kami_expr.
+    ((#pinfo!MesiInfo@."mesi_status" <= mesiI) &&
+     (#pinfo!MesiInfo@."mesi_dir_st" != mesiE))%kami_expr.
 
   Definition isDirInvalid (var: Kind -> Type)
              (pinfo: fullType var (SyntaxKind (Struct MesiInfo)))
     : Expr var (SyntaxKind Bool) :=
-    (#pinfo!MesiInfo@."mesi_dir_st" == mesiNP || #pinfo!MesiInfo@."mesi_dir_st" == mesiI)%kami_expr.
+    (#pinfo!MesiInfo@."mesi_dir_st" <= mesiI)%kami_expr.
 
   Definition edirEmptySlot (var: Kind -> Type)
              (edir: Expr var (SyntaxKind MesiEDirK))
     : Expr var (SyntaxKind Bool) :=
-    (edir!MesiEDir@."mesi_edir_st" == mesiNP || edir!MesiEDir@."mesi_edir_st" == mesiI)%kami_expr.
+    (edir!MesiEDir@."mesi_edir_st" <= mesiI)%kami_expr.
 
   Definition mesiInfoInit: ConstT (Struct MesiInfo) :=
     (CSTRUCT { "mesi_owned" ::= ConstBool false;
@@ -310,7 +315,8 @@ Section Cache.
                "mesi_dir_sharers" ::= ConstBit $0 })%init.
 
   Definition mesiEDirInit: ConstT MesiEDirK :=
-    (CSTRUCT { "mesi_edir_st" ::= ConstBit $1;
+    (CSTRUCT { "mesi_edir_owned" ::= ConstBool false;
+               "mesi_edir_st" ::= ConstBit $1;
                "mesi_edir_sharers" ::= ConstBit $0 })%init.
 
   Definition mesiL1: Modules :=

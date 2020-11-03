@@ -35,7 +35,7 @@ typedef struct { Bit#(50) tag; Struct12 value;  } Struct28 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(3) tm_way; Struct12 tm_value;  } Struct29 deriving(Eq, Bits);
 typedef struct { Struct1 in_msg; Bit#(3) in_msg_from;  } Struct3 deriving(Eq, Bits);
 typedef struct { Bit#(50) tag; Struct31 value;  } Struct30 deriving(Eq, Bits);
-typedef struct { Bit#(3) mesi_edir_st; Bit#(2) mesi_edir_sharers;  } Struct31 deriving(Eq, Bits);
+typedef struct { Bool mesi_edir_owned; Bit#(3) mesi_edir_st; Bit#(2) mesi_edir_sharers;  } Struct31 deriving(Eq, Bits);
 typedef struct { Bool tm_hit; Bit#(2) tm_way; Struct31 tm_value;  } Struct32 deriving(Eq, Bits);
 typedef struct { Bit#(9) addr; Struct28 datain;  } Struct33 deriving(Eq, Bits);
 typedef struct { Bit#(1) acc_type; Vector#(8, Bit#(8)) acc_reps; Bit#(9) acc_index; Bit#(3) acc_way;  } Struct34 deriving(Eq, Bits);
@@ -409,6 +409,23 @@ module mkModule8
     (Module8);
     Reg#(Vector#(8, Struct15)) victimRegs__00 <- mkReg(unpack(0));
 
+    Reg#(Bit#(19)) sscnt <- mkReg(0);
+    Reg#(Bool) ssdp <- mkReg(False);
+    rule snapshot (!ssdp);
+        if (sscnt == maxBound) begin
+            for (Integer i = 0; i < 8; i = i+1) begin
+                $display("-- 00:Victims[%d]: %d (%x) (%d %d %d %d)",
+                   i, victimRegs__00[i].victim_valid,
+                   victimRegs__00[i].victim_addr,
+                   victimRegs__00[i].victim_info.mesi_owned,
+                   victimRegs__00[i].victim_info.mesi_status,
+                   victimRegs__00[i].victim_info.mesi_dir_st,
+                   victimRegs__00[i].victim_info.mesi_dir_sharers);
+            end
+            ssdp <= True;
+        end
+        else sscnt <= sscnt + 1;
+    endrule
     // No rules in this module
 
     method ActionValue#(Struct6) victims__00__findVictim (Bit#(64) x_0);
@@ -827,7 +844,7 @@ module mkModule9 (Module9);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h7, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'hf, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -862,7 +879,7 @@ module mkModule10 (Module10);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h6, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'he, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -897,7 +914,7 @@ module mkModule11 (Module11);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h5, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'hd, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -932,7 +949,7 @@ module mkModule12 (Module12);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h4, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'hc, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -967,7 +984,7 @@ module mkModule13 (Module13);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h3, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'hb, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1002,7 +1019,7 @@ module mkModule14 (Module14);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h2, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'ha, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1037,7 +1054,7 @@ module mkModule15 (Module15);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h1, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'h9, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1072,7 +1089,7 @@ module mkModule16 (Module16);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct28 {tag: 50'h0, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct28 {tag: 50'h8, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1107,7 +1124,7 @@ module mkModule17 (Module17);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct30 {tag: 50'hb, value: Struct31 {mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
+        let initData = Struct30 {tag: 50'h13, value: Struct31 {mesi_edir_owned: False, mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1142,7 +1159,7 @@ module mkModule18 (Module18);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct30 {tag: 50'ha, value: Struct31 {mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
+        let initData = Struct30 {tag: 50'h12, value: Struct31 {mesi_edir_owned: False, mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1177,7 +1194,7 @@ module mkModule19 (Module19);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct30 {tag: 50'h9, value: Struct31 {mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
+        let initData = Struct30 {tag: 50'h11, value: Struct31 {mesi_edir_owned: False, mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1212,7 +1229,7 @@ module mkModule20 (Module20);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct30 {tag: 50'h8, value: Struct31 {mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
+        let initData = Struct30 {tag: 50'h10, value: Struct31 {mesi_edir_owned: False, mesi_edir_st: 3'h1, mesi_edir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1328,6 +1345,19 @@ module mkModule23
     (Module23);
     Reg#(Vector#(12, Struct17)) rqs_00 <- mkReg(unpack(0));
 
+    Reg#(Bit#(19)) sscnt <- mkReg(0);
+    Reg#(Bool) ssdp <- mkReg(False);
+    rule snapshot (!ssdp);
+        if (sscnt == maxBound) begin
+            for (Integer i = 0; i < 12; i = i+1) begin
+                $display ("-- 00:MSHRs[%d]: %d %d %d %d %x %d",
+                   i, rqs_00[i].m_status, rqs_00[i].m_next, rqs_00[i].m_is_ul,
+                   rqs_00[i].m_msg.id, rqs_00[i].m_msg.addr, rqs_00[i].m_qidx);
+            end
+            ssdp <= True;
+        end
+        else sscnt <= sscnt + 1;
+    endrule
     // No rules in this module
 
     method ActionValue#(Struct17) getMSHR_00 (Bit#(4) x_0);
@@ -3132,7 +3162,7 @@ module mkModule35 (Module35);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h3, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h7, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -3167,7 +3197,7 @@ module mkModule36 (Module36);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h2, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h6, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -3202,7 +3232,7 @@ module mkModule37 (Module37);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h1, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h5, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -3237,7 +3267,7 @@ module mkModule38 (Module38);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h0, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h4, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -3353,6 +3383,19 @@ module mkModule41
     (Module41);
     Reg#(Vector#(6, Struct47)) rqs_000 <- mkReg(unpack(0));
 
+    Reg#(Bit#(19)) sscnt <- mkReg(0);
+    Reg#(Bool) ssdp <- mkReg(False);
+    rule snapshot (!ssdp);
+        if (sscnt == maxBound) begin
+            for (Integer i = 0; i < 6; i = i+1) begin
+                $display ("-- 000:MSHRs[%d]: %d %d %d %d %x %d",
+                   i, rqs_000[i].m_status, rqs_000[i].m_next, rqs_000[i].m_is_ul,
+                   rqs_000[i].m_msg.id, rqs_000[i].m_msg.addr, rqs_000[i].m_qidx);
+            end
+            ssdp <= True;
+        end
+        else sscnt <= sscnt + 1;
+    endrule
     // No rules in this module
 
     method ActionValue#(Struct47) getMSHR_000 (Bit#(3) x_0);
@@ -4735,7 +4778,7 @@ module mkModule53 (Module53);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h3, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h7, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -4770,7 +4813,7 @@ module mkModule54 (Module54);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h2, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h6, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -4805,7 +4848,7 @@ module mkModule55 (Module55);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h1, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h5, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -4840,7 +4883,7 @@ module mkModule56 (Module56);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = Struct52 {tag: 51'h0, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
+        let initData = Struct52 {tag: 51'h4, value: Struct12 {mesi_owned: False, mesi_status: 3'h1, mesi_dir_st: 3'h1, mesi_dir_sharers: 2'h0}};
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -4956,6 +4999,19 @@ module mkModule59
     (Module59);
     Reg#(Vector#(6, Struct47)) rqs_001 <- mkReg(unpack(0));
 
+    Reg#(Bit#(19)) sscnt <- mkReg(0);
+    Reg#(Bool) ssdp <- mkReg(False);
+    rule snapshot (!ssdp);
+        if (sscnt == maxBound) begin
+            for (Integer i = 0; i < 6; i = i+1) begin
+                $display ("-- 001:MSHRs[%d]: %d %d %d %d %x %d",
+                   i, rqs_001[i].m_status, rqs_001[i].m_next, rqs_001[i].m_is_ul,
+                   rqs_001[i].m_msg.id, rqs_001[i].m_msg.addr, rqs_001[i].m_qidx);
+            end
+            ssdp <= True;
+        end
+        else sscnt <= sscnt + 1;
+    endrule
     // No rules in this module
 
     method ActionValue#(Struct47) getMSHR_001 (Bit#(3) x_0);
@@ -6312,27 +6368,17 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
         (Bool)'(True), tm_way : (Bit#(2))'(2'h3), tm_value :
         ((x_29)[(Bit#(2))'(2'h3)]).value}) : (unpack(0))))))))));
         Struct31 x_31 = ((x_30).tm_value);
-        Struct11 x_32 = (((((((x_29)[(Bit#(2))'(2'h0)]).value).mesi_edir_st)
-        == ((Bit#(3))'(3'h0))) ||
-        (((((x_29)[(Bit#(2))'(2'h0)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h1))) ? (Struct11 {valid : (Bool)'(True), data :
-        (Bit#(2))'(2'h0)}) :
-        (((((((x_29)[(Bit#(2))'(2'h1)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h0))) ||
-        (((((x_29)[(Bit#(2))'(2'h1)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h1))) ? (Struct11 {valid : (Bool)'(True), data :
-        (Bit#(2))'(2'h1)}) :
-        (((((((x_29)[(Bit#(2))'(2'h2)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h0))) ||
-        (((((x_29)[(Bit#(2))'(2'h2)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h1))) ? (Struct11 {valid : (Bool)'(True), data :
-        (Bit#(2))'(2'h2)}) :
-        (((((((x_29)[(Bit#(2))'(2'h3)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h0))) ||
-        (((((x_29)[(Bit#(2))'(2'h3)]).value).mesi_edir_st) ==
-        ((Bit#(3))'(3'h1))) ? (Struct11 {valid : (Bool)'(True), data :
-        (Bit#(2))'(2'h3)}) : (Struct11 {valid : (Bool)'(False), data :
-        unpack(0)})))))))));
+        Struct11 x_32 = ((! (((Bit#(3))'(3'h1)) <
+        ((((x_29)[(Bit#(2))'(2'h0)]).value).mesi_edir_st)) ? (Struct11 {valid
+        : (Bool)'(True), data : (Bit#(2))'(2'h0)}) : ((! (((Bit#(3))'(3'h1))
+        < ((((x_29)[(Bit#(2))'(2'h1)]).value).mesi_edir_st)) ? (Struct11
+        {valid : (Bool)'(True), data : (Bit#(2))'(2'h1)}) : ((!
+        (((Bit#(3))'(3'h1)) <
+        ((((x_29)[(Bit#(2))'(2'h2)]).value).mesi_edir_st)) ? (Struct11 {valid
+        : (Bool)'(True), data : (Bit#(2))'(2'h2)}) : ((! (((Bit#(3))'(3'h1))
+        < ((((x_29)[(Bit#(2))'(2'h3)]).value).mesi_edir_st)) ? (Struct11
+        {valid : (Bool)'(True), data : (Bit#(2))'(2'h3)}) : (Struct11 {valid
+        : (Bool)'(False), data : unpack(0)})))))))));
         let x_33 <- repGetRs__00();
         Bit#(3) x_34 = (unpack(0));
         Bit#(8) x_35 = (unpack(0));
@@ -6375,7 +6421,7 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
         Struct10 x_56 = (Struct10 {info_index : x_2, info_hit :
         (x_20).tm_hit, info_way : x_55, edir_hit : (x_30).tm_hit, edir_way :
         (x_30).tm_way, edir_slot : x_32, info : ((x_20).tm_hit ?
-        ((x_20).tm_value) : (Struct12 {mesi_owned : (Bool)'(False),
+        ((x_20).tm_value) : (Struct12 {mesi_owned : (x_31).mesi_edir_owned,
         mesi_status : (Bit#(3))'(3'h1), mesi_dir_st : (x_31).mesi_edir_st,
         mesi_dir_sharers : (x_31).mesi_edir_sharers})), may_victim : Struct13
         {mv_addr : {(x_53),({(x_2),((Bit#(5))'(5'h0))})}, mv_info : x_54},
@@ -6391,8 +6437,8 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
         Bit#(9) x_3 = ((x_2)[13:5]);
         Bit#(3) x_4 = ((x_0).info_way);
         Struct12 x_5 = ((x_0).info);
-        Bool x_6 = ((! ((x_5).mesi_owned)) && (((x_5).mesi_status) ==
-        ((Bit#(3))'(3'h1))));
+        Bool x_6 = ((! (((Bit#(3))'(3'h1)) < ((x_5).mesi_status))) && (!
+        (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h3)))));
         Struct11 x_7 = ((x_0).edir_slot);
         Bool x_8 = ((x_7).valid);
         Bit#(2) x_9 =
@@ -6454,9 +6500,8 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
                 end else begin
 
                 end
-                let x_31 <- repAccess__00(Struct34 {acc_type :
-                ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
-                (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ?
+                let x_31 <- repAccess__00(Struct34 {acc_type : (!
+                (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ?
                 ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))), acc_reps :
                 (x_0).reps, acc_index : x_3, acc_way :
                 x_4});
@@ -6466,7 +6511,8 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
                     (x_9)));
                     Struct35 x_33 = (Struct35 {addr : (x_2)[13:5], datain :
                     Struct30 {tag : (x_2)[63:14], value : Struct31
-                    {mesi_edir_st : (x_5).mesi_dir_st, mesi_edir_sharers :
+                    {mesi_edir_owned : (x_5).mesi_owned, mesi_edir_st :
+                    (x_5).mesi_dir_st, mesi_edir_sharers :
                     (x_5).mesi_dir_sharers}}});
                     if ((x_32) == ((Bit#(2))'(2'h0))) begin
                         let x_34 <- wrReq_edirRam__00__0(x_33);
@@ -6494,8 +6540,8 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
                         Bit#(2) x_42 = ((x_0).edir_way);
                         Struct35 x_43 = (Struct35 {addr : (x_2)[13:5], datain
                         : Struct30 {tag : (x_2)[63:14], value : Struct31
-                        {mesi_edir_st : (x_5).mesi_dir_st, mesi_edir_sharers
-                        :
+                        {mesi_edir_owned : (x_5).mesi_owned, mesi_edir_st :
+                        (x_5).mesi_dir_st, mesi_edir_sharers :
                         (x_5).mesi_dir_sharers}}});
                         if ((x_42) == ((Bit#(2))'(2'h0))) begin
                             let x_44 <- wrReq_edirRam__00__0(x_43);
@@ -6676,10 +6722,9 @@ module mkModule75#(function Action wrReq_dataRam__000(Struct56 _),
             end else begin
 
             end
-            let x_19 <- repAccess__000(Struct55 {acc_type :
-            ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
-            (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ? ((Bit#(1))'(1'h1))
-            : ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
+            let x_19 <- repAccess__000(Struct55 {acc_type : (!
+            (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ? ((Bit#(1))'(1'h1)) :
+            ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
             acc_way : x_4});
         end else begin
 
@@ -6833,10 +6878,9 @@ module mkModule76#(function Action wrReq_dataRam__001(Struct56 _),
             end else begin
 
             end
-            let x_19 <- repAccess__001(Struct55 {acc_type :
-            ((((x_5).mesi_dir_st) == ((Bit#(3))'(3'h0))) ||
-            (((x_5).mesi_dir_st) == ((Bit#(3))'(3'h1))) ? ((Bit#(1))'(1'h1))
-            : ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
+            let x_19 <- repAccess__001(Struct55 {acc_type : (!
+            (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ? ((Bit#(1))'(1'h1)) :
+            ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
             acc_way : x_4});
         end else begin
 
@@ -7062,8 +7106,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7142,8 +7187,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7223,8 +7269,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7277,8 +7324,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7335,8 +7383,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7427,8 +7476,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7481,8 +7531,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7539,8 +7590,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7593,8 +7645,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7650,8 +7703,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7728,8 +7782,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7817,8 +7872,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7903,8 +7959,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -7989,8 +8046,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8046,8 +8104,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8124,8 +8183,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8210,8 +8270,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8299,8 +8360,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8399,8 +8461,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8479,8 +8542,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8560,8 +8624,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8614,8 +8679,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8672,8 +8738,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8764,8 +8831,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8818,8 +8886,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8876,8 +8945,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8930,8 +9000,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -8987,8 +9058,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9065,8 +9137,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9154,8 +9227,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9240,8 +9314,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9326,8 +9401,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9383,8 +9459,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9461,8 +9538,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9547,8 +9625,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9636,8 +9715,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9736,8 +9816,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9846,8 +9927,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -9948,8 +10030,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10058,8 +10141,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10132,8 +10216,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10190,8 +10275,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10299,8 +10385,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10397,8 +10484,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10468,8 +10556,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10557,8 +10646,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10630,8 +10720,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10704,8 +10795,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10754,8 +10846,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10811,8 +10904,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10861,8 +10955,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -10950,8 +11045,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11037,8 +11133,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11074,8 +11171,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11112,8 +11210,9 @@ module mkModule77#(function Action canImm_00(Bit#(64) _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11334,8 +11433,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11385,8 +11485,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11437,8 +11538,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11514,8 +11616,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11591,8 +11694,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11664,8 +11768,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11742,8 +11847,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11804,8 +11910,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11856,8 +11963,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -11941,8 +12049,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12014,8 +12123,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12085,8 +12195,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12121,8 +12232,9 @@ module mkModule78#(function Action victims__000__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12350,8 +12462,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12401,8 +12514,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12453,8 +12567,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12530,8 +12645,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12607,8 +12723,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12680,8 +12797,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12758,8 +12876,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12820,8 +12939,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12872,8 +12992,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -12957,8 +13078,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -13030,8 +13152,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_11 = (unpack(0));
         Bool x_12 = ((x_7).mesi_owned);
         Bit#(3) x_13 = ((x_7).mesi_status);
-        Struct18 x_14 = (Struct18 {dir_st : (x_7).mesi_dir_st, dir_excl :
-        ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_14 = (Struct18 {dir_st : (((x_7).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_7).mesi_dir_st)),
+        dir_excl : ((((x_7).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_7).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -13101,8 +13224,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),
@@ -13137,8 +13261,9 @@ module mkModule79#(function Action victims__001__setVictimRq(Struct51 _),
         Vector#(4, Bit#(64)) x_6 = (unpack(0));
         Bool x_7 = ((x_2).mesi_owned);
         Bit#(3) x_8 = ((x_2).mesi_status);
-        Struct18 x_9 = (Struct18 {dir_st : (x_2).mesi_dir_st, dir_excl :
-        ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
+        Struct18 x_9 = (Struct18 {dir_st : (((x_2).mesi_dir_st) ==
+        ((Bit#(3))'(3'h0)) ? ((Bit#(3))'(3'h1)) : ((x_2).mesi_dir_st)),
+        dir_excl : ((((x_2).mesi_dir_sharers)[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) +
         ((((((x_2).mesi_dir_sharers)[1:1])[0:0]) == ((Bit#(1))'(1'h1)) ?
         ((Bit#(1))'(1'h0)) : (((Bit#(1))'(1'h1)) + (unpack(0))))))),

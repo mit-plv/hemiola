@@ -1086,7 +1086,9 @@ Section Cache.
   Variable (infoInitVal: ConstT infoK).
   Definition infoRam (way: nat) :=
     bram2 (dType:= TagInfoK) (infoRamN way) indexSz
-          (CSTRUCT { "tag" ::= ConstBit $way; "value" ::= infoInitVal })%init.
+          (* (CSTRUCT { "tag" ::= ConstBit $way; *)
+          (CSTRUCT { "tag" ::= ConstBit $(way + Nat.pow 2 lgWay);
+                     "value" ::= infoInitVal })%init.
   Definition infoRdReq (way: nat) :=
     MethodSig ((infoRamN way) -- "rdReq")(Bit indexSz): Void.
   Definition infoRdResp (way: nat) :=
@@ -1152,7 +1154,8 @@ Section Cache.
    *)
   Definition edirRam (way: nat) :=
     bram2 (dType:= TagEDirK) (edirRamN way) indexSz
-          (CSTRUCT { "tag" ::= ConstBit $(way + Nat.pow 2 lgWay);
+          (* (CSTRUCT { "tag" ::= ConstBit $(way + Nat.pow 2 lgWay); *)
+          (CSTRUCT { "tag" ::= ConstBit $(way + Nat.pow 2 (S lgWay));
                      "value" ::= edirInitVal })%init.
   Definition edirRdReq (way: nat) :=
     MethodSig ((edirRamN way) -- "rdReq")(Bit indexSz): Void.
@@ -1580,9 +1583,8 @@ Section Cache.
                (!#justDir) ||
                ((!(#lw!LineWrite@."edir_hit")) && #justDir && !#hasEDirSlot))
            then (LET irq <- STRUCT { "addr" ::= #index;
-                                     "datain" ::=
-                                       STRUCT { "tag" ::= getTag addr;
-                                                "value" ::= #ninfo } };
+                                     "datain" ::= STRUCT { "tag" ::= getTag addr;
+                                                           "value" ::= #ninfo } };
                 NCall makeInfoWrReqs info_way irq;
 
                 (** Should register a new victim line if not hit *)
