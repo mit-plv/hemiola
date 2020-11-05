@@ -1606,6 +1606,7 @@ Section Cache.
                                          "acc_reps" ::= #lw!LineWrite@."reps";
                                          "acc_index" ::= #index;
                                          "acc_way" ::= #info_way });
+                 Retv);
 
            (** 2) Cases that write to the edir cache, either an update or an invalidation *)
            If ((!(#lw!LineWrite@."info_hit")) &&
@@ -1627,7 +1628,6 @@ Section Cache.
                       Retv);
                  Retv);
            Retv);
-        Retv);
 
         (** Update the value if necessary *)
         If (#lw!LineWrite@."value_write")

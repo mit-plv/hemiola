@@ -6447,72 +6447,71 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
                 let x_31 <- repAccess__00(Struct34 {acc_type : (!
                 (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ?
                 ((Bit#(1))'(1'h0)) : ((Bit#(1))'(1'h1))), acc_reps :
-                (x_0).reps, acc_index : x_3, acc_way :
-                x_4});
-                if (((! ((x_0).info_hit)) && (x_6)) && (((x_0).edir_hit) ||
-                    (x_8))) begin
-                    Bit#(2) x_32 = (((x_0).edir_hit ? ((x_0).edir_way) :
-                    (x_9)));
-                    Struct35 x_33 = (Struct35 {addr : (x_2)[13:5], datain :
+                (x_0).reps, acc_index : x_3, acc_way : x_4});
+            end else begin
+
+            end
+            if (((! ((x_0).info_hit)) && (x_6)) && (((x_0).edir_hit) ||
+                (x_8))) begin
+                Bit#(2) x_33 = (((x_0).edir_hit ? ((x_0).edir_way) :
+                (x_9)));
+                Struct35 x_34 = (Struct35 {addr : (x_2)[13:5], datain :
+                Struct30 {tag : (x_2)[63:14], value : Struct31
+                {mesi_edir_owned : (x_5).mesi_owned, mesi_edir_st :
+                (x_5).mesi_dir_st, mesi_edir_sharers :
+                (x_5).mesi_dir_sharers}}});
+                if ((x_33) == ((Bit#(2))'(2'h0))) begin
+                    let x_35 <- wrReq_edirRam__00__0(x_34);
+                end else begin
+
+                end
+                if ((x_33) == ((Bit#(2))'(2'h1))) begin
+                    let x_37 <- wrReq_edirRam__00__1(x_34);
+                end else begin
+
+                end
+                if ((x_33) == ((Bit#(2))'(2'h2))) begin
+                    let x_39 <- wrReq_edirRam__00__2(x_34);
+                end else begin
+
+                end
+                if ((x_33) == ((Bit#(2))'(2'h3))) begin
+                    let x_41 <- wrReq_edirRam__00__3(x_34);
+                end else begin
+
+                end
+            end else
+                begin
+                if ((x_0).edir_hit) begin
+                    Bit#(2) x_43 = ((x_0).edir_way);
+                    Struct35 x_44 = (Struct35 {addr : (x_2)[13:5], datain :
                     Struct30 {tag : (x_2)[63:14], value : Struct31
                     {mesi_edir_owned : (x_5).mesi_owned, mesi_edir_st :
                     (x_5).mesi_dir_st, mesi_edir_sharers :
                     (x_5).mesi_dir_sharers}}});
-                    if ((x_32) == ((Bit#(2))'(2'h0))) begin
-                        let x_34 <- wrReq_edirRam__00__0(x_33);
+                    if ((x_43) == ((Bit#(2))'(2'h0))) begin
+                        let x_45 <- wrReq_edirRam__00__0(x_44);
                     end else begin
 
                     end
-                    if ((x_32) == ((Bit#(2))'(2'h1))) begin
-                        let x_36 <- wrReq_edirRam__00__1(x_33);
+                    if ((x_43) == ((Bit#(2))'(2'h1))) begin
+                        let x_47 <- wrReq_edirRam__00__1(x_44);
                     end else begin
 
                     end
-                    if ((x_32) == ((Bit#(2))'(2'h2))) begin
-                        let x_38 <- wrReq_edirRam__00__2(x_33);
+                    if ((x_43) == ((Bit#(2))'(2'h2))) begin
+                        let x_49 <- wrReq_edirRam__00__2(x_44);
                     end else begin
 
                     end
-                    if ((x_32) == ((Bit#(2))'(2'h3))) begin
-                        let x_40 <- wrReq_edirRam__00__3(x_33);
+                    if ((x_43) == ((Bit#(2))'(2'h3))) begin
+                        let x_51 <- wrReq_edirRam__00__3(x_44);
                     end else begin
 
                     end
-                end else
-                    begin
-                    if ((x_0).edir_hit) begin
-                        Bit#(2) x_42 = ((x_0).edir_way);
-                        Struct35 x_43 = (Struct35 {addr : (x_2)[13:5], datain
-                        : Struct30 {tag : (x_2)[63:14], value : Struct31
-                        {mesi_edir_owned : (x_5).mesi_owned, mesi_edir_st :
-                        (x_5).mesi_dir_st, mesi_edir_sharers :
-                        (x_5).mesi_dir_sharers}}});
-                        if ((x_42) == ((Bit#(2))'(2'h0))) begin
-                            let x_44 <- wrReq_edirRam__00__0(x_43);
-                        end else begin
+                end else begin
 
-                        end
-                        if ((x_42) == ((Bit#(2))'(2'h1))) begin
-                            let x_46 <- wrReq_edirRam__00__1(x_43);
-                        end else begin
-
-                        end
-                        if ((x_42) == ((Bit#(2))'(2'h2))) begin
-                            let x_48 <- wrReq_edirRam__00__2(x_43);
-                        end else begin
-
-                        end
-                        if ((x_42) == ((Bit#(2))'(2'h3))) begin
-                            let x_50 <- wrReq_edirRam__00__3(x_43);
-                        end else begin
-
-                        end
-                    end else begin
-
-                    end
                 end
-            end else begin
-
             end
         end else begin
 
