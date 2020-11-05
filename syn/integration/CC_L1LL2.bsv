@@ -409,23 +409,6 @@ module mkModule8
     (Module8);
     Reg#(Vector#(8, Struct15)) victimRegs__00 <- mkReg(unpack(0));
 
-    Reg#(Bit#(19)) sscnt <- mkReg(0);
-    Reg#(Bool) ssdp <- mkReg(False);
-    rule snapshot (!ssdp);
-        if (sscnt == maxBound) begin
-            for (Integer i = 0; i < 8; i = i+1) begin
-                $display("-- 00:Victims[%d]: %d (%x) (%d %d %d %d)",
-                   i, victimRegs__00[i].victim_valid,
-                   victimRegs__00[i].victim_addr,
-                   victimRegs__00[i].victim_info.mesi_owned,
-                   victimRegs__00[i].victim_info.mesi_status,
-                   victimRegs__00[i].victim_info.mesi_dir_st,
-                   victimRegs__00[i].victim_info.mesi_dir_sharers);
-            end
-            ssdp <= True;
-        end
-        else sscnt <= sscnt + 1;
-    endrule
     // No rules in this module
 
     method ActionValue#(Struct6) victims__00__findVictim (Bit#(64) x_0);
@@ -1300,7 +1283,7 @@ module mkModule22 (Module22);
     Reg#(Bit#(9)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = vec(8'h0, 8'h0, 8'h0, 8'h0, 8'h0, 8'h0, 8'h0, 8'h0);
+        let initData = vec(8'h1, 8'h1, 8'h1, 8'h1, 8'h1, 8'h1, 8'h1, 8'h1);
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -1345,19 +1328,6 @@ module mkModule23
     (Module23);
     Reg#(Vector#(12, Struct17)) rqs_00 <- mkReg(unpack(0));
 
-    Reg#(Bit#(19)) sscnt <- mkReg(0);
-    Reg#(Bool) ssdp <- mkReg(False);
-    rule snapshot (!ssdp);
-        if (sscnt == maxBound) begin
-            for (Integer i = 0; i < 12; i = i+1) begin
-                $display ("-- 00:MSHRs[%d]: %d %d %d %d %x %d",
-                   i, rqs_00[i].m_status, rqs_00[i].m_next, rqs_00[i].m_is_ul,
-                   rqs_00[i].m_msg.id, rqs_00[i].m_msg.addr, rqs_00[i].m_qidx);
-            end
-            ssdp <= True;
-        end
-        else sscnt <= sscnt + 1;
-    endrule
     // No rules in this module
 
     method ActionValue#(Struct17) getMSHR_00 (Bit#(4) x_0);
@@ -3338,7 +3308,7 @@ module mkModule40 (Module40);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = vec(8'h0, 8'h0, 8'h0, 8'h0);
+        let initData = vec(8'h1, 8'h1, 8'h1, 8'h1);
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -3383,19 +3353,6 @@ module mkModule41
     (Module41);
     Reg#(Vector#(6, Struct47)) rqs_000 <- mkReg(unpack(0));
 
-    Reg#(Bit#(19)) sscnt <- mkReg(0);
-    Reg#(Bool) ssdp <- mkReg(False);
-    rule snapshot (!ssdp);
-        if (sscnt == maxBound) begin
-            for (Integer i = 0; i < 6; i = i+1) begin
-                $display ("-- 000:MSHRs[%d]: %d %d %d %d %x %d",
-                   i, rqs_000[i].m_status, rqs_000[i].m_next, rqs_000[i].m_is_ul,
-                   rqs_000[i].m_msg.id, rqs_000[i].m_msg.addr, rqs_000[i].m_qidx);
-            end
-            ssdp <= True;
-        end
-        else sscnt <= sscnt + 1;
-    endrule
     // No rules in this module
 
     method ActionValue#(Struct47) getMSHR_000 (Bit#(3) x_0);
@@ -4954,7 +4911,7 @@ module mkModule58 (Module58);
     Reg#(Bit#(8)) initIdx <- mkReg(0);
 
     rule init (!initDone);
-        let initData = vec(8'h0, 8'h0, 8'h0, 8'h0);
+        let initData = vec(8'h1, 8'h1, 8'h1, 8'h1);
         bram.wrReq(initIdx, initData);
         initIdx <= initIdx + 1;
         initDone <= (initIdx == maxBound);
@@ -4999,19 +4956,6 @@ module mkModule59
     (Module59);
     Reg#(Vector#(6, Struct47)) rqs_001 <- mkReg(unpack(0));
 
-    Reg#(Bit#(19)) sscnt <- mkReg(0);
-    Reg#(Bool) ssdp <- mkReg(False);
-    rule snapshot (!ssdp);
-        if (sscnt == maxBound) begin
-            for (Integer i = 0; i < 6; i = i+1) begin
-                $display ("-- 001:MSHRs[%d]: %d %d %d %d %x %d",
-                   i, rqs_001[i].m_status, rqs_001[i].m_next, rqs_001[i].m_is_ul,
-                   rqs_001[i].m_msg.id, rqs_001[i].m_msg.addr, rqs_001[i].m_qidx);
-            end
-            ssdp <= True;
-        end
-        else sscnt <= sscnt + 1;
-    endrule
     // No rules in this module
 
     method ActionValue#(Struct47) getMSHR_001 (Bit#(3) x_0);
@@ -5956,7 +5900,7 @@ module mkModule65#(function Action wrReq_repRam__00(Struct38 _),
             x_20 = x_18;
         end else begin
             Vector#(8, Bit#(8)) x_19 = (update (x_17, (x_0).acc_way,
-            (Bit#(8))'(8'hff)));
+            (Bit#(8))'(8'h0)));
             x_20 = x_19;
         end
         Struct38 x_21 = (Struct38 {addr : (x_0).acc_index, datain :
@@ -6084,7 +6028,7 @@ module mkModule69#(function Action wrReq_repRam__000(Struct58 _),
             x_12 = x_10;
         end else begin
             Vector#(4, Bit#(8)) x_11 = (update (x_9, (x_0).acc_way,
-            (Bit#(8))'(8'hff)));
+            (Bit#(8))'(8'h0)));
             x_12 = x_11;
         end
         Struct58 x_13 = (Struct58 {addr : (x_0).acc_index, datain :
@@ -6212,7 +6156,7 @@ module mkModule73#(function Action wrReq_repRam__001(Struct58 _),
             x_12 = x_10;
         end else begin
             Vector#(4, Bit#(8)) x_11 = (update (x_9, (x_0).acc_way,
-            (Bit#(8))'(8'hff)));
+            (Bit#(8))'(8'h0)));
             x_12 = x_11;
         end
         Struct58 x_13 = (Struct58 {addr : (x_0).acc_index, datain :
@@ -6502,7 +6446,7 @@ module mkModule74#(function Action wrReq_dataRam__00(Struct36 _),
                 end
                 let x_31 <- repAccess__00(Struct34 {acc_type : (!
                 (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ?
-                ((Bit#(1))'(1'h1)) : ((Bit#(1))'(1'h0))), acc_reps :
+                ((Bit#(1))'(1'h0)) : ((Bit#(1))'(1'h1))), acc_reps :
                 (x_0).reps, acc_index : x_3, acc_way :
                 x_4});
                 if (((! ((x_0).info_hit)) && (x_6)) && (((x_0).edir_hit) ||
@@ -6723,8 +6667,8 @@ module mkModule75#(function Action wrReq_dataRam__000(Struct56 _),
 
             end
             let x_19 <- repAccess__000(Struct55 {acc_type : (!
-            (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ? ((Bit#(1))'(1'h1)) :
-            ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
+            (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ? ((Bit#(1))'(1'h0)) :
+            ((Bit#(1))'(1'h1))), acc_reps : (x_0).reps, acc_index : x_3,
             acc_way : x_4});
         end else begin
 
@@ -6879,8 +6823,8 @@ module mkModule76#(function Action wrReq_dataRam__001(Struct56 _),
 
             end
             let x_19 <- repAccess__001(Struct55 {acc_type : (!
-            (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ? ((Bit#(1))'(1'h1)) :
-            ((Bit#(1))'(1'h0))), acc_reps : (x_0).reps, acc_index : x_3,
+            (((Bit#(3))'(3'h1)) < ((x_5).mesi_dir_st)) ? ((Bit#(1))'(1'h0)) :
+            ((Bit#(1))'(1'h1))), acc_reps : (x_0).reps, acc_index : x_3,
             acc_way : x_4});
         end else begin
 

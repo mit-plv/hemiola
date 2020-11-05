@@ -1226,7 +1226,8 @@ Section Cache.
   Definition RepCntK := Bit repCntSz.
   Definition repRamN := "repRam"+o.
   Let repK := Vector RepCntK lgWay.
-  Definition repRam := bram2 repRamN indexSz (getDefaultConst repK).
+  Let repInit: ConstT repK := ConstVector (replicate (ConstBit $1) _).
+  Definition repRam := bram2 repRamN indexSz repInit.
   Definition repRdReq := MethodSig (repRamN -- "rdReq") (Bit indexSz): Void.
   Definition repRdResp := MethodSig (repRamN -- "rdResp") (): repK.
   Definition repWrReq :=
@@ -1294,7 +1295,7 @@ Section Cache.
         NCall ireps <- incReps reps;
         If (#acc!AccessRec@."acc_type" == accTouch)
         then (LET nreps <- #ireps@[#acc!AccessRec@."acc_way" <- $1]; Ret #nreps)
-        else (LET nreps <- #ireps@[#acc!AccessRec@."acc_way" <- $(Nat.pow 2 repCntSz - 1)];
+        else (LET nreps <- #ireps@[#acc!AccessRec@."acc_way" <- $0];
              Ret #nreps)
         as nreps;
         LET app <- STRUCT { "addr" ::= #acc!AccessRec@."acc_index";
@@ -1486,7 +1487,7 @@ Section Cache.
               (** Update replacement information *)
               Call repAccess(STRUCT { "acc_type" ::=
                                         (IF (isDirInvalid ninfo)
-                                         then accInvalid else accTouch);
+                                         then accTouch else accInvalid);
                                       "acc_reps" ::= #lw!LineWrite@."reps";
                                       "acc_index" ::= #index;
                                       "acc_way" ::= #info_way });
@@ -1601,7 +1602,7 @@ Section Cache.
                  (** Update replacement information *)
                  Call repAccess(STRUCT { "acc_type" ::=
                                            (IF (isDirInvalid ninfo)
-                                            then accInvalid else accTouch);
+                                            then accTouch else accInvalid);
                                          "acc_reps" ::= #lw!LineWrite@."reps";
                                          "acc_index" ::= #index;
                                          "acc_way" ::= #info_way });
