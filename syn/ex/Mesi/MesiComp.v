@@ -255,10 +255,15 @@ Section Cache.
   Definition offsetSz := Nat.log2 (Nat.div hcfg_addr_sz BitsPerByte) + hcfg_line_values_lg.
   Definition tagSz := hcfg_addr_sz - indexSz - offsetSz.
 
+  Definition getIndexE (var: Kind -> Type)
+             (addr: Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
+    : Expr var (SyntaxKind (Bit indexSz)) :=
+    (UniBit (ConstExtract _ _ _) addr)%kami_expr.
+
   Definition getIndex (var: Kind -> Type)
              (addr: fullType var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
     : Expr var (SyntaxKind (Bit indexSz)) :=
-    (UniBit (ConstExtract _ _ _) #addr)%kami_expr.
+    getIndexE (#addr)%kami_expr.
 
   Definition getTag (var: Kind -> Type)
              (addr: fullType var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
@@ -270,6 +275,11 @@ Section Cache.
              (index: fullType var (SyntaxKind (Bit indexSz)))
     : Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))) :=
     {#tag, {#index, $0}}%kami_expr.
+
+  Definition mshrConflictF (var: Kind -> Type)
+             (addr1 addr2: Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz))))
+    : Expr var (SyntaxKind Bool) :=
+    (addr1 != addr2 && getIndexE addr1 == getIndexE addr2)%kami_expr.
 
   Definition MesiEDir :=
     STRUCT { "mesi_edir_owned" :: Bool;

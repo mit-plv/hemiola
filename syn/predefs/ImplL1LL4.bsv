@@ -9,14 +9,14 @@
     endfunction
 
     Vector#(L1Num, MemRqRs#(Struct1)) _l1Ifc = newVector();
-    _l1Ifc[0] = getMemRqRs(m28.enq_fifo00000, m29.deq_fifo00002);
-    _l1Ifc[1] = getMemRqRs(m39.enq_fifo00100, m40.deq_fifo00102);
-    _l1Ifc[2] = getMemRqRs(m50.enq_fifo00200, m51.deq_fifo00202);
-    _l1Ifc[3] = getMemRqRs(m61.enq_fifo00300, m62.deq_fifo00302);
+    _l1Ifc[0] = getMemRqRs(m44.enq_fifo00000, m45.deq_fifo00002);
+    _l1Ifc[1] = getMemRqRs(m62.enq_fifo00100, m63.deq_fifo00102);
+    _l1Ifc[2] = getMemRqRs(m80.enq_fifo00200, m81.deq_fifo00202);
+    _l1Ifc[3] = getMemRqRs(m98.enq_fifo00300, m99.deq_fifo00302);
     interface l1Ifc = _l1Ifc;
 
     interface DMA llDma;
-        method dma_rdReq = m34.rdReq_dataRam__00;
-        method dma_wrReq = m34.wrReq_dataRam__00;
-        method dma_rdResp = m34.rdResp_dataRam__00;
+        method dma_rdReq = m33.rdReq_dataRam__00;
+        method dma_wrReq = m33.wrReq_dataRam__00;
+        method dma_rdResp = m33.rdResp_dataRam__00;
     endinterface

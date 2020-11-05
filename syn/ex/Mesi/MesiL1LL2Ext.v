@@ -16,16 +16,6 @@ Instance MesiTopoConfig: TopoConfig :=
 Existing Instance MesiCompExtType.
 Existing Instance MesiCompExtExp.
 
-(** FIXME:
- * 1) Use [getIndex] instead of [UniBit ConstExtract].
- * 2) Move to [MesiComp.v]. *)
-Definition mshrConflictF {indexSz} (var: Kind -> Type)
-           (addr1 addr2: Expr var (SyntaxKind (Bit (offsetSz + indexSz + tagSz indexSz))))
-  : Expr var (SyntaxKind Bool) :=
-  ((addr1 != addr2)
-   && (UniBit (ConstExtract _ _ _) addr1 ==
-       UniBit (ConstExtract _ _ _) addr2))%kami_expr.
-
 (***************
  *     Mem     *
  *      |      *
@@ -43,7 +33,7 @@ Definition l1IndexSz: nat := 8.
 Definition l1LgWay: nat := 2.
 Definition l1NumPRqs: nat := 2.
 Definition l1NumCRqs: nat := 4.
-Definition l1PredNumVictim: nat := Nat.pred 4.
+Definition l1PredNumVictim: nat := Nat.pred l1NumCRqs.
 Definition l1MshrSlotSz: nat := S (Nat.log2 (l1NumPRqs + l1NumCRqs - 1)).
 Definition l1Cache (oidx: IdxT): Modules :=
   mesiL1 oidx l1IndexSz l1LgWay l1PredNumVictim l1MshrSlotSz.
@@ -56,7 +46,7 @@ Definition llLgWay: nat := 3.
 Definition llEDirLgWay: nat := 2.
 Definition llNumPRqs: nat := 4.
 Definition llNumCRqs: nat := 8.
-Definition llPredNumVictim: nat := Nat.pred 8.
+Definition llPredNumVictim: nat := Nat.pred llNumCRqs.
 Definition llMshrSlotSz: nat := S (Nat.log2 (llNumPRqs + llNumCRqs - 1)).
 Definition llCache (oidx: IdxT): Modules :=
   mesiLi oidx llIndexSz llLgWay llEDirLgWay llPredNumVictim llMshrSlotSz.
