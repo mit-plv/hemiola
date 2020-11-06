@@ -40,8 +40,8 @@ Definition l1Cache (oidx: IdxT): Modules :=
 Definition l1Mshrs (oidx: IdxT): Modules :=
   mshrs oidx l1NumPRqs l1NumCRqs (mshrConflictF (indexSz := l1IndexSz)).
 
-(* 512KB LL: 2^10 * 2^4 * 32B *)
-Definition llIndexSz: nat := 10.
+(* 256KB LL: 2^9 * 2^4 * 32B *)
+Definition llIndexSz: nat := 9.
 Definition llLgWay: nat := 4.
 Definition llEDirLgWay: nat := 3.
 Definition llNumPRqs: nat := 4.

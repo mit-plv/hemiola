@@ -1,4 +1,4 @@
-typedef 4 L1Num;
+typedef 2 L1Num;
 
 interface MemRqRs#(type msgT);
     method Action mem_enq_rq (msgT rq);
