@@ -426,15 +426,16 @@ Section MSHR.
           LET addr <- #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
 
           (* Stall when either
-           * 1) an index-equivalent releasing line is in the pipeline or
-           * 2) a same-address line is in the pipeline. *)
+           * 1) an index-equivalent line is in the pipeline or
+           * 2) a same-address line is in the pipeline -- should not become to
+           *    the waiting mode in this case, since a downlock must proceed
+           *    even when the uplock is set. *)
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  ((m!MSHR@."m_status" == mshrReleasing) &&
-                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr)) ||
-                                  (((m!MSHR@."m_status" == mshrOwned) ||
-                                    (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  ((m!MSHR@."m_status" == mshrOwned) ||
+                                   (m!MSHR@."m_status" == mshrReleasing)) &&
+                                  ((conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr)) ||
                                    (m!MSHR@."m_msg"!KMsg@."addr" == #addr)))
                                #rqs);
 
@@ -504,7 +505,8 @@ Section MSHR.
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
-                                  (m!MSHR@."m_status" == mshrReleasing) &&
+                                  ((m!MSHR@."m_status" == mshrOwned) ||
+                                   (m!MSHR@."m_status" == mshrReleasing)) &&
                                   conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))
                                #rqs);
 
@@ -576,14 +578,17 @@ Section MSHR.
           LET mid <- #mwait!(MaybeStr MshrId)@."data";
           LET mshr <- #rqs#[#mid];
 
-          (* Should stall when an index-equivalent line is in the pipeline *)
+          (* Still must wait when either
+           * 1) a same-address line is in progress or
+           * 2) an index-equivalent line is in the pipeline. *)
           LET addr <- #mshr!MSHR@."m_msg"!KMsg@."addr";
           LET stall <- (rqIter $$false
                                (fun _ _ => $$true)
                                (fun m =>
                                   ((m!MSHR@."m_status" >= mshrOwned) &&
                                    (m!MSHR@."m_msg"!KMsg@."addr" == #addr)) ||
-                                  ((m!MSHR@."m_status" == mshrReleasing) &&
+                                  (((m!MSHR@."m_status" == mshrOwned) ||
+                                    m!MSHR@."m_status" == mshrReleasing) &&
                                    (conflictF (m!MSHR@."m_msg"!KMsg@."addr") (#addr))))
                                #rqs);
           Assert !#stall;
@@ -736,7 +741,7 @@ Section MSHR.
                                #rqs);
           Assert !#stall;
 
-          (* There should be no downlocks in order to release an uplock. *)
+          (* Also stall if there is a downlock with the same address. *)
           LET mmidDL <- (rqIter MaybeNone
                                 (fun n _ => MaybeSome $n)
                                 (fun m =>
@@ -838,8 +843,7 @@ Section Victims.
   Let victimIdxSz := S (Nat.log2 predNumVictims).
   Let MviK := Maybe (Bit victimIdxSz).
 
-  (** * FIXME: [victim_req] may not need [MshrId] at all;
-   * just a boolean flag would suffice. *)
+  (** * TODO: [victim_req] may not need [MshrId] at all; just a boolean flag would suffice. *)
   Definition Victim :=
     STRUCT { "victim_valid" :: Bool;
              "victim_addr" :: Bit addrSz;
