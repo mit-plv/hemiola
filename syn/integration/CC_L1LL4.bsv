@@ -11115,6 +11115,7 @@ module mkModule128#(function Action wrReq_dataRam__00(Struct34 _),
         ((Bit#(4))'(4'h0)) : (x_88)));
         Bit#(8) x_91 = ((! (((x_57)[(Bit#(4))'(4'h0)]) < (x_89)) ?
         ((x_57)[(Bit#(4))'(4'h0)]) : (x_89)));
+        when (! ((x_91) == ((Bit#(8))'(8'h0))), noAction);
         Struct26 x_92 = ((x_35)[x_90]);
         Bit#(50) x_93 = ((x_92).tag);
         Struct10 x_94 = ((x_92).value);
@@ -11447,6 +11448,7 @@ module mkModule129#(function Action wrReq_dataRam__000(Struct54 _),
         ((Bit#(2))'(2'h0)) : (x_20)));
         Bit#(8) x_23 = ((! (((x_13)[(Bit#(2))'(2'h0)]) < (x_21)) ?
         ((x_13)[(Bit#(2))'(2'h0)]) : (x_21)));
+        when (! ((x_23) == ((Bit#(8))'(8'h0))), noAction);
         Struct50 x_24 = ((x_11)[x_22]);
         Bit#(51) x_25 = ((x_24).tag);
         Struct10 x_26 = ((x_24).value);
@@ -11603,6 +11605,7 @@ module mkModule130#(function Action wrReq_dataRam__001(Struct54 _),
         ((Bit#(2))'(2'h0)) : (x_20)));
         Bit#(8) x_23 = ((! (((x_13)[(Bit#(2))'(2'h0)]) < (x_21)) ?
         ((x_13)[(Bit#(2))'(2'h0)]) : (x_21)));
+        when (! ((x_23) == ((Bit#(8))'(8'h0))), noAction);
         Struct50 x_24 = ((x_11)[x_22]);
         Bit#(51) x_25 = ((x_24).tag);
         Struct10 x_26 = ((x_24).value);
@@ -11759,6 +11762,7 @@ module mkModule131#(function Action wrReq_dataRam__002(Struct54 _),
         ((Bit#(2))'(2'h0)) : (x_20)));
         Bit#(8) x_23 = ((! (((x_13)[(Bit#(2))'(2'h0)]) < (x_21)) ?
         ((x_13)[(Bit#(2))'(2'h0)]) : (x_21)));
+        when (! ((x_23) == ((Bit#(8))'(8'h0))), noAction);
         Struct50 x_24 = ((x_11)[x_22]);
         Bit#(51) x_25 = ((x_24).tag);
         Struct10 x_26 = ((x_24).value);
@@ -11915,6 +11919,7 @@ module mkModule132#(function Action wrReq_dataRam__003(Struct54 _),
         ((Bit#(2))'(2'h0)) : (x_20)));
         Bit#(8) x_23 = ((! (((x_13)[(Bit#(2))'(2'h0)]) < (x_21)) ?
         ((x_13)[(Bit#(2))'(2'h0)]) : (x_21)));
+        when (! ((x_23) == ((Bit#(8))'(8'h0))), noAction);
         Struct50 x_24 = ((x_11)[x_22]);
         Bit#(51) x_25 = ((x_24).tag);
         Struct10 x_26 = ((x_24).value);
