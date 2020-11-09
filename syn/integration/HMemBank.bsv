@@ -147,8 +147,8 @@ endmodule
 
 (* synthesize *)
 module mkMemBankBram(MemBank);
-    FIFOF#(CCMsg) rqs <- mkFIFOF();
-    FIFOF#(CCMsg) rss <- mkFIFOF();
+    FIFOF#(CCMsg) rqs <- mkSizedFIFOF(4);
+    FIFOF#(CCMsg) rss <- mkSizedFIFOF(4);
     MemBank mb <- mkMemBankBramA(rqs, rss);
     return mb;
 endmodule
