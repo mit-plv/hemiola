@@ -17,7 +17,8 @@ MESI_EXT=ex/Mesi/MesiL1LL4Ext
 MESI_EXT_V=$(MESI_EXT).v
 MESI_EXT_VO=$(MESI_EXT).vo
 
-BSV_EXT_HEADER_REL=./predefs/Header.bsv
+# BSV_EXT_HEADER_REL=./predefs/HeaderL1LL2.bsv
+BSV_EXT_HEADER_REL=./predefs/HeaderL1LL4.bsv
 
 # BSV_EXT_IMPL_REL=./predefs/ImplL1LL2.bsv
 BSV_EXT_IMPL_REL=./predefs/ImplL1LL4.bsv
