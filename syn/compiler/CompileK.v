@@ -1108,7 +1108,6 @@ Section Compile.
   Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
   Section DebugFifos.
-    Let fifoSz := 1.
     Let cntSz := 18.
 
     Definition msgDisps {ty} (msg: Expr ty (SyntaxKind (Struct KMsg))): list (Disp ty) :=
@@ -1118,12 +1117,12 @@ Section Compile.
         :: nil.
 
     Definition dMsgFifo (fifoName: string) :=
-      debugFifoN (dType:= Struct KMsg) fifoName fifoSz cntSz
+      debugFifoN (dType:= Struct KMsg) fifoName 1 cntSz
                  ("-- MSG " ++ fifoName ++ ":")%string
                  (fun _ elt => msgDisps (#elt)%kami_expr).
 
     Definition dInputFifo (fifoName: string) :=
-      debugFifoN (dType:= Struct Input) fifoName fifoSz cntSz
+      debugFifoN (dType:= Struct Input) fifoName 2 cntSz
                  ("-- INPUT " ++ fifoName ++ ":")%string
                  (fun _ elt =>
                     (DispBit (0, Hex) (#elt!Input@."in_msg_from")%kami_expr)

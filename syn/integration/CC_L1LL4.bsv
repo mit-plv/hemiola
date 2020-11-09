@@ -78,9 +78,9 @@ endinterface
 
 module mkModule1
     (Module1);
-    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_00 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoCRqInput_00 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoCRqInput_00 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoCRqInput_00 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_00 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_00 <- mkReg(unpack(0));
@@ -97,11 +97,17 @@ module mkModule1
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoCRqInput_00);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoCRqInput_00:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoCRqInput_00:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoCRqInput_00:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoCRqInput_00:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoCRqInput_00:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoCRqInput_00:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoCRqInput_00 <= (Bool)'(True);
         end else begin
 
@@ -116,7 +122,7 @@ module mkModule1
         let x_4 = (deqP_fifoCRqInput_00);
         elt_fifoCRqInput_00 <= update (x_2, x_3, x_0);
         empty_fifoCRqInput_00 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoCRqInput_00 <= (x_4) == (x_5);
         enqP_fifoCRqInput_00 <= x_5;
     endmethod
@@ -128,7 +134,7 @@ module mkModule1
         let x_3 = (enqP_fifoCRqInput_00);
         let x_4 = (deqP_fifoCRqInput_00);
         full_fifoCRqInput_00 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoCRqInput_00 <= (x_3) == (x_5);
         deqP_fifoCRqInput_00 <= x_5;
         return (x_2)[x_4];
@@ -142,9 +148,9 @@ endinterface
 
 module mkModule2
     (Module2);
-    Reg#(Vector#(2, Struct2)) elt_fifoCRsInput_00 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoCRsInput_00 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoCRsInput_00 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoCRsInput_00 <- mkReg(True);
     Reg#(Bool) full_fifoCRsInput_00 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRsInput_00 <- mkReg(unpack(0));
@@ -161,11 +167,17 @@ module mkModule2
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoCRsInput_00);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoCRsInput_00:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoCRsInput_00:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoCRsInput_00:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoCRsInput_00:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoCRsInput_00:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoCRsInput_00:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoCRsInput_00 <= (Bool)'(True);
         end else begin
 
@@ -180,7 +192,7 @@ module mkModule2
         let x_4 = (deqP_fifoCRsInput_00);
         elt_fifoCRsInput_00 <= update (x_2, x_3, x_0);
         empty_fifoCRsInput_00 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoCRsInput_00 <= (x_4) == (x_5);
         enqP_fifoCRsInput_00 <= x_5;
     endmethod
@@ -192,7 +204,7 @@ module mkModule2
         let x_3 = (enqP_fifoCRsInput_00);
         let x_4 = (deqP_fifoCRsInput_00);
         full_fifoCRsInput_00 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoCRsInput_00 <= (x_3) == (x_5);
         deqP_fifoCRsInput_00 <= x_5;
         return (x_2)[x_4];
@@ -206,9 +218,9 @@ endinterface
 
 module mkModule3
     (Module3);
-    Reg#(Vector#(2, Struct2)) elt_fifoPInput_00 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoPInput_00 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoPInput_00 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoPInput_00 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_00 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_00 <- mkReg(unpack(0));
@@ -225,11 +237,17 @@ module mkModule3
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoPInput_00);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoPInput_00:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoPInput_00:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoPInput_00:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoPInput_00:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoPInput_00:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoPInput_00:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoPInput_00 <= (Bool)'(True);
         end else begin
 
@@ -244,7 +262,7 @@ module mkModule3
         let x_4 = (deqP_fifoPInput_00);
         elt_fifoPInput_00 <= update (x_2, x_3, x_0);
         empty_fifoPInput_00 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoPInput_00 <= (x_4) == (x_5);
         enqP_fifoPInput_00 <= x_5;
     endmethod
@@ -256,7 +274,7 @@ module mkModule3
         let x_3 = (enqP_fifoPInput_00);
         let x_4 = (deqP_fifoPInput_00);
         full_fifoPInput_00 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoPInput_00 <= (x_3) == (x_5);
         deqP_fifoPInput_00 <= x_5;
         return (x_2)[x_4];
@@ -2878,9 +2896,9 @@ endinterface
 
 module mkModule35
     (Module35);
-    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_000 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoCRqInput_000 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoCRqInput_000 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoCRqInput_000 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_000 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_000 <- mkReg(unpack(0));
@@ -2897,11 +2915,17 @@ module mkModule35
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoCRqInput_000);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoCRqInput_000:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoCRqInput_000:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoCRqInput_000:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoCRqInput_000:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoCRqInput_000:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoCRqInput_000:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoCRqInput_000 <= (Bool)'(True);
         end else begin
 
@@ -2916,7 +2940,7 @@ module mkModule35
         let x_4 = (deqP_fifoCRqInput_000);
         elt_fifoCRqInput_000 <= update (x_2, x_3, x_0);
         empty_fifoCRqInput_000 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoCRqInput_000 <= (x_4) == (x_5);
         enqP_fifoCRqInput_000 <= x_5;
     endmethod
@@ -2928,7 +2952,7 @@ module mkModule35
         let x_3 = (enqP_fifoCRqInput_000);
         let x_4 = (deqP_fifoCRqInput_000);
         full_fifoCRqInput_000 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoCRqInput_000 <= (x_3) == (x_5);
         deqP_fifoCRqInput_000 <= x_5;
         return (x_2)[x_4];
@@ -2942,9 +2966,9 @@ endinterface
 
 module mkModule36
     (Module36);
-    Reg#(Vector#(2, Struct2)) elt_fifoPInput_000 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoPInput_000 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoPInput_000 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoPInput_000 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_000 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_000 <- mkReg(unpack(0));
@@ -2961,11 +2985,17 @@ module mkModule36
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoPInput_000);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoPInput_000:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoPInput_000:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoPInput_000:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoPInput_000:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoPInput_000:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoPInput_000:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoPInput_000 <= (Bool)'(True);
         end else begin
 
@@ -2980,7 +3010,7 @@ module mkModule36
         let x_4 = (deqP_fifoPInput_000);
         elt_fifoPInput_000 <= update (x_2, x_3, x_0);
         empty_fifoPInput_000 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoPInput_000 <= (x_4) == (x_5);
         enqP_fifoPInput_000 <= x_5;
     endmethod
@@ -2992,7 +3022,7 @@ module mkModule36
         let x_3 = (enqP_fifoPInput_000);
         let x_4 = (deqP_fifoPInput_000);
         full_fifoPInput_000 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoPInput_000 <= (x_3) == (x_5);
         deqP_fifoPInput_000 <= x_5;
         return (x_2)[x_4];
@@ -4616,9 +4646,9 @@ endinterface
 
 module mkModule53
     (Module53);
-    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_001 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoCRqInput_001 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoCRqInput_001 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoCRqInput_001 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_001 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_001 <- mkReg(unpack(0));
@@ -4635,11 +4665,17 @@ module mkModule53
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoCRqInput_001);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoCRqInput_001:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoCRqInput_001:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoCRqInput_001:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoCRqInput_001:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoCRqInput_001:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoCRqInput_001:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoCRqInput_001 <= (Bool)'(True);
         end else begin
 
@@ -4654,7 +4690,7 @@ module mkModule53
         let x_4 = (deqP_fifoCRqInput_001);
         elt_fifoCRqInput_001 <= update (x_2, x_3, x_0);
         empty_fifoCRqInput_001 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoCRqInput_001 <= (x_4) == (x_5);
         enqP_fifoCRqInput_001 <= x_5;
     endmethod
@@ -4666,7 +4702,7 @@ module mkModule53
         let x_3 = (enqP_fifoCRqInput_001);
         let x_4 = (deqP_fifoCRqInput_001);
         full_fifoCRqInput_001 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoCRqInput_001 <= (x_3) == (x_5);
         deqP_fifoCRqInput_001 <= x_5;
         return (x_2)[x_4];
@@ -4680,9 +4716,9 @@ endinterface
 
 module mkModule54
     (Module54);
-    Reg#(Vector#(2, Struct2)) elt_fifoPInput_001 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoPInput_001 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoPInput_001 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoPInput_001 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_001 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_001 <- mkReg(unpack(0));
@@ -4699,11 +4735,17 @@ module mkModule54
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoPInput_001);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoPInput_001:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoPInput_001:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoPInput_001:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoPInput_001:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoPInput_001:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoPInput_001:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoPInput_001 <= (Bool)'(True);
         end else begin
 
@@ -4718,7 +4760,7 @@ module mkModule54
         let x_4 = (deqP_fifoPInput_001);
         elt_fifoPInput_001 <= update (x_2, x_3, x_0);
         empty_fifoPInput_001 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoPInput_001 <= (x_4) == (x_5);
         enqP_fifoPInput_001 <= x_5;
     endmethod
@@ -4730,7 +4772,7 @@ module mkModule54
         let x_3 = (enqP_fifoPInput_001);
         let x_4 = (deqP_fifoPInput_001);
         full_fifoPInput_001 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoPInput_001 <= (x_3) == (x_5);
         deqP_fifoPInput_001 <= x_5;
         return (x_2)[x_4];
@@ -6354,9 +6396,9 @@ endinterface
 
 module mkModule71
     (Module71);
-    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_002 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoCRqInput_002 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoCRqInput_002 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoCRqInput_002 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_002 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_002 <- mkReg(unpack(0));
@@ -6373,11 +6415,17 @@ module mkModule71
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoCRqInput_002);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoCRqInput_002:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoCRqInput_002:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoCRqInput_002:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoCRqInput_002:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoCRqInput_002:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoCRqInput_002:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoCRqInput_002 <= (Bool)'(True);
         end else begin
 
@@ -6392,7 +6440,7 @@ module mkModule71
         let x_4 = (deqP_fifoCRqInput_002);
         elt_fifoCRqInput_002 <= update (x_2, x_3, x_0);
         empty_fifoCRqInput_002 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoCRqInput_002 <= (x_4) == (x_5);
         enqP_fifoCRqInput_002 <= x_5;
     endmethod
@@ -6404,7 +6452,7 @@ module mkModule71
         let x_3 = (enqP_fifoCRqInput_002);
         let x_4 = (deqP_fifoCRqInput_002);
         full_fifoCRqInput_002 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoCRqInput_002 <= (x_3) == (x_5);
         deqP_fifoCRqInput_002 <= x_5;
         return (x_2)[x_4];
@@ -6418,9 +6466,9 @@ endinterface
 
 module mkModule72
     (Module72);
-    Reg#(Vector#(2, Struct2)) elt_fifoPInput_002 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoPInput_002 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoPInput_002 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoPInput_002 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_002 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_002 <- mkReg(unpack(0));
@@ -6437,11 +6485,17 @@ module mkModule72
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoPInput_002);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoPInput_002:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoPInput_002:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoPInput_002:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoPInput_002:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoPInput_002:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoPInput_002:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoPInput_002 <= (Bool)'(True);
         end else begin
 
@@ -6456,7 +6510,7 @@ module mkModule72
         let x_4 = (deqP_fifoPInput_002);
         elt_fifoPInput_002 <= update (x_2, x_3, x_0);
         empty_fifoPInput_002 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoPInput_002 <= (x_4) == (x_5);
         enqP_fifoPInput_002 <= x_5;
     endmethod
@@ -6468,7 +6522,7 @@ module mkModule72
         let x_3 = (enqP_fifoPInput_002);
         let x_4 = (deqP_fifoPInput_002);
         full_fifoPInput_002 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoPInput_002 <= (x_3) == (x_5);
         deqP_fifoPInput_002 <= x_5;
         return (x_2)[x_4];
@@ -8092,9 +8146,9 @@ endinterface
 
 module mkModule89
     (Module89);
-    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_003 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoCRqInput_003 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoCRqInput_003 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoCRqInput_003 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_003 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_003 <- mkReg(unpack(0));
@@ -8111,11 +8165,17 @@ module mkModule89
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoCRqInput_003);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoCRqInput_003:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoCRqInput_003:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoCRqInput_003:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoCRqInput_003:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoCRqInput_003:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoCRqInput_003:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoCRqInput_003 <= (Bool)'(True);
         end else begin
 
@@ -8130,7 +8190,7 @@ module mkModule89
         let x_4 = (deqP_fifoCRqInput_003);
         elt_fifoCRqInput_003 <= update (x_2, x_3, x_0);
         empty_fifoCRqInput_003 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoCRqInput_003 <= (x_4) == (x_5);
         enqP_fifoCRqInput_003 <= x_5;
     endmethod
@@ -8142,7 +8202,7 @@ module mkModule89
         let x_3 = (enqP_fifoCRqInput_003);
         let x_4 = (deqP_fifoCRqInput_003);
         full_fifoCRqInput_003 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoCRqInput_003 <= (x_3) == (x_5);
         deqP_fifoCRqInput_003 <= x_5;
         return (x_2)[x_4];
@@ -8156,9 +8216,9 @@ endinterface
 
 module mkModule90
     (Module90);
-    Reg#(Vector#(2, Struct2)) elt_fifoPInput_003 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) enqP_fifoPInput_003 <- mkReg(unpack(0));
-    Reg#(Bit#(1)) deqP_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Vector#(4, Struct2)) elt_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) enqP_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(2)) deqP_fifoPInput_003 <- mkReg(unpack(0));
     Reg#(Bool) empty_fifoPInput_003 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_003 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_003 <- mkReg(unpack(0));
@@ -8175,11 +8235,17 @@ module mkModule90
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
             let x_3 = (elt_fifoPInput_003);
             Struct2 x_4 =
-            ((x_3)[(Bit#(1))'(1'h1)]);
-            $display ("-- INPUT fifoPInput_003:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h3)]);
+            $display ("-- INPUT fifoPInput_003:3 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
             Struct2 x_5 =
-            ((x_3)[(Bit#(1))'(1'h0)]);
-            $display ("-- INPUT fifoPInput_003:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            ((x_3)[(Bit#(2))'(2'h2)]);
+            $display ("-- INPUT fifoPInput_003:2 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
+            Struct2 x_6 =
+            ((x_3)[(Bit#(2))'(2'h1)]);
+            $display ("-- INPUT fifoPInput_003:1 %x %x %b %x", (x_6).in_msg_from, ((x_6).in_msg).id, ((x_6).in_msg).type_, ((x_6).in_msg).addr);
+            Struct2 x_7 =
+            ((x_3)[(Bit#(2))'(2'h0)]);
+            $display ("-- INPUT fifoPInput_003:0 %x %x %b %x", (x_7).in_msg_from, ((x_7).in_msg).id, ((x_7).in_msg).type_, ((x_7).in_msg).addr);
             countDone_fifoPInput_003 <= (Bool)'(True);
         end else begin
 
@@ -8194,7 +8260,7 @@ module mkModule90
         let x_4 = (deqP_fifoPInput_003);
         elt_fifoPInput_003 <= update (x_2, x_3, x_0);
         empty_fifoPInput_003 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_3) + ((Bit#(2))'(2'h1)));
         full_fifoPInput_003 <= (x_4) == (x_5);
         enqP_fifoPInput_003 <= x_5;
     endmethod
@@ -8206,7 +8272,7 @@ module mkModule90
         let x_3 = (enqP_fifoPInput_003);
         let x_4 = (deqP_fifoPInput_003);
         full_fifoPInput_003 <= (Bool)'(False);
-        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        Bit#(2) x_5 = ((x_4) + ((Bit#(2))'(2'h1)));
         empty_fifoPInput_003 <= (x_3) == (x_5);
         deqP_fifoPInput_003 <= x_5;
         return (x_2)[x_4];
