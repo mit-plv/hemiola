@@ -1108,6 +1108,7 @@ Section Compile.
   Definition compile_OState_init (oidx: IdxT): list RegInitT := nil.
 
   Section DebugFifos.
+    Let fifoSz := 1.
     Let cntSz := 18.
 
     Definition msgDisps {ty} (msg: Expr ty (SyntaxKind (Struct KMsg))): list (Disp ty) :=
@@ -1117,16 +1118,16 @@ Section Compile.
         :: nil.
 
     Definition dMsgFifo (fifoName: string) :=
-      debugFifo (dType:= Struct KMsg) fifoName cntSz
-                ("-- MSG " ++ fifoName ++ ":")%string
-                (fun _ elt => msgDisps (#elt)%kami_expr).
+      debugFifoN (dType:= Struct KMsg) fifoName fifoSz cntSz
+                 ("-- MSG " ++ fifoName ++ ":")%string
+                 (fun _ elt => msgDisps (#elt)%kami_expr).
 
     Definition dInputFifo (fifoName: string) :=
-      debugFifo (dType:= Struct Input) fifoName cntSz
-                ("-- INPUT " ++ fifoName ++ ":")%string
-                (fun _ elt =>
-                   (DispBit (0, Hex) (#elt!Input@."in_msg_from")%kami_expr)
-                     :: (msgDisps (#elt!Input@."in_msg")%kami_expr)).
+      debugFifoN (dType:= Struct Input) fifoName fifoSz cntSz
+                 ("-- INPUT " ++ fifoName ++ ":")%string
+                 (fun _ elt =>
+                    (DispBit (0, Hex) (#elt!Input@."in_msg_from")%kami_expr)
+                      :: (msgDisps (#elt!Input@."in_msg")%kami_expr)).
 
     Definition irDisps {ty} (elt: Expr ty (SyntaxKind (Struct IRElt))): list (Disp ty) :=
       (DispBool (0, Binary) (elt!IRElt@."ir_is_rs_rel")%kami_expr)

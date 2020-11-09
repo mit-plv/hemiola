@@ -78,7 +78,10 @@ endinterface
 
 module mkModule1
     (Module1);
-    Reg#(Struct2) elt_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoCRqInput_00 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoCRqInput_00 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_00 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_00 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoCRqInput_00 <- mkReg(unpack(0));
@@ -92,9 +95,13 @@ module mkModule1
         let x_2 =
         (full_fifoCRqInput_00);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoCRqInput_00);
-            $display ("-- INPUT fifoCRqInput_00: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoCRqInput_00);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoCRqInput_00:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoCRqInput_00:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoCRqInput_00 <= (Bool)'(True);
         end else begin
 
@@ -104,16 +111,27 @@ module mkModule1
     method Action enq_fifoCRqInput_00 (Struct2 x_0);
         let x_1 = (full_fifoCRqInput_00);
         when (! (x_1), noAction);
-        elt_fifoCRqInput_00 <= x_0;
-        full_fifoCRqInput_00 <= (Bool)'(True);
+        let x_2 = (elt_fifoCRqInput_00);
+        let x_3 = (enqP_fifoCRqInput_00);
+        let x_4 = (deqP_fifoCRqInput_00);
+        elt_fifoCRqInput_00 <= update (x_2, x_3, x_0);
+        empty_fifoCRqInput_00 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoCRqInput_00 <= (x_4) == (x_5);
+        enqP_fifoCRqInput_00 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoCRqInput_00 ();
-        let x_1 = (full_fifoCRqInput_00);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoCRqInput_00);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoCRqInput_00);
+        let x_3 = (enqP_fifoCRqInput_00);
+        let x_4 = (deqP_fifoCRqInput_00);
         full_fifoCRqInput_00 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoCRqInput_00 <= (x_3) == (x_5);
+        deqP_fifoCRqInput_00 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -124,7 +142,10 @@ endinterface
 
 module mkModule2
     (Module2);
-    Reg#(Struct2) elt_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoCRsInput_00 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoCRsInput_00 <- mkReg(True);
     Reg#(Bool) full_fifoCRsInput_00 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRsInput_00 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoCRsInput_00 <- mkReg(unpack(0));
@@ -138,9 +159,13 @@ module mkModule2
         let x_2 =
         (full_fifoCRsInput_00);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoCRsInput_00);
-            $display ("-- INPUT fifoCRsInput_00: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoCRsInput_00);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoCRsInput_00:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoCRsInput_00:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoCRsInput_00 <= (Bool)'(True);
         end else begin
 
@@ -150,16 +175,27 @@ module mkModule2
     method Action enq_fifoCRsInput_00 (Struct2 x_0);
         let x_1 = (full_fifoCRsInput_00);
         when (! (x_1), noAction);
-        elt_fifoCRsInput_00 <= x_0;
-        full_fifoCRsInput_00 <= (Bool)'(True);
+        let x_2 = (elt_fifoCRsInput_00);
+        let x_3 = (enqP_fifoCRsInput_00);
+        let x_4 = (deqP_fifoCRsInput_00);
+        elt_fifoCRsInput_00 <= update (x_2, x_3, x_0);
+        empty_fifoCRsInput_00 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoCRsInput_00 <= (x_4) == (x_5);
+        enqP_fifoCRsInput_00 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoCRsInput_00 ();
-        let x_1 = (full_fifoCRsInput_00);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoCRsInput_00);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoCRsInput_00);
+        let x_3 = (enqP_fifoCRsInput_00);
+        let x_4 = (deqP_fifoCRsInput_00);
         full_fifoCRsInput_00 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoCRsInput_00 <= (x_3) == (x_5);
+        deqP_fifoCRsInput_00 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -170,7 +206,10 @@ endinterface
 
 module mkModule3
     (Module3);
-    Reg#(Struct2) elt_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoPInput_00 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoPInput_00 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_00 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_00 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoPInput_00 <- mkReg(unpack(0));
@@ -184,9 +223,13 @@ module mkModule3
         let x_2 =
         (full_fifoPInput_00);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoPInput_00);
-            $display ("-- INPUT fifoPInput_00: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoPInput_00);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoPInput_00:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoPInput_00:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoPInput_00 <= (Bool)'(True);
         end else begin
 
@@ -196,16 +239,27 @@ module mkModule3
     method Action enq_fifoPInput_00 (Struct2 x_0);
         let x_1 = (full_fifoPInput_00);
         when (! (x_1), noAction);
-        elt_fifoPInput_00 <= x_0;
-        full_fifoPInput_00 <= (Bool)'(True);
+        let x_2 = (elt_fifoPInput_00);
+        let x_3 = (enqP_fifoPInput_00);
+        let x_4 = (deqP_fifoPInput_00);
+        elt_fifoPInput_00 <= update (x_2, x_3, x_0);
+        empty_fifoPInput_00 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoPInput_00 <= (x_4) == (x_5);
+        enqP_fifoPInput_00 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoPInput_00 ();
-        let x_1 = (full_fifoPInput_00);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoPInput_00);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoPInput_00);
+        let x_3 = (enqP_fifoPInput_00);
+        let x_4 = (deqP_fifoPInput_00);
         full_fifoPInput_00 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoPInput_00 <= (x_3) == (x_5);
+        deqP_fifoPInput_00 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -2806,7 +2860,10 @@ endinterface
 
 module mkModule35
     (Module35);
-    Reg#(Struct2) elt_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoCRqInput_000 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoCRqInput_000 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_000 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_000 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoCRqInput_000 <- mkReg(unpack(0));
@@ -2820,9 +2877,13 @@ module mkModule35
         let x_2 =
         (full_fifoCRqInput_000);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoCRqInput_000);
-            $display ("-- INPUT fifoCRqInput_000: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoCRqInput_000);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoCRqInput_000:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoCRqInput_000:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoCRqInput_000 <= (Bool)'(True);
         end else begin
 
@@ -2832,16 +2893,27 @@ module mkModule35
     method Action enq_fifoCRqInput_000 (Struct2 x_0);
         let x_1 = (full_fifoCRqInput_000);
         when (! (x_1), noAction);
-        elt_fifoCRqInput_000 <= x_0;
-        full_fifoCRqInput_000 <= (Bool)'(True);
+        let x_2 = (elt_fifoCRqInput_000);
+        let x_3 = (enqP_fifoCRqInput_000);
+        let x_4 = (deqP_fifoCRqInput_000);
+        elt_fifoCRqInput_000 <= update (x_2, x_3, x_0);
+        empty_fifoCRqInput_000 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoCRqInput_000 <= (x_4) == (x_5);
+        enqP_fifoCRqInput_000 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoCRqInput_000 ();
-        let x_1 = (full_fifoCRqInput_000);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoCRqInput_000);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoCRqInput_000);
+        let x_3 = (enqP_fifoCRqInput_000);
+        let x_4 = (deqP_fifoCRqInput_000);
         full_fifoCRqInput_000 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoCRqInput_000 <= (x_3) == (x_5);
+        deqP_fifoCRqInput_000 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -2852,7 +2924,10 @@ endinterface
 
 module mkModule36
     (Module36);
-    Reg#(Struct2) elt_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoPInput_000 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoPInput_000 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_000 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_000 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoPInput_000 <- mkReg(unpack(0));
@@ -2866,9 +2941,13 @@ module mkModule36
         let x_2 =
         (full_fifoPInput_000);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoPInput_000);
-            $display ("-- INPUT fifoPInput_000: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoPInput_000);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoPInput_000:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoPInput_000:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoPInput_000 <= (Bool)'(True);
         end else begin
 
@@ -2878,16 +2957,27 @@ module mkModule36
     method Action enq_fifoPInput_000 (Struct2 x_0);
         let x_1 = (full_fifoPInput_000);
         when (! (x_1), noAction);
-        elt_fifoPInput_000 <= x_0;
-        full_fifoPInput_000 <= (Bool)'(True);
+        let x_2 = (elt_fifoPInput_000);
+        let x_3 = (enqP_fifoPInput_000);
+        let x_4 = (deqP_fifoPInput_000);
+        elt_fifoPInput_000 <= update (x_2, x_3, x_0);
+        empty_fifoPInput_000 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoPInput_000 <= (x_4) == (x_5);
+        enqP_fifoPInput_000 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoPInput_000 ();
-        let x_1 = (full_fifoPInput_000);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoPInput_000);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoPInput_000);
+        let x_3 = (enqP_fifoPInput_000);
+        let x_4 = (deqP_fifoPInput_000);
         full_fifoPInput_000 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoPInput_000 <= (x_3) == (x_5);
+        deqP_fifoPInput_000 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -3036,7 +3126,10 @@ endinterface
 
 module mkModule40
     (Module40);
-    Reg#(Struct1) elt_fifo0000 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0000 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0000 <- mkReg(True);
     Reg#(Bool) full_fifo0000 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0000 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0000 <- mkReg(unpack(0));
@@ -3050,9 +3143,13 @@ module mkModule40
         let x_2 =
         (full_fifo0000);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0000);
-            $display ("-- MSG fifo0000: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0000);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0000:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0000:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0000 <= (Bool)'(True);
         end else begin
 
@@ -3062,16 +3159,27 @@ module mkModule40
     method Action enq_fifo0000 (Struct1 x_0);
         let x_1 = (full_fifo0000);
         when (! (x_1), noAction);
-        elt_fifo0000 <= x_0;
-        full_fifo0000 <= (Bool)'(True);
+        let x_2 = (elt_fifo0000);
+        let x_3 = (enqP_fifo0000);
+        let x_4 = (deqP_fifo0000);
+        elt_fifo0000 <= update (x_2, x_3, x_0);
+        empty_fifo0000 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0000 <= (x_4) == (x_5);
+        enqP_fifo0000 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0000 ();
-        let x_1 = (full_fifo0000);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0000);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0000);
+        let x_3 = (enqP_fifo0000);
+        let x_4 = (deqP_fifo0000);
         full_fifo0000 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0000 <= (x_3) == (x_5);
+        deqP_fifo0000 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -3082,7 +3190,10 @@ endinterface
 
 module mkModule41
     (Module41);
-    Reg#(Struct1) elt_fifo0001 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0001 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0001 <- mkReg(True);
     Reg#(Bool) full_fifo0001 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0001 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0001 <- mkReg(unpack(0));
@@ -3096,9 +3207,13 @@ module mkModule41
         let x_2 =
         (full_fifo0001);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0001);
-            $display ("-- MSG fifo0001: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0001);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0001:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0001:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0001 <= (Bool)'(True);
         end else begin
 
@@ -3108,16 +3223,27 @@ module mkModule41
     method Action enq_fifo0001 (Struct1 x_0);
         let x_1 = (full_fifo0001);
         when (! (x_1), noAction);
-        elt_fifo0001 <= x_0;
-        full_fifo0001 <= (Bool)'(True);
+        let x_2 = (elt_fifo0001);
+        let x_3 = (enqP_fifo0001);
+        let x_4 = (deqP_fifo0001);
+        elt_fifo0001 <= update (x_2, x_3, x_0);
+        empty_fifo0001 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0001 <= (x_4) == (x_5);
+        enqP_fifo0001 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0001 ();
-        let x_1 = (full_fifo0001);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0001);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0001);
+        let x_3 = (enqP_fifo0001);
+        let x_4 = (deqP_fifo0001);
         full_fifo0001 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0001 <= (x_3) == (x_5);
+        deqP_fifo0001 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -3128,7 +3254,10 @@ endinterface
 
 module mkModule42
     (Module42);
-    Reg#(Struct1) elt_fifo0002 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0002 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0002 <- mkReg(True);
     Reg#(Bool) full_fifo0002 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0002 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0002 <- mkReg(unpack(0));
@@ -3142,9 +3271,13 @@ module mkModule42
         let x_2 =
         (full_fifo0002);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0002);
-            $display ("-- MSG fifo0002: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0002);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0002:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0002:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0002 <= (Bool)'(True);
         end else begin
 
@@ -3154,16 +3287,27 @@ module mkModule42
     method Action enq_fifo0002 (Struct1 x_0);
         let x_1 = (full_fifo0002);
         when (! (x_1), noAction);
-        elt_fifo0002 <= x_0;
-        full_fifo0002 <= (Bool)'(True);
+        let x_2 = (elt_fifo0002);
+        let x_3 = (enqP_fifo0002);
+        let x_4 = (deqP_fifo0002);
+        elt_fifo0002 <= update (x_2, x_3, x_0);
+        empty_fifo0002 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0002 <= (x_4) == (x_5);
+        enqP_fifo0002 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0002 ();
-        let x_1 = (full_fifo0002);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0002);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0002);
+        let x_3 = (enqP_fifo0002);
+        let x_4 = (deqP_fifo0002);
         full_fifo0002 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0002 <= (x_3) == (x_5);
+        deqP_fifo0002 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -3174,7 +3318,10 @@ endinterface
 
 module mkModule43
     (Module43);
-    Reg#(Struct1) elt_fifo00000 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00000 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00000 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00000 <- mkReg(True);
     Reg#(Bool) full_fifo00000 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00000 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00000 <- mkReg(unpack(0));
@@ -3188,9 +3335,13 @@ module mkModule43
         let x_2 =
         (full_fifo00000);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00000);
-            $display ("-- MSG fifo00000: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00000);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00000:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00000:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00000 <= (Bool)'(True);
         end else begin
 
@@ -3200,16 +3351,27 @@ module mkModule43
     method Action enq_fifo00000 (Struct1 x_0);
         let x_1 = (full_fifo00000);
         when (! (x_1), noAction);
-        elt_fifo00000 <= x_0;
-        full_fifo00000 <= (Bool)'(True);
+        let x_2 = (elt_fifo00000);
+        let x_3 = (enqP_fifo00000);
+        let x_4 = (deqP_fifo00000);
+        elt_fifo00000 <= update (x_2, x_3, x_0);
+        empty_fifo00000 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00000 <= (x_4) == (x_5);
+        enqP_fifo00000 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00000 ();
-        let x_1 = (full_fifo00000);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00000);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00000);
+        let x_3 = (enqP_fifo00000);
+        let x_4 = (deqP_fifo00000);
         full_fifo00000 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00000 <= (x_3) == (x_5);
+        deqP_fifo00000 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -3220,7 +3382,10 @@ endinterface
 
 module mkModule44
     (Module44);
-    Reg#(Struct1) elt_fifo00002 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00002 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00002 <- mkReg(True);
     Reg#(Bool) full_fifo00002 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00002 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00002 <- mkReg(unpack(0));
@@ -3234,9 +3399,13 @@ module mkModule44
         let x_2 =
         (full_fifo00002);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00002);
-            $display ("-- MSG fifo00002: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00002);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00002:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00002:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00002 <= (Bool)'(True);
         end else begin
 
@@ -3246,16 +3415,27 @@ module mkModule44
     method Action enq_fifo00002 (Struct1 x_0);
         let x_1 = (full_fifo00002);
         when (! (x_1), noAction);
-        elt_fifo00002 <= x_0;
-        full_fifo00002 <= (Bool)'(True);
+        let x_2 = (elt_fifo00002);
+        let x_3 = (enqP_fifo00002);
+        let x_4 = (deqP_fifo00002);
+        elt_fifo00002 <= update (x_2, x_3, x_0);
+        empty_fifo00002 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00002 <= (x_4) == (x_5);
+        enqP_fifo00002 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00002 ();
-        let x_1 = (full_fifo00002);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00002);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00002);
+        let x_3 = (enqP_fifo00002);
+        let x_4 = (deqP_fifo00002);
         full_fifo00002 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00002 <= (x_3) == (x_5);
+        deqP_fifo00002 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4409,7 +4589,10 @@ endinterface
 
 module mkModule53
     (Module53);
-    Reg#(Struct2) elt_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoCRqInput_001 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoCRqInput_001 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_001 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_001 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoCRqInput_001 <- mkReg(unpack(0));
@@ -4423,9 +4606,13 @@ module mkModule53
         let x_2 =
         (full_fifoCRqInput_001);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoCRqInput_001);
-            $display ("-- INPUT fifoCRqInput_001: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoCRqInput_001);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoCRqInput_001:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoCRqInput_001:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoCRqInput_001 <= (Bool)'(True);
         end else begin
 
@@ -4435,16 +4622,27 @@ module mkModule53
     method Action enq_fifoCRqInput_001 (Struct2 x_0);
         let x_1 = (full_fifoCRqInput_001);
         when (! (x_1), noAction);
-        elt_fifoCRqInput_001 <= x_0;
-        full_fifoCRqInput_001 <= (Bool)'(True);
+        let x_2 = (elt_fifoCRqInput_001);
+        let x_3 = (enqP_fifoCRqInput_001);
+        let x_4 = (deqP_fifoCRqInput_001);
+        elt_fifoCRqInput_001 <= update (x_2, x_3, x_0);
+        empty_fifoCRqInput_001 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoCRqInput_001 <= (x_4) == (x_5);
+        enqP_fifoCRqInput_001 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoCRqInput_001 ();
-        let x_1 = (full_fifoCRqInput_001);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoCRqInput_001);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoCRqInput_001);
+        let x_3 = (enqP_fifoCRqInput_001);
+        let x_4 = (deqP_fifoCRqInput_001);
         full_fifoCRqInput_001 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoCRqInput_001 <= (x_3) == (x_5);
+        deqP_fifoCRqInput_001 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4455,7 +4653,10 @@ endinterface
 
 module mkModule54
     (Module54);
-    Reg#(Struct2) elt_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoPInput_001 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoPInput_001 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_001 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_001 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoPInput_001 <- mkReg(unpack(0));
@@ -4469,9 +4670,13 @@ module mkModule54
         let x_2 =
         (full_fifoPInput_001);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoPInput_001);
-            $display ("-- INPUT fifoPInput_001: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoPInput_001);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoPInput_001:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoPInput_001:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoPInput_001 <= (Bool)'(True);
         end else begin
 
@@ -4481,16 +4686,27 @@ module mkModule54
     method Action enq_fifoPInput_001 (Struct2 x_0);
         let x_1 = (full_fifoPInput_001);
         when (! (x_1), noAction);
-        elt_fifoPInput_001 <= x_0;
-        full_fifoPInput_001 <= (Bool)'(True);
+        let x_2 = (elt_fifoPInput_001);
+        let x_3 = (enqP_fifoPInput_001);
+        let x_4 = (deqP_fifoPInput_001);
+        elt_fifoPInput_001 <= update (x_2, x_3, x_0);
+        empty_fifoPInput_001 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoPInput_001 <= (x_4) == (x_5);
+        enqP_fifoPInput_001 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoPInput_001 ();
-        let x_1 = (full_fifoPInput_001);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoPInput_001);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoPInput_001);
+        let x_3 = (enqP_fifoPInput_001);
+        let x_4 = (deqP_fifoPInput_001);
         full_fifoPInput_001 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoPInput_001 <= (x_3) == (x_5);
+        deqP_fifoPInput_001 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4639,7 +4855,10 @@ endinterface
 
 module mkModule58
     (Module58);
-    Reg#(Struct1) elt_fifo0010 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0010 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0010 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0010 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0010 <- mkReg(True);
     Reg#(Bool) full_fifo0010 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0010 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0010 <- mkReg(unpack(0));
@@ -4653,9 +4872,13 @@ module mkModule58
         let x_2 =
         (full_fifo0010);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0010);
-            $display ("-- MSG fifo0010: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0010);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0010:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0010:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0010 <= (Bool)'(True);
         end else begin
 
@@ -4665,16 +4888,27 @@ module mkModule58
     method Action enq_fifo0010 (Struct1 x_0);
         let x_1 = (full_fifo0010);
         when (! (x_1), noAction);
-        elt_fifo0010 <= x_0;
-        full_fifo0010 <= (Bool)'(True);
+        let x_2 = (elt_fifo0010);
+        let x_3 = (enqP_fifo0010);
+        let x_4 = (deqP_fifo0010);
+        elt_fifo0010 <= update (x_2, x_3, x_0);
+        empty_fifo0010 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0010 <= (x_4) == (x_5);
+        enqP_fifo0010 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0010 ();
-        let x_1 = (full_fifo0010);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0010);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0010);
+        let x_3 = (enqP_fifo0010);
+        let x_4 = (deqP_fifo0010);
         full_fifo0010 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0010 <= (x_3) == (x_5);
+        deqP_fifo0010 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4685,7 +4919,10 @@ endinterface
 
 module mkModule59
     (Module59);
-    Reg#(Struct1) elt_fifo0011 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0011 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0011 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0011 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0011 <- mkReg(True);
     Reg#(Bool) full_fifo0011 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0011 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0011 <- mkReg(unpack(0));
@@ -4699,9 +4936,13 @@ module mkModule59
         let x_2 =
         (full_fifo0011);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0011);
-            $display ("-- MSG fifo0011: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0011);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0011:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0011:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0011 <= (Bool)'(True);
         end else begin
 
@@ -4711,16 +4952,27 @@ module mkModule59
     method Action enq_fifo0011 (Struct1 x_0);
         let x_1 = (full_fifo0011);
         when (! (x_1), noAction);
-        elt_fifo0011 <= x_0;
-        full_fifo0011 <= (Bool)'(True);
+        let x_2 = (elt_fifo0011);
+        let x_3 = (enqP_fifo0011);
+        let x_4 = (deqP_fifo0011);
+        elt_fifo0011 <= update (x_2, x_3, x_0);
+        empty_fifo0011 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0011 <= (x_4) == (x_5);
+        enqP_fifo0011 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0011 ();
-        let x_1 = (full_fifo0011);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0011);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0011);
+        let x_3 = (enqP_fifo0011);
+        let x_4 = (deqP_fifo0011);
         full_fifo0011 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0011 <= (x_3) == (x_5);
+        deqP_fifo0011 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4731,7 +4983,10 @@ endinterface
 
 module mkModule60
     (Module60);
-    Reg#(Struct1) elt_fifo0012 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0012 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0012 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0012 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0012 <- mkReg(True);
     Reg#(Bool) full_fifo0012 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0012 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0012 <- mkReg(unpack(0));
@@ -4745,9 +5000,13 @@ module mkModule60
         let x_2 =
         (full_fifo0012);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0012);
-            $display ("-- MSG fifo0012: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0012);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0012:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0012:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0012 <= (Bool)'(True);
         end else begin
 
@@ -4757,16 +5016,27 @@ module mkModule60
     method Action enq_fifo0012 (Struct1 x_0);
         let x_1 = (full_fifo0012);
         when (! (x_1), noAction);
-        elt_fifo0012 <= x_0;
-        full_fifo0012 <= (Bool)'(True);
+        let x_2 = (elt_fifo0012);
+        let x_3 = (enqP_fifo0012);
+        let x_4 = (deqP_fifo0012);
+        elt_fifo0012 <= update (x_2, x_3, x_0);
+        empty_fifo0012 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0012 <= (x_4) == (x_5);
+        enqP_fifo0012 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0012 ();
-        let x_1 = (full_fifo0012);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0012);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0012);
+        let x_3 = (enqP_fifo0012);
+        let x_4 = (deqP_fifo0012);
         full_fifo0012 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0012 <= (x_3) == (x_5);
+        deqP_fifo0012 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4777,7 +5047,10 @@ endinterface
 
 module mkModule61
     (Module61);
-    Reg#(Struct1) elt_fifo00100 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00100 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00100 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00100 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00100 <- mkReg(True);
     Reg#(Bool) full_fifo00100 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00100 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00100 <- mkReg(unpack(0));
@@ -4791,9 +5064,13 @@ module mkModule61
         let x_2 =
         (full_fifo00100);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00100);
-            $display ("-- MSG fifo00100: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00100);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00100:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00100:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00100 <= (Bool)'(True);
         end else begin
 
@@ -4803,16 +5080,27 @@ module mkModule61
     method Action enq_fifo00100 (Struct1 x_0);
         let x_1 = (full_fifo00100);
         when (! (x_1), noAction);
-        elt_fifo00100 <= x_0;
-        full_fifo00100 <= (Bool)'(True);
+        let x_2 = (elt_fifo00100);
+        let x_3 = (enqP_fifo00100);
+        let x_4 = (deqP_fifo00100);
+        elt_fifo00100 <= update (x_2, x_3, x_0);
+        empty_fifo00100 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00100 <= (x_4) == (x_5);
+        enqP_fifo00100 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00100 ();
-        let x_1 = (full_fifo00100);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00100);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00100);
+        let x_3 = (enqP_fifo00100);
+        let x_4 = (deqP_fifo00100);
         full_fifo00100 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00100 <= (x_3) == (x_5);
+        deqP_fifo00100 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -4823,7 +5111,10 @@ endinterface
 
 module mkModule62
     (Module62);
-    Reg#(Struct1) elt_fifo00102 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00102 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00102 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00102 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00102 <- mkReg(True);
     Reg#(Bool) full_fifo00102 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00102 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00102 <- mkReg(unpack(0));
@@ -4837,9 +5128,13 @@ module mkModule62
         let x_2 =
         (full_fifo00102);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00102);
-            $display ("-- MSG fifo00102: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00102);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00102:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00102:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00102 <= (Bool)'(True);
         end else begin
 
@@ -4849,16 +5144,27 @@ module mkModule62
     method Action enq_fifo00102 (Struct1 x_0);
         let x_1 = (full_fifo00102);
         when (! (x_1), noAction);
-        elt_fifo00102 <= x_0;
-        full_fifo00102 <= (Bool)'(True);
+        let x_2 = (elt_fifo00102);
+        let x_3 = (enqP_fifo00102);
+        let x_4 = (deqP_fifo00102);
+        elt_fifo00102 <= update (x_2, x_3, x_0);
+        empty_fifo00102 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00102 <= (x_4) == (x_5);
+        enqP_fifo00102 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00102 ();
-        let x_1 = (full_fifo00102);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00102);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00102);
+        let x_3 = (enqP_fifo00102);
+        let x_4 = (deqP_fifo00102);
         full_fifo00102 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00102 <= (x_3) == (x_5);
+        deqP_fifo00102 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6012,7 +6318,10 @@ endinterface
 
 module mkModule71
     (Module71);
-    Reg#(Struct2) elt_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoCRqInput_002 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoCRqInput_002 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_002 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_002 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoCRqInput_002 <- mkReg(unpack(0));
@@ -6026,9 +6335,13 @@ module mkModule71
         let x_2 =
         (full_fifoCRqInput_002);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoCRqInput_002);
-            $display ("-- INPUT fifoCRqInput_002: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoCRqInput_002);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoCRqInput_002:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoCRqInput_002:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoCRqInput_002 <= (Bool)'(True);
         end else begin
 
@@ -6038,16 +6351,27 @@ module mkModule71
     method Action enq_fifoCRqInput_002 (Struct2 x_0);
         let x_1 = (full_fifoCRqInput_002);
         when (! (x_1), noAction);
-        elt_fifoCRqInput_002 <= x_0;
-        full_fifoCRqInput_002 <= (Bool)'(True);
+        let x_2 = (elt_fifoCRqInput_002);
+        let x_3 = (enqP_fifoCRqInput_002);
+        let x_4 = (deqP_fifoCRqInput_002);
+        elt_fifoCRqInput_002 <= update (x_2, x_3, x_0);
+        empty_fifoCRqInput_002 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoCRqInput_002 <= (x_4) == (x_5);
+        enqP_fifoCRqInput_002 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoCRqInput_002 ();
-        let x_1 = (full_fifoCRqInput_002);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoCRqInput_002);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoCRqInput_002);
+        let x_3 = (enqP_fifoCRqInput_002);
+        let x_4 = (deqP_fifoCRqInput_002);
         full_fifoCRqInput_002 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoCRqInput_002 <= (x_3) == (x_5);
+        deqP_fifoCRqInput_002 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6058,7 +6382,10 @@ endinterface
 
 module mkModule72
     (Module72);
-    Reg#(Struct2) elt_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoPInput_002 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoPInput_002 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_002 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_002 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoPInput_002 <- mkReg(unpack(0));
@@ -6072,9 +6399,13 @@ module mkModule72
         let x_2 =
         (full_fifoPInput_002);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoPInput_002);
-            $display ("-- INPUT fifoPInput_002: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoPInput_002);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoPInput_002:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoPInput_002:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoPInput_002 <= (Bool)'(True);
         end else begin
 
@@ -6084,16 +6415,27 @@ module mkModule72
     method Action enq_fifoPInput_002 (Struct2 x_0);
         let x_1 = (full_fifoPInput_002);
         when (! (x_1), noAction);
-        elt_fifoPInput_002 <= x_0;
-        full_fifoPInput_002 <= (Bool)'(True);
+        let x_2 = (elt_fifoPInput_002);
+        let x_3 = (enqP_fifoPInput_002);
+        let x_4 = (deqP_fifoPInput_002);
+        elt_fifoPInput_002 <= update (x_2, x_3, x_0);
+        empty_fifoPInput_002 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoPInput_002 <= (x_4) == (x_5);
+        enqP_fifoPInput_002 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoPInput_002 ();
-        let x_1 = (full_fifoPInput_002);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoPInput_002);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoPInput_002);
+        let x_3 = (enqP_fifoPInput_002);
+        let x_4 = (deqP_fifoPInput_002);
         full_fifoPInput_002 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoPInput_002 <= (x_3) == (x_5);
+        deqP_fifoPInput_002 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6242,7 +6584,10 @@ endinterface
 
 module mkModule76
     (Module76);
-    Reg#(Struct1) elt_fifo0020 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0020 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0020 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0020 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0020 <- mkReg(True);
     Reg#(Bool) full_fifo0020 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0020 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0020 <- mkReg(unpack(0));
@@ -6256,9 +6601,13 @@ module mkModule76
         let x_2 =
         (full_fifo0020);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0020);
-            $display ("-- MSG fifo0020: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0020);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0020:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0020:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0020 <= (Bool)'(True);
         end else begin
 
@@ -6268,16 +6617,27 @@ module mkModule76
     method Action enq_fifo0020 (Struct1 x_0);
         let x_1 = (full_fifo0020);
         when (! (x_1), noAction);
-        elt_fifo0020 <= x_0;
-        full_fifo0020 <= (Bool)'(True);
+        let x_2 = (elt_fifo0020);
+        let x_3 = (enqP_fifo0020);
+        let x_4 = (deqP_fifo0020);
+        elt_fifo0020 <= update (x_2, x_3, x_0);
+        empty_fifo0020 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0020 <= (x_4) == (x_5);
+        enqP_fifo0020 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0020 ();
-        let x_1 = (full_fifo0020);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0020);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0020);
+        let x_3 = (enqP_fifo0020);
+        let x_4 = (deqP_fifo0020);
         full_fifo0020 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0020 <= (x_3) == (x_5);
+        deqP_fifo0020 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6288,7 +6648,10 @@ endinterface
 
 module mkModule77
     (Module77);
-    Reg#(Struct1) elt_fifo0021 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0021 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0021 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0021 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0021 <- mkReg(True);
     Reg#(Bool) full_fifo0021 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0021 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0021 <- mkReg(unpack(0));
@@ -6302,9 +6665,13 @@ module mkModule77
         let x_2 =
         (full_fifo0021);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0021);
-            $display ("-- MSG fifo0021: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0021);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0021:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0021:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0021 <= (Bool)'(True);
         end else begin
 
@@ -6314,16 +6681,27 @@ module mkModule77
     method Action enq_fifo0021 (Struct1 x_0);
         let x_1 = (full_fifo0021);
         when (! (x_1), noAction);
-        elt_fifo0021 <= x_0;
-        full_fifo0021 <= (Bool)'(True);
+        let x_2 = (elt_fifo0021);
+        let x_3 = (enqP_fifo0021);
+        let x_4 = (deqP_fifo0021);
+        elt_fifo0021 <= update (x_2, x_3, x_0);
+        empty_fifo0021 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0021 <= (x_4) == (x_5);
+        enqP_fifo0021 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0021 ();
-        let x_1 = (full_fifo0021);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0021);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0021);
+        let x_3 = (enqP_fifo0021);
+        let x_4 = (deqP_fifo0021);
         full_fifo0021 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0021 <= (x_3) == (x_5);
+        deqP_fifo0021 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6334,7 +6712,10 @@ endinterface
 
 module mkModule78
     (Module78);
-    Reg#(Struct1) elt_fifo0022 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0022 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0022 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0022 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0022 <- mkReg(True);
     Reg#(Bool) full_fifo0022 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0022 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0022 <- mkReg(unpack(0));
@@ -6348,9 +6729,13 @@ module mkModule78
         let x_2 =
         (full_fifo0022);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0022);
-            $display ("-- MSG fifo0022: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0022);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0022:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0022:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0022 <= (Bool)'(True);
         end else begin
 
@@ -6360,16 +6745,27 @@ module mkModule78
     method Action enq_fifo0022 (Struct1 x_0);
         let x_1 = (full_fifo0022);
         when (! (x_1), noAction);
-        elt_fifo0022 <= x_0;
-        full_fifo0022 <= (Bool)'(True);
+        let x_2 = (elt_fifo0022);
+        let x_3 = (enqP_fifo0022);
+        let x_4 = (deqP_fifo0022);
+        elt_fifo0022 <= update (x_2, x_3, x_0);
+        empty_fifo0022 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0022 <= (x_4) == (x_5);
+        enqP_fifo0022 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0022 ();
-        let x_1 = (full_fifo0022);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0022);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0022);
+        let x_3 = (enqP_fifo0022);
+        let x_4 = (deqP_fifo0022);
         full_fifo0022 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0022 <= (x_3) == (x_5);
+        deqP_fifo0022 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6380,7 +6776,10 @@ endinterface
 
 module mkModule79
     (Module79);
-    Reg#(Struct1) elt_fifo00200 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00200 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00200 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00200 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00200 <- mkReg(True);
     Reg#(Bool) full_fifo00200 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00200 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00200 <- mkReg(unpack(0));
@@ -6394,9 +6793,13 @@ module mkModule79
         let x_2 =
         (full_fifo00200);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00200);
-            $display ("-- MSG fifo00200: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00200);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00200:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00200:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00200 <= (Bool)'(True);
         end else begin
 
@@ -6406,16 +6809,27 @@ module mkModule79
     method Action enq_fifo00200 (Struct1 x_0);
         let x_1 = (full_fifo00200);
         when (! (x_1), noAction);
-        elt_fifo00200 <= x_0;
-        full_fifo00200 <= (Bool)'(True);
+        let x_2 = (elt_fifo00200);
+        let x_3 = (enqP_fifo00200);
+        let x_4 = (deqP_fifo00200);
+        elt_fifo00200 <= update (x_2, x_3, x_0);
+        empty_fifo00200 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00200 <= (x_4) == (x_5);
+        enqP_fifo00200 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00200 ();
-        let x_1 = (full_fifo00200);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00200);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00200);
+        let x_3 = (enqP_fifo00200);
+        let x_4 = (deqP_fifo00200);
         full_fifo00200 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00200 <= (x_3) == (x_5);
+        deqP_fifo00200 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -6426,7 +6840,10 @@ endinterface
 
 module mkModule80
     (Module80);
-    Reg#(Struct1) elt_fifo00202 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00202 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00202 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00202 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00202 <- mkReg(True);
     Reg#(Bool) full_fifo00202 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00202 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00202 <- mkReg(unpack(0));
@@ -6440,9 +6857,13 @@ module mkModule80
         let x_2 =
         (full_fifo00202);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00202);
-            $display ("-- MSG fifo00202: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00202);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00202:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00202:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00202 <= (Bool)'(True);
         end else begin
 
@@ -6452,16 +6873,27 @@ module mkModule80
     method Action enq_fifo00202 (Struct1 x_0);
         let x_1 = (full_fifo00202);
         when (! (x_1), noAction);
-        elt_fifo00202 <= x_0;
-        full_fifo00202 <= (Bool)'(True);
+        let x_2 = (elt_fifo00202);
+        let x_3 = (enqP_fifo00202);
+        let x_4 = (deqP_fifo00202);
+        elt_fifo00202 <= update (x_2, x_3, x_0);
+        empty_fifo00202 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00202 <= (x_4) == (x_5);
+        enqP_fifo00202 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00202 ();
-        let x_1 = (full_fifo00202);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00202);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00202);
+        let x_3 = (enqP_fifo00202);
+        let x_4 = (deqP_fifo00202);
         full_fifo00202 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00202 <= (x_3) == (x_5);
+        deqP_fifo00202 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -7615,7 +8047,10 @@ endinterface
 
 module mkModule89
     (Module89);
-    Reg#(Struct2) elt_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoCRqInput_003 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoCRqInput_003 <- mkReg(True);
     Reg#(Bool) full_fifoCRqInput_003 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoCRqInput_003 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoCRqInput_003 <- mkReg(unpack(0));
@@ -7629,9 +8064,13 @@ module mkModule89
         let x_2 =
         (full_fifoCRqInput_003);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoCRqInput_003);
-            $display ("-- INPUT fifoCRqInput_003: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoCRqInput_003);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoCRqInput_003:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoCRqInput_003:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoCRqInput_003 <= (Bool)'(True);
         end else begin
 
@@ -7641,16 +8080,27 @@ module mkModule89
     method Action enq_fifoCRqInput_003 (Struct2 x_0);
         let x_1 = (full_fifoCRqInput_003);
         when (! (x_1), noAction);
-        elt_fifoCRqInput_003 <= x_0;
-        full_fifoCRqInput_003 <= (Bool)'(True);
+        let x_2 = (elt_fifoCRqInput_003);
+        let x_3 = (enqP_fifoCRqInput_003);
+        let x_4 = (deqP_fifoCRqInput_003);
+        elt_fifoCRqInput_003 <= update (x_2, x_3, x_0);
+        empty_fifoCRqInput_003 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoCRqInput_003 <= (x_4) == (x_5);
+        enqP_fifoCRqInput_003 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoCRqInput_003 ();
-        let x_1 = (full_fifoCRqInput_003);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoCRqInput_003);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoCRqInput_003);
+        let x_3 = (enqP_fifoCRqInput_003);
+        let x_4 = (deqP_fifoCRqInput_003);
         full_fifoCRqInput_003 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoCRqInput_003 <= (x_3) == (x_5);
+        deqP_fifoCRqInput_003 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -7661,7 +8111,10 @@ endinterface
 
 module mkModule90
     (Module90);
-    Reg#(Struct2) elt_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct2)) elt_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifoPInput_003 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifoPInput_003 <- mkReg(True);
     Reg#(Bool) full_fifoPInput_003 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifoPInput_003 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifoPInput_003 <- mkReg(unpack(0));
@@ -7675,9 +8128,13 @@ module mkModule90
         let x_2 =
         (full_fifoPInput_003);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifoPInput_003);
-            $display ("-- INPUT fifoPInput_003: %x %x %b %x", (x_3).in_msg_from, ((x_3).in_msg).id, ((x_3).in_msg).type_, ((x_3).in_msg).addr);
+            let x_3 = (elt_fifoPInput_003);
+            Struct2 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- INPUT fifoPInput_003:1 %x %x %b %x", (x_4).in_msg_from, ((x_4).in_msg).id, ((x_4).in_msg).type_, ((x_4).in_msg).addr);
+            Struct2 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- INPUT fifoPInput_003:0 %x %x %b %x", (x_5).in_msg_from, ((x_5).in_msg).id, ((x_5).in_msg).type_, ((x_5).in_msg).addr);
             countDone_fifoPInput_003 <= (Bool)'(True);
         end else begin
 
@@ -7687,16 +8144,27 @@ module mkModule90
     method Action enq_fifoPInput_003 (Struct2 x_0);
         let x_1 = (full_fifoPInput_003);
         when (! (x_1), noAction);
-        elt_fifoPInput_003 <= x_0;
-        full_fifoPInput_003 <= (Bool)'(True);
+        let x_2 = (elt_fifoPInput_003);
+        let x_3 = (enqP_fifoPInput_003);
+        let x_4 = (deqP_fifoPInput_003);
+        elt_fifoPInput_003 <= update (x_2, x_3, x_0);
+        empty_fifoPInput_003 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifoPInput_003 <= (x_4) == (x_5);
+        enqP_fifoPInput_003 <= x_5;
     endmethod
 
     method ActionValue#(Struct2) deq_fifoPInput_003 ();
-        let x_1 = (full_fifoPInput_003);
-        when (x_1, noAction);
+        let x_1 = (empty_fifoPInput_003);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifoPInput_003);
+        let x_3 = (enqP_fifoPInput_003);
+        let x_4 = (deqP_fifoPInput_003);
         full_fifoPInput_003 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifoPInput_003 <= (x_3) == (x_5);
+        deqP_fifoPInput_003 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -7845,7 +8313,10 @@ endinterface
 
 module mkModule94
     (Module94);
-    Reg#(Struct1) elt_fifo0030 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0030 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0030 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0030 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0030 <- mkReg(True);
     Reg#(Bool) full_fifo0030 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0030 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0030 <- mkReg(unpack(0));
@@ -7859,9 +8330,13 @@ module mkModule94
         let x_2 =
         (full_fifo0030);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0030);
-            $display ("-- MSG fifo0030: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0030);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0030:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0030:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0030 <= (Bool)'(True);
         end else begin
 
@@ -7871,16 +8346,27 @@ module mkModule94
     method Action enq_fifo0030 (Struct1 x_0);
         let x_1 = (full_fifo0030);
         when (! (x_1), noAction);
-        elt_fifo0030 <= x_0;
-        full_fifo0030 <= (Bool)'(True);
+        let x_2 = (elt_fifo0030);
+        let x_3 = (enqP_fifo0030);
+        let x_4 = (deqP_fifo0030);
+        elt_fifo0030 <= update (x_2, x_3, x_0);
+        empty_fifo0030 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0030 <= (x_4) == (x_5);
+        enqP_fifo0030 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0030 ();
-        let x_1 = (full_fifo0030);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0030);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0030);
+        let x_3 = (enqP_fifo0030);
+        let x_4 = (deqP_fifo0030);
         full_fifo0030 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0030 <= (x_3) == (x_5);
+        deqP_fifo0030 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -7891,7 +8377,10 @@ endinterface
 
 module mkModule95
     (Module95);
-    Reg#(Struct1) elt_fifo0031 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0031 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0031 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0031 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0031 <- mkReg(True);
     Reg#(Bool) full_fifo0031 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0031 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0031 <- mkReg(unpack(0));
@@ -7905,9 +8394,13 @@ module mkModule95
         let x_2 =
         (full_fifo0031);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0031);
-            $display ("-- MSG fifo0031: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0031);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0031:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0031:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0031 <= (Bool)'(True);
         end else begin
 
@@ -7917,16 +8410,27 @@ module mkModule95
     method Action enq_fifo0031 (Struct1 x_0);
         let x_1 = (full_fifo0031);
         when (! (x_1), noAction);
-        elt_fifo0031 <= x_0;
-        full_fifo0031 <= (Bool)'(True);
+        let x_2 = (elt_fifo0031);
+        let x_3 = (enqP_fifo0031);
+        let x_4 = (deqP_fifo0031);
+        elt_fifo0031 <= update (x_2, x_3, x_0);
+        empty_fifo0031 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0031 <= (x_4) == (x_5);
+        enqP_fifo0031 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0031 ();
-        let x_1 = (full_fifo0031);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0031);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0031);
+        let x_3 = (enqP_fifo0031);
+        let x_4 = (deqP_fifo0031);
         full_fifo0031 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0031 <= (x_3) == (x_5);
+        deqP_fifo0031 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -7937,7 +8441,10 @@ endinterface
 
 module mkModule96
     (Module96);
-    Reg#(Struct1) elt_fifo0032 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo0032 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo0032 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo0032 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo0032 <- mkReg(True);
     Reg#(Bool) full_fifo0032 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo0032 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo0032 <- mkReg(unpack(0));
@@ -7951,9 +8458,13 @@ module mkModule96
         let x_2 =
         (full_fifo0032);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo0032);
-            $display ("-- MSG fifo0032: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo0032);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo0032:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo0032:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo0032 <= (Bool)'(True);
         end else begin
 
@@ -7963,16 +8474,27 @@ module mkModule96
     method Action enq_fifo0032 (Struct1 x_0);
         let x_1 = (full_fifo0032);
         when (! (x_1), noAction);
-        elt_fifo0032 <= x_0;
-        full_fifo0032 <= (Bool)'(True);
+        let x_2 = (elt_fifo0032);
+        let x_3 = (enqP_fifo0032);
+        let x_4 = (deqP_fifo0032);
+        elt_fifo0032 <= update (x_2, x_3, x_0);
+        empty_fifo0032 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo0032 <= (x_4) == (x_5);
+        enqP_fifo0032 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo0032 ();
-        let x_1 = (full_fifo0032);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo0032);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo0032);
+        let x_3 = (enqP_fifo0032);
+        let x_4 = (deqP_fifo0032);
         full_fifo0032 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo0032 <= (x_3) == (x_5);
+        deqP_fifo0032 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -7983,7 +8505,10 @@ endinterface
 
 module mkModule97
     (Module97);
-    Reg#(Struct1) elt_fifo00300 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00300 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00300 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00300 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00300 <- mkReg(True);
     Reg#(Bool) full_fifo00300 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00300 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00300 <- mkReg(unpack(0));
@@ -7997,9 +8522,13 @@ module mkModule97
         let x_2 =
         (full_fifo00300);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00300);
-            $display ("-- MSG fifo00300: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00300);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00300:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00300:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00300 <= (Bool)'(True);
         end else begin
 
@@ -8009,16 +8538,27 @@ module mkModule97
     method Action enq_fifo00300 (Struct1 x_0);
         let x_1 = (full_fifo00300);
         when (! (x_1), noAction);
-        elt_fifo00300 <= x_0;
-        full_fifo00300 <= (Bool)'(True);
+        let x_2 = (elt_fifo00300);
+        let x_3 = (enqP_fifo00300);
+        let x_4 = (deqP_fifo00300);
+        elt_fifo00300 <= update (x_2, x_3, x_0);
+        empty_fifo00300 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00300 <= (x_4) == (x_5);
+        enqP_fifo00300 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00300 ();
-        let x_1 = (full_fifo00300);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00300);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00300);
+        let x_3 = (enqP_fifo00300);
+        let x_4 = (deqP_fifo00300);
         full_fifo00300 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00300 <= (x_3) == (x_5);
+        deqP_fifo00300 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
@@ -8029,7 +8569,10 @@ endinterface
 
 module mkModule98
     (Module98);
-    Reg#(Struct1) elt_fifo00302 <- mkReg(unpack(0));
+    Reg#(Vector#(2, Struct1)) elt_fifo00302 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) enqP_fifo00302 <- mkReg(unpack(0));
+    Reg#(Bit#(1)) deqP_fifo00302 <- mkReg(unpack(0));
+    Reg#(Bool) empty_fifo00302 <- mkReg(True);
     Reg#(Bool) full_fifo00302 <- mkReg(unpack(0));
     Reg#(Bool) countDone_fifo00302 <- mkReg(unpack(0));
     Reg#(Bit#(18)) counter_fifo00302 <- mkReg(unpack(0));
@@ -8043,9 +8586,13 @@ module mkModule98
         let x_2 =
         (full_fifo00302);
         if (((x_1) == ((Bit#(18))'(18'h3ffff))) && (x_2)) begin
-            let x_3 =
-            (elt_fifo00302);
-            $display ("-- MSG fifo00302: %x %b %x", (x_3).id, (x_3).type_, (x_3).addr);
+            let x_3 = (elt_fifo00302);
+            Struct1 x_4 =
+            ((x_3)[(Bit#(1))'(1'h1)]);
+            $display ("-- MSG fifo00302:1 %x %b %x", (x_4).id, (x_4).type_, (x_4).addr);
+            Struct1 x_5 =
+            ((x_3)[(Bit#(1))'(1'h0)]);
+            $display ("-- MSG fifo00302:0 %x %b %x", (x_5).id, (x_5).type_, (x_5).addr);
             countDone_fifo00302 <= (Bool)'(True);
         end else begin
 
@@ -8055,16 +8602,27 @@ module mkModule98
     method Action enq_fifo00302 (Struct1 x_0);
         let x_1 = (full_fifo00302);
         when (! (x_1), noAction);
-        elt_fifo00302 <= x_0;
-        full_fifo00302 <= (Bool)'(True);
+        let x_2 = (elt_fifo00302);
+        let x_3 = (enqP_fifo00302);
+        let x_4 = (deqP_fifo00302);
+        elt_fifo00302 <= update (x_2, x_3, x_0);
+        empty_fifo00302 <= (Bool)'(False);
+        Bit#(1) x_5 = ((x_3) + ((Bit#(1))'(1'h1)));
+        full_fifo00302 <= (x_4) == (x_5);
+        enqP_fifo00302 <= x_5;
     endmethod
 
     method ActionValue#(Struct1) deq_fifo00302 ();
-        let x_1 = (full_fifo00302);
-        when (x_1, noAction);
+        let x_1 = (empty_fifo00302);
+        when (! (x_1), noAction);
         let x_2 = (elt_fifo00302);
+        let x_3 = (enqP_fifo00302);
+        let x_4 = (deqP_fifo00302);
         full_fifo00302 <= (Bool)'(False);
-        return x_2;
+        Bit#(1) x_5 = ((x_4) + ((Bit#(1))'(1'h1)));
+        empty_fifo00302 <= (x_3) == (x_5);
+        deqP_fifo00302 <= x_5;
+        return (x_2)[x_4];
     endmethod
 endmodule
 
