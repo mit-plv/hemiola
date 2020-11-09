@@ -1437,7 +1437,8 @@ Section Cache.
         Call reps <- repGetRs();
         LET maxWay: Bit lgWay <- $$Default;
         LET maxAge: RepCntK <- $$Default;
-        NCall2 repWay, _ <- getRepWay maxWay maxAge reps;
+        NCall2 repWay, repAge <- getRepWay maxWay maxAge reps;
+        Assert (#repAge != $0);
 
         LET repTagInfo <- #ntis@[#repWay];
         LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
@@ -1530,7 +1531,8 @@ Section Cache.
         Call reps <- repGetRs();
         LET maxWay: Bit lgWay <- $$Default;
         LET maxAge: RepCntK <- $$Default;
-        NCall2 repWay, _ <- getRepWay maxWay maxAge reps;
+        NCall2 repWay, repAge <- getRepWay maxWay maxAge reps;
+        Assert (#repAge != $0);
 
         LET repTagInfo <- #ntis@[#repWay];
         LET repTag <- #repTagInfo!(TagValue infoK)@."tag";
