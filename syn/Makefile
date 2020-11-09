@@ -13,15 +13,18 @@ MSI_EXT_V=$(MSI_EXT).v
 MSI_EXT_VO=$(MSI_EXT).vo
 
 # MESI_EXT=ex/Mesi/MesiL1LL2Ext
-MESI_EXT=ex/Mesi/MesiL1LL4Ext
+# MESI_EXT=ex/Mesi/MesiL1LL4Ext
+MESI_EXT=ex/Mesi/MesiL1L2LLExt
 MESI_EXT_V=$(MESI_EXT).v
 MESI_EXT_VO=$(MESI_EXT).vo
 
 # BSV_EXT_HEADER_REL=./predefs/HeaderL1LL2.bsv
-BSV_EXT_HEADER_REL=./predefs/HeaderL1LL4.bsv
+# BSV_EXT_HEADER_REL=./predefs/HeaderL1LL4.bsv
+BSV_EXT_HEADER_REL=./predefs/HeaderL1L2LL.bsv
 
 # BSV_EXT_IMPL_REL=./predefs/ImplL1LL2.bsv
-BSV_EXT_IMPL_REL=./predefs/ImplL1LL4.bsv
+# BSV_EXT_IMPL_REL=./predefs/ImplL1LL4.bsv
+BSV_EXT_IMPL_REL=./predefs/ImplL1L2LL.bsv
 BSV_EXT_IFC_REL=./predefs/Ifc.bsv
 
 BSV_EXT_HEADER=$(realpath $(BSV_EXT_HEADER_REL))
