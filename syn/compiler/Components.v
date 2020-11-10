@@ -616,7 +616,10 @@ Section MSHR.
                                             "m_next" ::= #pmshr!MSHR@."m_next";
                                             "m_is_ul" ::= $$true;
                                             "m_msg" ::= #pmshr!MSHR@."m_msg";
-                                            "m_qidx" ::= _zeroExtend_ (#ul!RegUL@."r_ul_rsbTo");
+                                            (* Concatenating [$downIdx] is very important here;
+                                             * when it turns into a downlock (by [transferUpDown])
+                                             * it should have a precise [KQIdx] value. *)
+                                            "m_qidx" ::= {$downIdx, (#ul!RegUL@."r_ul_rsbTo")};
                                             "m_rsb" ::= #ul!RegUL@."r_ul_rsb";
                                             "m_dl_rss_from" ::= $$Default;
                                             "m_dl_rss_recv" ::= $$Default;
@@ -685,6 +688,8 @@ Section MSHR.
           Ret #mid
 
         with Method ("transferUpDown"+o)(trsf: TrsfUpDownK): Void :=
+          (* [transferUpDown] requires that the line is free of downlocks;
+           * it is checked by [getULReady] early in the pipeline. *)
           Read rqs: Array (Struct MSHR) numSlots <- "rqs"+o;
           LET mid <- #trsf!TrsfUpDown@."r_id";
           LET pmshr <- #rqs#[#mid];
