@@ -10,7 +10,7 @@ import HCC::*;
 import HCCIfc::*;
 import HCCTypes::*;
 
-typedef 14 MemAddrSz;
+typedef 16 MemAddrSz;
 typedef Bit#(MemAddrSz) MemAddr;
 typedef struct { MemAddr addr; CCValue datain; } MemDmaRq deriving (Bits, Eq);
 

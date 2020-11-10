@@ -8,7 +8,7 @@ import HCCIfc::*;
 
 interface CC;
     interface Vector#(L1Num, MemRqRs#(Struct1)) l1Ifc;
-    interface DMA#(Bit#(13), Struct34, Vector#(4, Bit#(64))) llDma;
+    interface DMA#(Bit#(14), Struct33, Vector#(4, Bit#(64))) llDma;
 endinterface
 
 typedef struct { Bit#(6) id; Bool type_; Bit#(64) addr; Vector#(4, Bit#(64)) value;  } Struct1 deriving(Eq, Bits);
@@ -34932,16 +34932,16 @@ function Action enq_fifo000(Struct1 _)) (CC);
     endfunction
 
     Vector#(L1Num, MemRqRs#(Struct1)) _l1Ifc = newVector();
-    _l1Ifc[0] = getMemRqRs(m71.enq_fifo000000, m72.deq_fifo000002);
-    _l1Ifc[1] = getMemRqRs(m90.enq_fifo000100, m91.deq_fifo000102);
-    _l1Ifc[2] = getMemRqRs(m136.enq_fifo001000, m137.deq_fifo001002);
-    _l1Ifc[3] = getMemRqRs(m155.enq_fifo001100, m156.deq_fifo001102);
+    _l1Ifc[0] = getMemRqRs(m68.enq_fifo000000, m69.deq_fifo000002);
+    _l1Ifc[1] = getMemRqRs(m86.enq_fifo000100, m87.deq_fifo000102);
+    _l1Ifc[2] = getMemRqRs(m129.enq_fifo001000, m130.deq_fifo001002);
+    _l1Ifc[3] = getMemRqRs(m147.enq_fifo001100, m148.deq_fifo001102);
     interface l1Ifc = _l1Ifc;
 
     interface DMA llDma;
-        method dma_rdReq = m34.rdReq_dataRam__00;
-        method dma_wrReq = m34.wrReq_dataRam__00;
-        method dma_rdResp = m34.rdResp_dataRam__00;
+        method dma_rdReq = m32.rdReq_dataRam__00;
+        method dma_wrReq = m32.wrReq_dataRam__00;
+        method dma_rdResp = m32.rdResp_dataRam__00;
     endinterface
 
 endmodule
