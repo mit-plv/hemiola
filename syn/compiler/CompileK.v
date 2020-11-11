@@ -11,8 +11,10 @@ Set Implicit Arguments.
 
 Import MonadNotations.
 
-Definition nfifo (fifoName: string) (dType: Kind) := fifo primNormalFifoName fifoName dType.
-Definition ppfifo (fifoName: string) (dType: Kind) := fifo primPipelineFifoName fifoName dType.
+Definition nfifo (fifoName: string) (dType: Kind) (sz: nat) :=
+  fifo primNormalFifoName fifoName dType sz.
+Definition ppfifo (fifoName: string) (dType: Kind) :=
+  fifo primPipelineFifoName fifoName dType 0.
 
 Section Compile.
   Context `{rcfg: ReifyConfig} `{tcfg: TopoConfig}
@@ -1172,15 +1174,18 @@ Section Compile.
 
   End DebugFifos.
 
+  (* Let msgFifo (fifoName: string) := dMsgFifo fifoName. *)
+  Let msgFifo (fifoName: string) := nfifo fifoName (Struct KMsg) 1.
+
   Definition build_int_fifos (oidx: IdxT): Modules :=
-    ((dMsgFifo (fifoBaseName ++ idx_to_string (rqUpFrom oidx)))
-       ++ (dMsgFifo (fifoBaseName ++ idx_to_string (rsUpFrom oidx)))
-       ++ (dMsgFifo (fifoBaseName ++ idx_to_string (downTo oidx)))
+    ((msgFifo (fifoBaseName ++ idx_to_string (rqUpFrom oidx)))
+       ++ (msgFifo (fifoBaseName ++ idx_to_string (rsUpFrom oidx)))
+       ++ (msgFifo (fifoBaseName ++ idx_to_string (downTo oidx)))
     )%kami.
 
   Definition build_ext_fifos (oidx: IdxT): Modules :=
-    ((dMsgFifo (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))))
-       ++ (dMsgFifo (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx))))
+    ((msgFifo (fifoBaseName ++ idx_to_string (rqUpFrom (l1ExtOf oidx))))
+       ++ (msgFifo (fifoBaseName ++ idx_to_string (downTo (l1ExtOf oidx))))
     )%kami.
 
   Section Inputs.
@@ -1201,8 +1206,11 @@ Section Compile.
           Retv
         }.
 
+    (* Let pInputFifo := dInputFifo ppPInputFifoN. *)
+    Let pInputFifo := nfifo ppPInputFifoN (Struct Input) 2.
+
     Definition build_parent_inputs: Modules :=
-      (pInputConverter ++ dInputFifo ppPInputFifoN)%kami.
+      (pInputConverter ++ pInputFifo)%kami.
 
     Definition ppCRqInputFifoN: string := ("fifoCRqInput_" ++ idx_to_string oidx).
     Definition enqCRqInputN := ppCRqInputFifoN -- enqN.
@@ -1223,20 +1231,25 @@ Section Compile.
           Retv
       }.
 
+    (* Let cRqInputFifo := dInputFifo ppCRqInputFifoN. *)
+    (* Let cRsInputFifo := dInputFifo ppCRsInputFifoN. *)
+    Let cRqInputFifo := nfifo ppCRqInputFifoN (Struct Input) 2.
+    Let cRsInputFifo := nfifo ppCRsInputFifoN (Struct Input) 2.
+
     Definition build_child_inputs_l1: Modules :=
-      (cInputConverter ++ dInputFifo ppCRqInputFifoN)%kami.
+      (cInputConverter ++ cRqInputFifo)%kami.
 
     Definition build_child_inputs_li_2: Modules :=
       ((cRqAcceptor2 oidx enqCRqInputN (oidx~>0) (oidx~>1))
-         ++ (dInputFifo ppCRqInputFifoN)
+         ++ cRqInputFifo
          ++ (cRsAcceptor2 oidx enqCRsInputN (oidx~>0) (oidx~>1))
-         ++ (dInputFifo ppCRsInputFifoN))%kami.
+         ++ cRsInputFifo)%kami.
 
     Definition build_child_inputs_li_4: Modules :=
       ((cRqAcceptor4 oidx enqCRqInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (dInputFifo ppCRqInputFifoN)
+         ++ cRqInputFifo
          ++ (cRsAcceptor4 oidx enqCRsInputN (oidx~>0) (oidx~>1) (oidx~>2) (oidx~>3))
-         ++ (dInputFifo ppCRsInputFifoN))%kami.
+         ++ cRsInputFifo)%kami.
 
   End Inputs.
 
@@ -1427,15 +1440,23 @@ Section Compile.
                        oidx (deqLR2EXN (idx_to_string oidx)) (hobj_rules (projT2 obj)) in
     Mod cregs (pp ++ execRules) nil.
 
+  (* Let n2iFifo (oidx: IdxT) := dIRFifo (ppIN2IRN (idx_to_string oidx)). *)
+  (* Let i2lFifo (oidx: IdxT) := dIRFifo (ppIR2LRN (idx_to_string oidx)). *)
+  (* Let l2eFifo (oidx: IdxT) := dLRFifo (ppLR2EXN (idx_to_string oidx)). *)
+
+  Let n2iFifo (oidx: IdxT) := ppfifo (ppIN2IRN (idx_to_string oidx)) (Struct IRElt).
+  Let i2lFifo (oidx: IdxT) := ppfifo (ppIR2LRN (idx_to_string oidx)) (Struct IRElt).
+  Let l2eFifo (oidx: IdxT) := ppfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt).
+
   Definition build_controller_l1
              (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     ((build_child_inputs_l1 oidx)
        ++ (build_parent_inputs oidx)
        ++ (build_pipeline_l1 obj)
-       ++ (dIRFifo (ppIN2IRN (idx_to_string oidx)))
-       ++ (dIRFifo (ppIR2LRN (idx_to_string oidx)))
-       ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
+       ++ (n2iFifo oidx)
+       ++ (i2lFifo oidx)
+       ++ (l2eFifo oidx)
        ++ build_outputs_l1 oidx
        ++ build_int_fifos oidx
        ++ build_ext_fifos oidx)%kami.
@@ -1446,9 +1467,9 @@ Section Compile.
     ((build_child_inputs_li_2 oidx)
        ++ (build_parent_inputs oidx)
        ++ (build_pipeline_li obj)
-       ++ (dIRFifo (ppIN2IRN (idx_to_string oidx)))
-       ++ (dIRFifo (ppIR2LRN (idx_to_string oidx)))
-       ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
+       ++ (n2iFifo oidx)
+       ++ (i2lFifo oidx)
+       ++ (l2eFifo oidx)
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_4_no_ints
@@ -1457,9 +1478,9 @@ Section Compile.
     ((build_child_inputs_li_4 oidx)
        ++ (build_parent_inputs oidx)
        ++ (build_pipeline_li obj)
-       ++ (dIRFifo (ppIN2IRN (idx_to_string oidx)))
-       ++ (dIRFifo (ppIR2LRN (idx_to_string oidx)))
-       ++ (dLRFifo (ppLR2EXN (idx_to_string oidx)))
+       ++ (n2iFifo oidx)
+       ++ (i2lFifo oidx)
+       ++ (l2eFifo oidx)
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_2
