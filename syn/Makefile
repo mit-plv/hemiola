@@ -1,12 +1,13 @@
-VS:=$(shell find . -type f -name '*.v')
+COMPILE_VS:=$(wildcard compiler/*.v)
+EX_MESI_VS:=$(wildcard ex/Mesi/*.v)
 
 .PHONY: clean
 
 all: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
-Makefile.coq: Makefile $(VS)
-	$(COQBIN)coq_makefile -f _CoqProject $(VS) -o Makefile.coq
+Makefile.coq: Makefile $(COMPILE_VS) $(EX_MESI_VS)
+	$(COQBIN)coq_makefile -f _CoqProject $(COMPILE_VS) $(EX_MESI_VS) -o Makefile.coq
 
 # MESI_EXT=ex/Mesi/MesiL1LL2Ext
 # MESI_EXT=ex/Mesi/MesiL1LL4Ext
