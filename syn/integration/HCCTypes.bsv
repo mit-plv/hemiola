@@ -4,6 +4,7 @@ import FIFO::*;
 import FIFOF::*;
 
 import HCC::*;
+import HCCIfc::*;
 
 typedef Struct1 CCMsg;
 typedef Bit#(6) CCMsgId;
@@ -20,3 +21,7 @@ typedef Vector#(LineSz, CCVal) CCValue;
 typedef TLog#(ValueByte) ValueOffset; // 3
 typedef TLog#(LineSz) LineOffset; // 2
 typedef TAdd#(LineOffset, ValueOffset) AddrOffset; // 5
+
+typedef 13 LLIndexSz;
+typedef Bit#(LLIndexSz) LLIndex;
+typedef Struct34 LLDmaRq;

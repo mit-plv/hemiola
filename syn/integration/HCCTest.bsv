@@ -680,7 +680,7 @@ typedef L1Num ShIdx; // FIXED
 // - LgShRange: the size of shared lines.
 // - LgExShRatio: access ratio between exclusive and shared lines.
 typedef 5 LgShRange;
-typedef 3 LgExShRatio;
+typedef 1 LgExShRatio;
 typedef 32 NumTlCycles;
 
 module mkCCTestShared#(CC mem)(CCTest);

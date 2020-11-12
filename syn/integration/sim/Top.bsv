@@ -13,12 +13,12 @@ typedef `TEST_CYCLE_CNT TestCycleCnt;
 (* synthesize *)
 module mkTop(Empty);
     // CC mem <- mkCCRegFileMem();
-    CC mem <- mkCCBramMem();
+    CCMem mem <- mkCCBramMem();
 
     // CCTest tester <- mkCCTestIsolated(mem);
-    // CCTest tester <- mkCCTestShared(mem);
+    CCTest tester <- mkCCTestShared(mem.cc);
     // CCTest tester <- mkCCTestRandom(mem);
-    CCTest tester <- mkCCTestCheck(mem);
+    // CCTest tester <- mkCCTestCheck(mem);
     // CCTest tester <- mkCCTestCheckIdxEquiv(mem);
 
     Reg#(Bool) started <- mkReg(False);

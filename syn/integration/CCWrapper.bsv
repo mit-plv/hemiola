@@ -4,6 +4,7 @@ import FIFO::*;
 import FIFOF::*;
 
 import HCC::*;
+import HCCIfc::*;
 import HCCTypes::*;
 import HMemBank::*;
 
@@ -25,12 +26,17 @@ module mkIgnoreDeq(IgnoreDeq#(CCMsg));
     endmethod
 endmodule
 
+interface CCMem;
+    interface CC cc;
+    interface DMA#(MemAddr, MemDmaRq, CCValue) memDma;
+endinterface
+
 // CC + BRAM memory
 (* synthesize *)
-module mkCCBramMem(CC);
+module mkCCBramMem(CCMem);
     MemBank mb <- mkMemBankBram();
     IgnoreEnq#(CCMsg) ige <- mkIgnoreEnq();
     IgnoreDeq#(CCMsg) igd <- mkIgnoreDeq();
-    CC mem <- mkCC(mb.getMemRs, ige.ignore_enq, mb.putMemRq);
-    return mem;
+    CC cc <- mkCC(mb.getMemRs, ige.ignore_enq, mb.putMemRq);
+    interface memDma = mb.memDma;
 endmodule

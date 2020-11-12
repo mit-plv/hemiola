@@ -14,10 +14,10 @@ public:
     done = true;
   }
 
-  virtual void dma_getRs_ll(uint64_t val) {
+  virtual void dma_rdResp_ll(uint64_t val) {
     printf("DMA LL: %lx\n", val);
   }
-  virtual void dma_getRs_mem(uint64_t val) {
+  virtual void dma_rdResp_mem(uint64_t val) {
     printf("DMA MEM: %lx\n", val);
   }
 
