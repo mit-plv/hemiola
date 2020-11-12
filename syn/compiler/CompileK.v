@@ -253,7 +253,7 @@ Section Compile.
       Definition enqIN2IR := MethodSig enqIN2IRN(IREltK): Void.
 
       Local Notation findVictim := (findVictim oidx hcfg_addr_sz predNumVictims).
-      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
+      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz).
       Local Notation hasVictim := (hasVictim oidx).
 
       Local Notation getPRqSlot := (getPRqSlot oidx mshrNumPRqs mshrNumCRqs).
@@ -364,7 +364,6 @@ Section Compile.
         LET msg <- #pelt!Input@."in_msg";
         Assert (#msg!KMsg@."type" && #msg!KMsg@."id" == $$invRsId);
         Call vmid <- getULReady(#msg!KMsg@."addr");
-        (* Call vmid <- releaseVictim(#msg!KMsg@."addr"); *)
         Call releaseVictim(#msg!KMsg@."addr");
         Call releaseMSHR(#vmid);
         Retv)%kami_action.
@@ -428,8 +427,8 @@ Section Compile.
       Local Notation infoRsValueRq :=
         (infoRsValueRq oidx infoK indexSz hcfg_addr_sz lgWay edirLgWay).
       Local Notation getVictim :=
-        (getVictim oidx hcfg_addr_sz predNumVictims infoK KValue mshrSlotSz).
-      Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
+        (getVictim oidx hcfg_addr_sz predNumVictims infoK KValue).
+      Local Notation Victim := (Victim hcfg_addr_sz infoK KValue).
 
       Definition lrCache: ActionT var Void :=
         (Call ir <- deqIR2LR();
@@ -909,12 +908,12 @@ Section Compile.
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
-      Local Notation Victim := (Victim hcfg_addr_sz infoK KValue mshrSlotSz).
-      Local Notation getFirstVictim := (getFirstVictim oidx hcfg_addr_sz infoK KValue mshrSlotSz).
-      Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz mshrSlotSz).
-      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz mshrSlotSz).
+      Local Notation Victim := (Victim hcfg_addr_sz infoK KValue).
+      Local Notation getFirstVictim := (getFirstVictim oidx hcfg_addr_sz infoK KValue).
+      Local Notation setVictimRq := (setVictimRq oidx hcfg_addr_sz).
+      Local Notation releaseVictim := (releaseVictim oidx hcfg_addr_sz).
       Local Notation canImm := (canImm oidx).
-      Local Notation setULImm := (setULImm oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation setULImm := (setULImm oidx).
 
       Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
@@ -988,12 +987,8 @@ Section Compile.
            msg mshr nostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs_invrq msg mshr nostVars (hrule_trs hr);
         (if isImm
-         then (Call canImm(#paddr);
-              Call releaseVictim(#paddr);
-              Retv)
-         else (Call mid <- setULImm(#msg);
-              Call setVictimRq(STRUCT { "victim_addr" ::= #paddr; "victim_req" ::= #mid });
-              Retv)))%kami_action.
+         then (Call canImm(#paddr); Call releaseVictim(#paddr); Retv)
+         else (Call setULImm(#msg); Call setVictimRq(#paddr); Retv)))%kami_action.
 
     End ExecStage.
 

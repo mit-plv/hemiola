@@ -320,7 +320,7 @@ Section MSHR.
   Definition registerDL: Attribute SignatureT := MethodSig ("registerDL"+o)(RegDLK): Void.
 
   Definition canImm: Attribute SignatureT := MethodSig ("canImm"+o)(KAddr): Void.
-  Definition setULImm: Attribute SignatureT := MethodSig ("setULImm"+o)(Struct KMsg): MshrId.
+  Definition setULImm: Attribute SignatureT := MethodSig ("setULImm"+o)(Struct KMsg): Void.
 
   Definition TrsfUpDown :=
     STRUCT { "r_id" :: MshrId; "r_dl_rss_from" :: KCBv }.
@@ -405,8 +405,6 @@ Section MSHR.
                                   Expr ty (SyntaxKind KAddr) ->
                                   Expr ty (SyntaxKind Bool)).
 
-  (** * TODO: should be better to separate the MSHR-status vector and the contents vector;
-   * it is quite frequent to just change the status. *)
   Definition mshrs: Kami.Syntax.Modules :=
     MODULE {
         Register ("rqs"+o): Array (Struct MSHR) numSlots <- Default
@@ -659,7 +657,7 @@ Section MSHR.
           Assert !(#cmmid!(MaybeStr MshrId)@."valid"); (* No conflicts with the other MSHRs *)
           Retv
 
-        with Method ("setULImm"+o)(msg: Struct KMsg): MshrId :=
+        with Method ("setULImm"+o)(msg: Struct KMsg): Void :=
           Read rqs <- "rqs"+o;
           LET mmid <- (crqIter MaybeNone
                                (fun n _ => MaybeSome $n)
@@ -685,7 +683,7 @@ Section MSHR.
                                  "m_dl_rss_recv" ::= $$Default;
                                  "m_dl_rss" ::= $$Default }];
           Write "rqs"+o <- #nrqs;
-          Ret #mid
+          Retv
 
         with Method ("transferUpDown"+o)(trsf: TrsfUpDownK): Void :=
           (* [transferUpDown] requires that the line is free of downlocks;
@@ -848,13 +846,12 @@ Section Victims.
   Let victimIdxSz := S (Nat.log2 predNumVictims).
   Let MviK := Maybe (Bit victimIdxSz).
 
-  (** * TODO: [victim_req] may not need [MshrId] at all; just a boolean flag would suffice. *)
   Definition Victim :=
     STRUCT { "victim_valid" :: Bool;
              "victim_addr" :: Bit addrSz;
              "victim_info" :: infoK;
              "victim_value" :: valueK;
-             "victim_req" :: Maybe MshrId }.
+             "victim_req" :: Bool }.
   Let VictimK := Struct Victim.
 
   Definition victimsN: string := "victims"+o.
@@ -882,14 +879,11 @@ Section Victims.
   Definition hasVictimN: string := victimsN _++ "hasVictim".
   Definition hasVictim := MethodSig hasVictimN (): Bool.
 
-  Definition VictimRq :=
-    STRUCT { "victim_addr" :: Bit addrSz; "victim_req" :: MshrId }.
-  Let VictimRqK := Struct VictimRq.
   Definition setVictimRqN: string := victimsN _++ "setVictimRq".
-  Definition setVictimRq := MethodSig setVictimRqN (VictimRqK): Void.
+  Definition setVictimRq := MethodSig setVictimRqN (Bit addrSz): Void.
 
   Definition releaseVictimN: string := victimsN _++ "releaseVictim".
-  Definition releaseVictim := MethodSig releaseVictimN (Bit addrSz): MshrId.
+  Definition releaseVictim := MethodSig releaseVictimN (Bit addrSz): Void.
 
   (** Registers *)
   Definition victimRegsN: string := "victimRegs"+o.
@@ -945,7 +939,7 @@ Section Victims.
      | O => MaybeNone
      | S n' =>
        (IF ((victims#[$v$n']!Victim@."victim_valid") &&
-            (!(victims#[$v$n']!Victim@."victim_req"!(MaybeStr MshrId)@."valid")))
+            (!(victims#[$v$n']!Victim@."victim_req")))
         then MaybeSome (victims#[$v$n'])
         else getFirstVictimFix victims n')
      end)%kami_expr.
@@ -962,7 +956,7 @@ Section Victims.
      | O => $$false
      | S n' =>
        (IF ((victims#[$v$n']!Victim@."victim_valid") &&
-            (!(victims#[$v$n']!Victim@."victim_req"!(MaybeStr MshrId)@."valid")))
+            (!(victims#[$v$n']!Victim@."victim_req")))
         then $$true
         else hasVictimFix victims n')
      end)%kami_expr.
@@ -975,7 +969,6 @@ Section Victims.
   Fixpoint setVictimRqFix (var: Kind -> Type)
            (addr: Expr var (SyntaxKind (Bit addrSz)))
            (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-           (mid: Expr var (SyntaxKind MshrId))
            (cont: ActionT var Void)
            (n: nat): ActionT var Void :=
     (match n with
@@ -988,18 +981,17 @@ Section Victims.
                                                "victim_addr" ::= #victim!Victim@."victim_addr";
                                                "victim_info" ::= #victim!Victim@."victim_info";
                                                "victim_value" ::= #victim!Victim@."victim_value";
-                                               "victim_req" ::= MaybeSome mid };
+                                               "victim_req" ::= $$true };
              Write victimRegsN <- victims#[$v$n' <- #nvictim];
              Retv)
-        else (setVictimRqFix addr victims mid cont n'); Retv)
+        else (setVictimRqFix addr victims cont n'); Retv)
      end)%kami_action.
 
   Definition setVictimRqF (var: Kind -> Type)
              (addr: Expr var (SyntaxKind (Bit addrSz)))
              (victims: Expr var (SyntaxKind (Array VictimK numVictims)))
-             (mid: Expr var (SyntaxKind MshrId))
              (cont: ActionT var Void): ActionT var Void :=
-    setVictimRqFix addr victims mid cont numVictims.
+    setVictimRqFix addr victims cont numVictims.
 
   Definition victimsIfc :=
     MODULE {
@@ -1046,22 +1038,17 @@ Section Victims.
         LET hv <- hasVictimF #victims;
         Ret #hv
 
-      with Method setVictimRqN (vrq: VictimRqK): Void :=
-        LET addr <- #vrq!VictimRq@."victim_addr";
-        LET mid <- #vrq!VictimRq@."victim_req";
+      with Method setVictimRqN (addr: Bit addrSz): Void :=
         Read victims <- victimRegsN;
-        setVictimRqF (#addr)%kami_expr (#victims)%kami_expr (#mid)%kami_expr Retv
+        setVictimRqF (#addr)%kami_expr (#victims)%kami_expr Retv
 
-      with Method releaseVictimN (addr: Bit addrSz): MshrId :=
+      with Method releaseVictimN (addr: Bit addrSz): Void :=
         Read victims <- victimRegsN;
         victimIterA
           (#victims)%kami_expr (#addr)%kami_expr
-          (fun i victim =>
-             (Write victimRegsN <- #victims#[$v$i <- $$Default];
-             (** assumes [victim_req] is valid *)
-             LET vmid <- victim!Victim@."victim_req"!(MaybeStr MshrId)@."data";
-             Ret #vmid))
-          (Ret $$Default)
+          (fun i victim => (Write victimRegsN <- #victims#[$v$i <- $$Default];
+                           Retv))
+          Retv
     }.
 
 End Victims.
@@ -1422,7 +1409,7 @@ Section Cache.
      end)%kami_expr.
 
   Variable (mshrSlotSz: nat).
-  Local Notation registerVictim := (registerVictim oidx addrSz infoK valueK mshrSlotSz).
+  Local Notation registerVictim := (registerVictim oidx addrSz infoK valueK).
 
   Definition cacheIfc :=
     MODULE {
@@ -1490,7 +1477,7 @@ Section Cache.
                                       "victim_addr" ::= #mv!MayVictim@."mv_addr";
                                       "victim_info" ::= #mv!MayVictim@."mv_info";
                                       "victim_value" ::= #value;
-                                      "victim_req" ::= MaybeNone };
+                                      "victim_req" ::= $$false };
                    Call registerVictim(#nv);
                    Retv);
 
@@ -1606,7 +1593,7 @@ Section Cache.
                                          "victim_addr" ::= #mv!MayVictim@."mv_addr";
                                          "victim_info" ::= #mv!MayVictim@."mv_info";
                                          "victim_value" ::= #value;
-                                         "victim_req" ::= MaybeNone };
+                                         "victim_req" ::= $$false };
                       Call registerVictim(#nv);
                       Retv);
 
@@ -1662,7 +1649,7 @@ Section Cache.
 
   Variable predNumVictims: nat.
   Local Notation victimsIfc :=
-    (victimsIfc oidx addrSz predNumVictims infoK valueK mshrSlotSz).
+    (victimsIfc oidx addrSz predNumVictims infoK valueK).
 
   Definition cache :=
     (cacheIfc
