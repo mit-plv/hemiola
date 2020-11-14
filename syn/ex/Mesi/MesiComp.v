@@ -331,12 +331,12 @@ Section Cache.
 
   Definition mesiL1: Modules :=
     cache oidx KValue lgWay 0
-          mesiInfoInit getIndex getTag buildAddr isDirInvalid mshrSlotSz predNumVictims.
+          mesiInfoInit getIndex getTag buildAddr isDirInvalid predNumVictims.
 
   Definition mesiLi: Modules :=
     ncid oidx KValue lgWay edirLgWay
          mesiInfoInit mesiEDirInit
          getIndex getTag buildAddr edirToInfo edirFromInfo isJustDir isDirInvalid edirEmptySlot
-         mshrSlotSz predNumVictims.
+         predNumVictims.
 
 End Cache.

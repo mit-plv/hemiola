@@ -36,7 +36,7 @@ Definition l1NumCRqs: nat := 4.
 Definition l1PredNumVictim: nat := Nat.pred l1NumCRqs.
 Definition l1MshrSlotSz: nat := S (Nat.log2 (l1NumPRqs + l1NumCRqs - 1)).
 Definition l1Cache (oidx: IdxT): Modules :=
-  mesiL1 oidx l1IndexSz l1LgWay l1PredNumVictim l1MshrSlotSz.
+  mesiL1 oidx l1IndexSz l1LgWay l1PredNumVictim.
 Definition l1Mshrs (oidx: IdxT): Modules :=
   mshrs oidx l1NumPRqs l1NumCRqs (mshrConflictF (indexSz := l1IndexSz)).
 
@@ -49,7 +49,7 @@ Definition llNumCRqs: nat := 8.
 Definition llPredNumVictim: nat := Nat.pred llNumCRqs.
 Definition llMshrSlotSz: nat := S (Nat.log2 (llNumPRqs + llNumCRqs - 1)).
 Definition llCache (oidx: IdxT): Modules :=
-  mesiLi oidx llIndexSz llLgWay llEDirLgWay llPredNumVictim llMshrSlotSz.
+  mesiLi oidx llIndexSz llLgWay llEDirLgWay llPredNumVictim.
 Definition llMshrs (oidx: IdxT): Modules :=
   mshrs oidx llNumPRqs llNumCRqs (mshrConflictF (indexSz := llIndexSz)).
 
