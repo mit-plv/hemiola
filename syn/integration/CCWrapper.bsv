@@ -37,6 +37,7 @@ module mkCCBramMem(CCMem);
     MemBank mb <- mkMemBankBram();
     IgnoreEnq#(CCMsg) ige <- mkIgnoreEnq();
     IgnoreDeq#(CCMsg) igd <- mkIgnoreDeq();
-    CC cc <- mkCC(mb.getMemRs, ige.ignore_enq, mb.putMemRq);
+    CC cci <- mkCC(mb.getMemRs, ige.ignore_enq, mb.putMemRq);
+    interface cc = cci;
     interface memDma = mb.memDma;
 endmodule
