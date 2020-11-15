@@ -424,10 +424,15 @@ Section MSHR.
           Read rqs: Array (Struct KMsg) numSlots <- "rqs"+o;
           Ret #rqs#[#mid]
         with Method ("getMSHRFirstRs"+o)(mid: MshrId): Struct KMsg :=
-          Read rss: Array (Struct MSHRRs) numSlots <- "mshrs"+o;
+          Read mshrs: Array (Struct MSHR) numSlots <- "mshrs"+o;
+          LET mshr <- #mshrs#[#mid];
+          LET rsRecv <- #mshr!MSHR@."m_dl_rss_recv";
+          LET fstIdx <- bvFirstSet #rsRecv;
+
+          Read rss: Array (Struct MSHRRs) numSlots <- "rss"+o;
           LET rs <- #rss#[#mid];
-          LET frs <- (#rs!MSHRRs@."m_dl_rss")#[$$(natToWord hcfg_children_max_lg 0)];
-          Ret #frs
+          LET fstRs <- (#rs!MSHRRs@."m_dl_rss")#[#fstIdx];
+          Ret #fstRs
 
         with Method ("getPRqSlot"+o)(pmshr: PreMSHRK): GetSlotK :=
           Read mshrs <- "mshrs"+o;
