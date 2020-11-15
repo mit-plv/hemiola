@@ -92,7 +92,7 @@ Section Compile.
   Let mshrNumSlots := S predMshrNumSlots.
   Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
   Let MshrId := Bit mshrSlotSz.
-  Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
+  Local Notation MSHRRq := (MSHRRq mshrNumPRqs mshrNumCRqs).
 
   (** Victims *)
   Variable predNumVictims: nat.
@@ -316,7 +316,7 @@ Section Compile.
         LET msg <- #pelt!Input@."in_msg";
         Assert !(#msg!KMsg@."type");
         (** NOTE: the [hasVictim] check is necessary to avoid deadlocks between
-         * victim lines and uplocks. It is tricky to have the assertion in this MSHR
+         * victim lines and uplocks. It is tricky to have the assertion in this MSHRRq
          * transition, but [HUpdUpLock] is the only and exact transition that
          * requires this check. *)
         Call hasVictim <- hasVictim();
@@ -465,13 +465,13 @@ Section Compile.
     Class CompExtExp :=
       { compile_eexp:
           forall (var: Kind -> Type) {het},
-            var (Struct KMsg) -> var (Struct MSHR) ->
+            var (Struct KMsg) -> var (Struct MSHRRq) ->
             HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
             heexp (hvar_of var) het ->
             Expr var (SyntaxKind (kind_of het));
         compile_eoprec:
           forall (var: Kind -> Type),
-            var (Struct KMsg) -> var (Struct MSHR) ->
+            var (Struct KMsg) -> var (Struct MSHRRq) ->
             HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
             heoprec (hvar_of var) ->
             Expr var (SyntaxKind Bool);
@@ -480,7 +480,7 @@ Section Compile.
 
     Section CompileExec.
       Variables (msgIn: var (Struct KMsg))
-                (mshrId: var MshrId) (mshr: var (Struct MSHR)).
+                (mshrId: var MshrId) (mshr: var (Struct MSHRRq)).
 
       Section OstVarsNoValue.
         Variable ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty).
@@ -521,8 +521,8 @@ Section Compile.
                     (HBType hbt0)
                     (hostf_ty_compat i Heq))
            (* The expressions below are used only when dealing with responses. *)
-           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")})
-           | HDownLockIdxBackI _ => (#mshr!MSHR@."m_qidx")
+           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHRRq@."m_qidx")})
+           | HDownLockIdxBackI _ => (#mshr!MSHRRq@."m_qidx")
            end)%kami_expr.
 
         Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
@@ -560,24 +560,24 @@ Section Compile.
            | HUpLockFree => cont
            | HDownLockFree => cont
            | HUpLockMsgId mty mid =>
-             (Assert (#mshr!MSHR@."m_rsb");
-             Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
-             Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+             (Assert (#mshr!MSHRRq@."m_rsb");
+             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
+             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
-           | HUpLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
-           | HUpLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
-           | HUpLockBackNone => (Assert (!(#mshr!MSHR@."m_rsb")); cont)
+           | HUpLockMsg => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
+           | HUpLockIdxBack => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
+           | HUpLockBackNone => (Assert (!(#mshr!MSHRRq@."m_rsb")); cont)
            | HDownLockMsgId mty mid =>
-             (Assert (#mshr!MSHR@."m_rsb");
-             Assert (#mshr!MSHR@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
-             Assert (#mshr!MSHR@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+             (Assert (#mshr!MSHRRq@."m_rsb");
+             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
+             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
-           | HDownLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
-           | HDownLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HDownLockMsg => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
+           | HDownLockIdxBack => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
            | HRssFull =>
              (** The below assertion is already checked in [inputRsRel] *)
-             (* Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from");  *)
+             (* Assert (#mshr!MSHRRq@."dl_rss_recv" == #mshr!MSHRRq@."dl_rss_from");  *)
              cont
            end)%kami_action.
 
@@ -612,14 +612,16 @@ Section Compile.
           : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
           (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
            | HGetFirstMsg => #msgIn
-           | HGetUpLockMsg => (#mshr!MSHR@."m_msg")
-           | HGetDownLockMsg => (#mshr!MSHR@."m_msg")
-           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")}
-           | HGetDownLockIdxBack => (#mshr!MSHR@."m_qidx")
+           | HGetUpLockMsg => (#mshr!MSHRRq@."m_msg")
+           | HGetDownLockMsg => (#mshr!MSHRRq@."m_msg")
+           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHRRq@."m_qidx")}
+           | HGetDownLockIdxBack => (#mshr!MSHRRq@."m_qidx")
            | HGetDownLockFirstRs =>
-             (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
-              STRUCT { "cidx" ::= {$rsUpIdx, fs};
-                       "msg" ::= (#mshr!MSHR@."m_rss")#[fs] })
+             (** * FIXME: this is problematic.. *)
+             (* (let fs := bvFirstSet (#mshr!MSHRRq@."m_dl_rss_from") in *)
+             (*  STRUCT { "cidx" ::= {$rsUpIdx, fs}; *)
+             (*           "msg" ::= (#mshr!MSHRRq@."m_rss")#[fs] }) *)
+             $$Default
            end)%kami_expr.
 
         Fixpoint compile_OState_write_fix
@@ -977,10 +979,7 @@ Section Compile.
                              "m_is_ul" ::= $$true;
                              "m_msg" ::= #msg;
                              "m_qidx" ::= $$Default;
-                             "m_rsb" ::= $$false;
-                             "m_dl_rss_from" ::= $$Default;
-                             "m_dl_rss_recv" ::= $$Default;
-                             "m_dl_rss" ::= $$Default };
+                             "m_rsb" ::= $$false };
         ostVars <- compile_info_to_ostVars pinfo;
         let nostVars := compile_value_read_to_ostVars _ ostVars pvalue in
         :compile_rule_prec
