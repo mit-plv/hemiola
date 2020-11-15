@@ -92,7 +92,7 @@ Section Compile.
   Let mshrNumSlots := S predMshrNumSlots.
   Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
   Let MshrId := Bit mshrSlotSz.
-  Local Notation MSHRRq := (MSHRRq mshrNumPRqs mshrNumCRqs).
+  Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
 
   (** Victims *)
   Variable predNumVictims: nat.
@@ -465,13 +465,13 @@ Section Compile.
     Class CompExtExp :=
       { compile_eexp:
           forall (var: Kind -> Type) {het},
-            var (Struct KMsg) -> var (Struct MSHRRq) ->
+            var (Struct KMsg) -> var (Struct MSHR) ->
             HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
             heexp (hvar_of var) het ->
             Expr var (SyntaxKind (kind_of het));
         compile_eoprec:
           forall (var: Kind -> Type),
-            var (Struct KMsg) -> var (Struct MSHRRq) ->
+            var (Struct KMsg) -> var (Struct MSHR) ->
             HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
             heoprec (hvar_of var) ->
             Expr var (SyntaxKind Bool);
@@ -480,7 +480,8 @@ Section Compile.
 
     Section CompileExec.
       Variables (msgIn: var (Struct KMsg))
-                (mshrId: var MshrId) (mshr: var (Struct MSHRRq)).
+                (mshrId: var MshrId) (mshr: var (Struct MSHR))
+                (rq frs: var (Struct KMsg)).
 
       Section OstVarsNoValue.
         Variable ostVars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty).
@@ -521,8 +522,8 @@ Section Compile.
                     (HBType hbt0)
                     (hostf_ty_compat i Heq))
            (* The expressions below are used only when dealing with responses. *)
-           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHRRq@."m_qidx")})
-           | HDownLockIdxBackI _ => (#mshr!MSHRRq@."m_qidx")
+           | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")})
+           | HDownLockIdxBackI _ => (#mshr!MSHR@."m_qidx")
            end)%kami_expr.
 
         Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
@@ -560,24 +561,24 @@ Section Compile.
            | HUpLockFree => cont
            | HDownLockFree => cont
            | HUpLockMsgId mty mid =>
-             (Assert (#mshr!MSHRRq@."m_rsb");
-             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
-             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+             (Assert (#mshr!MSHR@."m_rsb");
+             Assert (#rq!KMsg@."type" == Const _ (ConstBool mty));
+             Assert (#rq!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
-           | HUpLockMsg => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
-           | HUpLockIdxBack => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
-           | HUpLockBackNone => (Assert (!(#mshr!MSHRRq@."m_rsb")); cont)
+           | HUpLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HUpLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HUpLockBackNone => (Assert (!(#mshr!MSHR@."m_rsb")); cont)
            | HDownLockMsgId mty mid =>
-             (Assert (#mshr!MSHRRq@."m_rsb");
-             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."type" == Const _ (ConstBool mty));
-             Assert (#mshr!MSHRRq@."m_msg"!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
+             (Assert (#mshr!MSHR@."m_rsb");
+             Assert (#rq!KMsg@."type" == Const _ (ConstBool mty));
+             Assert (#rq!KMsg@."id" == $$%mid%:hcfg_msg_id_sz);
              cont)
-           | HDownLockMsg => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
-           | HDownLockIdxBack => (Assert (#mshr!MSHRRq@."m_rsb"); cont)
+           | HDownLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
+           | HDownLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
            | HRssFull =>
              (** The below assertion is already checked in [inputRsRel] *)
-             (* Assert (#mshr!MSHRRq@."dl_rss_recv" == #mshr!MSHRRq@."dl_rss_from");  *)
+             (* Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from");  *)
              cont
            end)%kami_action.
 
@@ -612,16 +613,13 @@ Section Compile.
           : Expr var (SyntaxKind (kind_of_hbtype hbt)) :=
           (match hv in hbval hbt' return Expr var (SyntaxKind (kind_of_hbtype hbt')) with
            | HGetFirstMsg => #msgIn
-           | HGetUpLockMsg => (#mshr!MSHRRq@."m_msg")
-           | HGetDownLockMsg => (#mshr!MSHRRq@."m_msg")
-           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHRRq@."m_qidx")}
-           | HGetDownLockIdxBack => (#mshr!MSHRRq@."m_qidx")
+           | HGetUpLockMsg => #rq
+           | HGetDownLockMsg => #rq
+           | HGetUpLockIdxBack => {$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")}
+           | HGetDownLockIdxBack => (#mshr!MSHR@."m_qidx")
            | HGetDownLockFirstRs =>
-             (** * FIXME: this is problematic.. *)
-             (* (let fs := bvFirstSet (#mshr!MSHRRq@."m_dl_rss_from") in *)
-             (*  STRUCT { "cidx" ::= {$rsUpIdx, fs}; *)
-             (*           "msg" ::= (#mshr!MSHRRq@."m_rss")#[fs] }) *)
-             $$Default
+             (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
+              STRUCT { "cidx" ::= {$rsUpIdx, fs}; "msg" ::= #frs })
            end)%kami_expr.
 
         Fixpoint compile_OState_write_fix
@@ -909,6 +907,8 @@ Section Compile.
       Local Notation valueRsLineRq :=
         (valueRsLineRq oidx infoK KValue hcfg_addr_sz lgWay edirLgWay).
       Local Notation getMSHR := (getMSHR oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getMSHRRq := (getMSHRRq oidx mshrNumPRqs mshrNumCRqs).
+      Local Notation getMSHRFirstRs := (getMSHRFirstRs oidx mshrNumPRqs mshrNumCRqs).
       Local Notation releaseMSHR := (releaseMSHR oidx mshrNumPRqs mshrNumCRqs).
       Local Notation Victim := (Victim hcfg_addr_sz infoK KValue).
       Local Notation getFirstVictim := (getFirstVictim oidx hcfg_addr_sz infoK KValue).
@@ -938,11 +938,13 @@ Section Compile.
         LET mvi <- #irpp!IRElt@."ir_by_victim";
         LET victimVal <- #lr!LRElt@."lr_value";
         Call mshr <- getMSHR(#mshrId);
+        Call rq <- getMSHRRq(#mshrId);
+        Call frs <- getMSHRFirstRs(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
-           msgIn mshr ostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars mvi victimVal (hrule_trs hr);
+           msgIn mshr rq ostVars (hrule_precond hr (hvar_of var));
+        :compile_rule_trs_ord msgIn mshrId mshr rq frs pir ostVars mvi victimVal (hrule_trs hr);
         (if isImm then (Call releaseMSHR(#mshrId); Retv) else Retv))%kami_action.
 
       Definition execRsRel: ActionT var Void :=
@@ -958,11 +960,13 @@ Section Compile.
         LET mvi <- #irpp!IRElt@."ir_by_victim";
         LET victimVal <- #lr!LRElt@."lr_value";
         Call mshr <- getMSHR(#mshrId);
+        Call rq <- getMSHRRq(#mshrId);
+        Call frs <- getMSHRFirstRs(#mshrId);
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
-           msgIn mshr ostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs_ord msgIn mshrId mshr pir ostVars mvi victimVal (hrule_trs hr);
+           msgIn mshr rq ostVars (hrule_precond hr (hvar_of var));
+        :compile_rule_trs_ord msgIn mshrId mshr rq frs pir ostVars mvi victimVal (hrule_trs hr);
         Retv)%kami_action.
 
       Definition execInvRq (isImm: bool): ActionT var Void :=
@@ -977,14 +981,18 @@ Section Compile.
         LET mshr <- STRUCT { "m_status" ::= mshrValid;
                              "m_next" ::= $$Default;
                              "m_is_ul" ::= $$true;
-                             "m_msg" ::= #msg;
+                             "m_addr" ::= #paddr;
                              "m_qidx" ::= $$Default;
-                             "m_rsb" ::= $$false };
+                             "m_rsb" ::= $$false;
+                             "m_dl_rss_from" ::= $$Default;
+                             "m_dl_rss_recv" ::= $$Default };
+        LET rq <- $$Default;
+        LET frs <- $$Default;
         ostVars <- compile_info_to_ostVars pinfo;
         let nostVars := compile_value_read_to_ostVars _ ostVars pvalue in
         :compile_rule_prec
-           msg mshr nostVars (hrule_precond hr (hvar_of var));
-        :compile_rule_trs_invrq msg mshr nostVars (hrule_trs hr);
+           msg mshr rq nostVars (hrule_precond hr (hvar_of var));
+        :compile_rule_trs_invrq msg mshr rq frs nostVars (hrule_trs hr);
         (if isImm
          then (Call canImm(#paddr); Call releaseVictim(#paddr); Retv)
          else (Call setULImm(#msg); Call setVictimRq(#paddr); Retv)))%kami_action.

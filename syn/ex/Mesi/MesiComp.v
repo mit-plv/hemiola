@@ -49,7 +49,7 @@ Section Instances.
   Fixpoint compile_dir_exp
            (var: Kind -> Type) {het}
            (msgIn: var (Struct KMsg))
-           (mshr: var (Struct (MSHRRq mshrNumPRqs mshrNumCRqs)))
+           (mshr: var (Struct (MSHR mshrNumPRqs mshrNumCRqs)))
            (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
            (he: heexp (hvar_of var) het): Expr var (SyntaxKind (kind_of het)) :=
     (match he in (hexp_dir _ h) return (Expr var (SyntaxKind (kind_of h))) with
@@ -108,7 +108,7 @@ Section Instances.
   Definition compile_dir_OPrec
              (var: Kind -> Type)
              (msgIn: var (Struct KMsg))
-             (mshr: var (Struct (MSHRRq mshrNumPRqs mshrNumCRqs)))
+             (mshr: var (Struct (MSHR mshrNumPRqs mshrNumCRqs)))
              (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
