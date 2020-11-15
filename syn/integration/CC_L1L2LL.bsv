@@ -32219,19 +32219,7 @@ module mkModule201#(function Action victims__0011__setVictimRq(Bit#(64) _),
     // No methods in this module
 endmodule
 
-typedef 4 L1Num;
-
-interface MemRqRs#(type msgT);
-    method Action mem_enq_rq (msgT rq);
-    method ActionValue#(msgT) mem_deq_rs ();
-endinterface
-
-interface DMA#(type rdReqT, type wrReqT, type valueT);
-    method Action dma_rdReq (rdReqT addr);
-    method Action dma_wrReq (wrReqT rq);
-    method ActionValue#(valueT) dma_rdResp ();
-endinterface
-
+// The CC interface is defined in the header part (thus in Header.bsv)
 
 module mkCC#(function ActionValue#(Struct1) deq_fifo002(),
 function Action enq_fifo001(Struct1 _),

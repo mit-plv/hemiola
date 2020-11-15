@@ -23,8 +23,7 @@ BSV_EXT_HEADER_REL=./predefs/HeaderL1L2LL.bsv
 # BSV_EXT_IMPL_REL=./predefs/ImplL1LL4.bsv
 BSV_EXT_IMPL_REL=./predefs/ImplL1L2LL.bsv
 
-# BSV_EXT_IFC_REL=./predefs/CCIfc2.bsv
-BSV_EXT_IFC_REL=./predefs/CCIfc4.bsv
+BSV_EXT_IFC_REL=./predefs/Ifc.bsv
 
 BSV_EXT_HEADER=$(realpath $(BSV_EXT_HEADER_REL))
 BSV_EXT_IMPL=$(realpath $(BSV_EXT_IMPL_REL))
