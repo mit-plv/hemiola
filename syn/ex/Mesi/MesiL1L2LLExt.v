@@ -40,7 +40,7 @@ Definition l1MshrSlotSz: nat := S (Nat.log2 (l1NumPRqs + l1NumCRqs - 1)).
 Definition l1Cache (oidx: IdxT): Modules :=
   mesiL1 oidx l1IndexSz l1LgWay l1PredNumVictim.
 Definition l1Mshrs (oidx: IdxT): Modules :=
-  mshrs oidx l1NumPRqs l1NumCRqs (mshrConflictF (indexSz := l1IndexSz)).
+  mshrsL1 oidx l1NumPRqs l1NumCRqs (mshrConflictF (indexSz := l1IndexSz)).
 
 (* 128KB L2: 2^9 * 2^3 * 32B *)
 Definition l2IndexSz: nat := 9.
@@ -53,7 +53,7 @@ Definition l2MshrSlotSz: nat := S (Nat.log2 (l2NumPRqs + l2NumCRqs - 1)).
 Definition l2Cache (oidx: IdxT): Modules :=
   mesiLi oidx l2IndexSz l2LgWay l2EDirLgWay l2PredNumVictim.
 Definition l2Mshrs (oidx: IdxT): Modules :=
-  mshrs oidx l2NumPRqs l2NumCRqs (mshrConflictF (indexSz := l2IndexSz)).
+  mshrsLi oidx l2NumPRqs l2NumCRqs (mshrConflictF (indexSz := l2IndexSz)).
 
 (* 512KB LL: 2^10 * 2^4 * 32B *)
 Definition llIndexSz: nat := 10.
@@ -66,7 +66,7 @@ Definition llMshrSlotSz: nat := S (Nat.log2 (llNumPRqs + llNumCRqs - 1)).
 Definition llCache (oidx: IdxT): Modules :=
   mesiLi oidx llIndexSz llLgWay llEDirLgWay llPredNumVictim.
 Definition llMshrs (oidx: IdxT): Modules :=
-  mshrs oidx llNumPRqs llNumCRqs (mshrConflictF (indexSz := llIndexSz)).
+  mshrsLi oidx llNumPRqs llNumCRqs (mshrConflictF (indexSz := llIndexSz)).
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((build_controller_l1

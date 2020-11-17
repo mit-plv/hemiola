@@ -939,7 +939,8 @@ Section Compile.
         LET victimVal <- #lr!LRElt@."lr_value";
         Call mshr <- getMSHR(#mshrId);
         Call rq <- getMSHRRq(#mshrId);
-        Call frs <- getMSHRFirstRs(#mshrId);
+        (* [execPP] should not use any response messages during the execution *)
+        LET frs <- $$Default;
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec

@@ -411,7 +411,345 @@ Section MSHR.
                                   Expr ty (SyntaxKind KAddr) ->
                                   Expr ty (SyntaxKind Bool)).
 
-  Definition mshrs: Kami.Syntax.Modules :=
+  Definition mshrsL1: Kami.Syntax.Modules :=
+    MODULE {
+        Register ("mshrs"+o): Array (Struct MSHR) numSlots <- Default
+        with Register ("rqs"+o): Array (Struct KMsg) numSlots <- Default
+
+        with Method ("getMSHR"+o)(mid: MshrId): Struct MSHR :=
+          Read mshrs: Array (Struct MSHR) numSlots <- "mshrs"+o;
+          Ret #mshrs#[#mid]
+        with Method ("getMSHRRq"+o)(mid: MshrId): Struct KMsg :=
+          Read rqs: Array (Struct KMsg) numSlots <- "rqs"+o;
+          Ret #rqs#[#mid]
+
+        with Method ("getPRqSlot"+o)(pmshr: PreMSHRK): GetSlotK :=
+          Read mshrs <- "mshrs"+o;
+          LET mmid <- (pmiter MaybeNone
+                              (fun n _ => MaybeSome $n)
+                              (fun m => m!MSHR@."m_status" == mshrInvalid)
+                              #mshrs);
+          LET hasSlot <- #mmid!(MaybeStr MshrId)@."valid";
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          LET addr <- #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
+
+          (* Stall when either
+           * 1) an index-equivalent line is in the pipeline or
+           * 2) a same-address line is in the pipeline -- should not become to
+           *    the waiting mode in this case, since a downlock must proceed
+           *    even when the uplock is set. *)
+          LET stall <- (miter $$false
+                              (fun _ _ => $$true)
+                              (fun m =>
+                                 ((m!MSHR@."m_status" == mshrOwned) ||
+                                  (m!MSHR@."m_status" == mshrReleasing)) &&
+                                 ((conflictF (m!MSHR@."m_addr") (#addr)) ||
+                                  (m!MSHR@."m_addr" == #addr)))
+                              #mshrs);
+
+          (* Conflict when a valid downlock exists ([cmmid]).
+           * Find the last of the chain when conflict ([pmid]). *)
+          LET cmmid <- (miter MaybeNone
+                              (fun i m => MaybeSome $i)
+                              (fun m => (m!MSHR@."m_status" == mshrValid) &&
+                                        (!(m!MSHR@."m_is_ul")) &&
+                                        m!MSHR@."m_addr" == #addr)
+                              #mshrs);
+          LET conflict <- #cmmid!(MaybeStr MshrId)@."valid";
+          LET ret: GetSlotK <- STRUCT { "s_has_slot" ::= #hasSlot && !#stall;
+                                        "s_conflict" ::= #conflict;
+                                        "s_id" ::= #mid };
+
+          If (#hasSlot && !#stall)
+          then (LET nmshrs <-
+                #mshrs#[#mid <- STRUCT { "m_status" ::= IF #conflict then mshrWaiting else mshrOwned;
+                                         "m_next" ::= MaybeNone;
+                                         "m_is_ul" ::= $$Default;
+                                         "m_addr" ::= #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
+                                         "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
+                                         "m_rsb" ::= $$Default;
+                                         "m_dl_rss_from" ::= $$Default;
+                                         "m_dl_rss_recv" ::= $$Default }];
+               Read rqs: Array (Struct KMsg) numSlots <- "rqs"+o;
+               Write "rqs"+o <- #rqs#[#mid <- #pmshr!PreMSHR@."r_msg"];
+               If (#conflict)
+               then (LET pmid: MshrId <-
+                               (miter $$Default
+                                       (fun i m => $i)
+                                       (fun m =>
+                                          (m!MSHR@."m_status" != mshrInvalid) &&
+                                          (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                          m!MSHR@."m_addr" == #addr)
+                                       #mshrs);
+                    LET pslot <- #mshrs#[#pmid];
+                    LET umshrs <-
+                    #nmshrs#[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
+                                               "m_next" ::=
+                                                 (IF #conflict
+                                                  then MaybeSome #mid
+                                                  else #pslot!MSHR@."m_next");
+                                               "m_is_ul" ::= #pslot!MSHR@."m_is_ul";
+                                               "m_addr" ::= #pslot!MSHR@."m_addr";
+                                               "m_qidx" ::= #pslot!MSHR@."m_qidx";
+                                               "m_rsb" ::= #pslot!MSHR@."m_rsb";
+                                               "m_dl_rss_from" ::= #pslot!MSHR@."m_dl_rss_from";
+                                               "m_dl_rss_recv" ::= #pslot!MSHR@."m_dl_rss_recv" }];
+                    Ret #umshrs) else (Ret #nmshrs) as umshrs;
+               Write "mshrs"+o <- #umshrs;
+               Retv);
+          Ret #ret
+
+        with Method ("getCRqSlot"+o)(pmshr: PreMSHRK): GetSlotK :=
+          Read mshrs <- "mshrs"+o;
+          LET mmid <- (cmiter MaybeNone
+                              (fun n _ => MaybeSome $n)
+                              (fun m => m!MSHR@."m_status" == mshrInvalid)
+                              #mshrs);
+          LET hasSlot <- #mmid!(MaybeStr MshrId)@."valid";
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          LET addr <- #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
+
+          (* Should stall when an index-equivalent line is in the pipeline *)
+          LET stall <- (miter $$false
+                              (fun _ _ => $$true)
+                              (fun m =>
+                                 ((m!MSHR@."m_status" == mshrOwned) ||
+                                  (m!MSHR@."m_status" == mshrReleasing)) &&
+                                 conflictF (m!MSHR@."m_addr") (#addr))
+                              #mshrs);
+
+          LET cmmidUL <- (cmiter MaybeNone
+                                 (fun i m => MaybeSome $i)
+                                 (fun m =>
+                                    (m!MSHR@."m_status" != mshrInvalid) &&
+                                    (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                    (m!MSHR@."m_is_ul") &&
+                                    m!MSHR@."m_addr" == #addr)
+                                 #mshrs);
+          LET cmmidDL <- (miter MaybeNone
+                                (fun i m => MaybeSome $i)
+                                (fun m =>
+                                   (m!MSHR@."m_status" != mshrInvalid) &&
+                                   (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                   (!(m!MSHR@."m_is_ul")) &&
+                                   m!MSHR@."m_addr" == #addr)
+                                #mshrs);
+          LET conflictUL <- #cmmidUL!(MaybeStr MshrId)@."valid";
+          LET conflictDL <- #cmmidDL!(MaybeStr MshrId)@."valid";
+          LET conflict <- #conflictUL || #conflictDL;
+          LET ret: GetSlotK <- STRUCT { "s_has_slot" ::= #hasSlot && !#stall;
+                                        "s_conflict" ::= #conflict;
+                                        "s_id" ::= #mid };
+
+          If (#hasSlot && !#stall)
+          then (LET nmshrs <-
+                #mshrs#[#mid <- STRUCT { "m_status" ::= IF #conflict then mshrWaiting else mshrOwned;
+                                         "m_next" ::= MaybeNone;
+                                         "m_is_ul" ::= $$Default;
+                                         "m_addr" ::= #pmshr!PreMSHR@."r_msg"!KMsg@."addr";
+                                         "m_qidx" ::= #pmshr!PreMSHR@."r_msg_from";
+                                         "m_rsb" ::= $$Default;
+                                         "m_dl_rss_from" ::= $$Default;
+                                         "m_dl_rss_recv" ::= $$Default }];
+               Read rqs: Array (Struct KMsg) numSlots <- "rqs"+o;
+               Write "rqs"+o <- #rqs#[#mid <- #pmshr!PreMSHR@."r_msg"];
+               If (#conflict)
+               then (LET pmid <- (IF #conflictUL
+                                  then #cmmidUL!(MaybeStr MshrId)@."data"
+                                  else #cmmidDL!(MaybeStr MshrId)@."data");
+                    LET pslot <- #mshrs#[#pmid];
+                    LET umshrs <-
+                    #nmshrs#[#pmid <- STRUCT { "m_status" ::= #pslot!MSHR@."m_status";
+                                               "m_next" ::=
+                                                 (IF #conflict
+                                                  then MaybeSome #mid
+                                                  else #pslot!MSHR@."m_next");
+                                               "m_is_ul" ::= #pslot!MSHR@."m_is_ul";
+                                               "m_addr" ::= #pslot!MSHR@."m_addr";
+                                               "m_qidx" ::= #pslot!MSHR@."m_qidx";
+                                               "m_rsb" ::= #pslot!MSHR@."m_rsb";
+                                               "m_dl_rss_from" ::= #pslot!MSHR@."m_dl_rss_from";
+                                               "m_dl_rss_recv" ::= #pslot!MSHR@."m_dl_rss_recv" }];
+                    Ret #umshrs) else (Ret #nmshrs) as umshrs;
+               Write "mshrs"+o <- #umshrs;
+               Retv);
+          Ret #ret
+
+        with Method ("getWait"+o)(): PreMSHRK :=
+          Read mshrs <- "mshrs"+o;
+          Read rqs: Array (Struct KMsg) numSlots <- "rqs"+o;
+
+          LET mwait <- (miter MaybeNone
+                               (fun i _ => MaybeSome $i)
+                               (fun m => m!MSHR@."m_status" == mshrFirstWait)
+                               #mshrs);
+          Assert (#mwait!(MaybeStr MshrId)@."valid");
+          LET mid <- #mwait!(MaybeStr MshrId)@."data";
+          LET mshr <- #mshrs#[#mid];
+          LET rq <- #rqs#[#mid];
+
+          (* Still must wait when either
+           * 1) a same-address line is in progress or
+           * 2) an index-equivalent line is in the pipeline. *)
+          LET addr <- #mshr!MSHR@."m_addr";
+          LET stall <- (miter $$false
+                              (fun _ _ => $$true)
+                              (fun m =>
+                                 ((m!MSHR@."m_status" >= mshrOwned) &&
+                                  (m!MSHR@."m_addr" == #addr)) ||
+                                 (((m!MSHR@."m_status" == mshrOwned) ||
+                                   m!MSHR@."m_status" == mshrReleasing) &&
+                                  (conflictF (m!MSHR@."m_addr") (#addr))))
+                              #mshrs);
+          Assert !#stall;
+
+          Write "mshrs"+o <- #mshrs#[#mid <-
+                                     STRUCT { "m_status" ::= mshrOwned;
+                                              "m_next" ::= #mshr!MSHR@."m_next";
+                                              "m_is_ul" ::= #mshr!MSHR@."m_is_ul";
+                                              "m_addr" ::= #mshr!MSHR@."m_addr";
+                                              "m_qidx" ::= #mshr!MSHR@."m_qidx";
+                                              "m_rsb" ::= #mshr!MSHR@."m_rsb";
+                                              "m_dl_rss_from" ::= #mshr!MSHR@."m_dl_rss_from";
+                                              "m_dl_rss_recv" ::= #mshr!MSHR@."m_dl_rss_recv" }];
+          LET pre: PreMSHRK <- STRUCT { "r_id" ::= #mid;
+                                        "r_msg" ::= #rq;
+                                        "r_msg_from" ::= #mshr!MSHR@."m_qidx" };
+          Ret #pre
+
+        with Method ("registerUL"+o)(ul: RegULK): Void :=
+          Read mshrs: Array (Struct MSHR) numSlots <- "mshrs"+o;
+          LET mid <- #ul!RegUL@."r_id";
+          LET pmshr <- #mshrs#[#mid];
+          LET mshr: Struct MSHR <- STRUCT { "m_status" ::= mshrValid;
+                                            "m_next" ::= #pmshr!MSHR@."m_next";
+                                            "m_is_ul" ::= $$true;
+                                            "m_addr" ::= #pmshr!MSHR@."m_addr";
+                                            (* Concatenating [$downIdx] is very important here;
+                                             * when it turns into a downlock (by [transferUpDown])
+                                             * it should have a precise [KQIdx] value. *)
+                                            "m_qidx" ::= {$downIdx, (#ul!RegUL@."r_ul_rsbTo")};
+                                            "m_rsb" ::= #ul!RegUL@."r_ul_rsb";
+                                            "m_dl_rss_from" ::= $$Default;
+                                            "m_dl_rss_recv" ::= $$Default };
+          Write "mshrs"+o <- #mshrs#[#mid <- #mshr];
+          Retv
+
+        with Method ("canImm"+o)(addr: KAddr): Void :=
+          Read mshrs <- "mshrs"+o;
+          LET mmid <- (cmiter MaybeNone
+                              (fun n _ => MaybeSome $n)
+                              (fun m => m!MSHR@."m_status" == mshrInvalid)
+                              #mshrs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid"); (* Has a slot *)
+          LET cmmid <- (miter MaybeNone
+                              (fun i m => MaybeSome $i)
+                              (fun m =>
+                                 (m!MSHR@."m_status" != mshrInvalid) &&
+                                 (!(m!MSHR@."m_next"!(MaybeStr MshrId)@."valid")) &&
+                                 m!MSHR@."m_addr" == #addr)
+                              #mshrs);
+          Assert !(#cmmid!(MaybeStr MshrId)@."valid"); (* No conflicts with the other MSHRs *)
+          Retv
+
+        with Method ("setULImm"+o)(msg: Struct KMsg): Void :=
+          Read mshrs <- "mshrs"+o;
+          Read rqs: Array (Struct KMsg) numSlots <- "rqs"+o;
+          LET mmid <- (cmiter MaybeNone
+                               (fun n _ => MaybeSome $n)
+                               (fun m => m!MSHR@."m_status" == mshrInvalid)
+                               #mshrs);
+          Assert (#mmid!(MaybeStr MshrId)@."valid"); (* Has a slot *)
+          LET mid <- #mmid!(MaybeStr MshrId)@."data";
+          LET addr <- #msg!KMsg@."addr";
+          LET cmmid <- (miter MaybeNone
+                               (fun i m => MaybeSome $i)
+                               (fun m => (m!MSHR@."m_status" != mshrInvalid) &&
+                                         m!MSHR@."m_addr" == #addr)
+                               #mshrs);
+          Assert !(#cmmid!(MaybeStr MshrId)@."valid"); (* No conflicts with the other MSHRs *)
+          Write "mshrs"+o <- #mshrs#[#mid <- STRUCT { "m_status" ::= mshrValid;
+                                                      "m_next" ::= MaybeNone;
+                                                      "m_is_ul" ::= $$true;
+                                                      "m_addr" ::= #msg!KMsg@."addr";
+                                                      "m_qidx" ::= $$Default;
+                                                      "m_rsb" ::= $$false;
+                                                      "m_dl_rss_from" ::= $$Default;
+                                                      "m_dl_rss_recv" ::= $$Default }];
+          Write "rqs"+o <- #rqs#[#mid <- #msg];
+          Retv
+
+        with Method ("getULReady"+o)(addr: KAddr): MshrId :=
+          Read mshrs <- "mshrs"+o;
+
+          (* Should stall when an index-equivalent line is in the pipeline *)
+          LET stall <- (miter $$false
+                              (fun _ _ => $$true)
+                              (fun m =>
+                                 ((m!MSHR@."m_status" == mshrOwned) ||
+                                  m!MSHR@."m_status" == mshrReleasing) &&
+                                 conflictF (m!MSHR@."m_addr") (#addr))
+                              #mshrs);
+          Assert !#stall;
+
+          (* Also stall if there is a downlock with the same address. *)
+          LET mmidDL <- (miter MaybeNone
+                               (fun n _ => MaybeSome $n)
+                               (fun m =>
+                                  (m!MSHR@."m_status" >= mshrOwned) &&
+                                  (!(m!MSHR@."m_is_ul")) &&
+                                  m!MSHR@."m_addr" == #addr)
+                               #mshrs);
+          Assert !(#mmidDL!(MaybeStr MshrId)@."valid");
+
+          (* [cmiter] is used below, since PRq cannot make any uplocks. *)
+          LET mmidUL <- (cmiter MaybeNone
+                                (fun n _ => MaybeSome $n)
+                                (fun m =>
+                                   (m!MSHR@."m_status" == mshrValid) &&
+                                   m!MSHR@."m_is_ul" && m!MSHR@."m_addr" == #addr)
+                                #mshrs);
+          Assert (#mmidUL!(MaybeStr MshrId)@."valid");
+          LET mid <- #mmidUL!(MaybeStr MshrId)@."data";
+          Ret #mid
+
+        with Method ("startRelease"+o)(mid: MshrId): Void :=
+          Read mshrs: Array (Struct MSHR) numSlots <- "mshrs"+o;
+          LET pmshr <- #mshrs#[#mid];
+          LET nmshr: Struct MSHR <- STRUCT { "m_status" ::= mshrReleasing;
+                                             "m_next" ::= #pmshr!MSHR@."m_next";
+                                             "m_is_ul" ::= #pmshr!MSHR@."m_is_ul";
+                                             "m_addr" ::= #pmshr!MSHR@."m_addr";
+                                             "m_qidx" ::= #pmshr!MSHR@."m_qidx";
+                                             "m_rsb" ::= #pmshr!MSHR@."m_rsb";
+                                             "m_dl_rss_from" ::= #pmshr!MSHR@."m_dl_rss_from";
+                                             "m_dl_rss_recv" ::= #pmshr!MSHR@."m_dl_rss_recv" };
+          Write "mshrs"+o <- #mshrs#[#mid <- #nmshr];
+          Retv
+
+        with Method ("releaseMSHR"+o)(mid: MshrId): Void :=
+          Read mshrs: Array (Struct MSHR) numSlots <- "mshrs"+o;
+          LET mshr <- #mshrs#[#mid];
+          LET rmshrs <- #mshrs#[#mid <- $$Default];
+          If (#mshr!MSHR@."m_next"!(MaybeStr MshrId)@."valid")
+          then (LET cmid <- #mshr!MSHR@."m_next"!(MaybeStr MshrId)@."data";
+               LET cmshr <- #mshrs#[#cmid];
+               LET nmshrs <-
+               #rmshrs#[#cmid <- STRUCT { "m_status" ::= mshrFirstWait;
+                                          "m_next" ::= #cmshr!MSHR@."m_next";
+                                          "m_is_ul" ::= #cmshr!MSHR@."m_is_ul";
+                                          "m_addr" ::= #cmshr!MSHR@."m_addr";
+                                          "m_qidx" ::= #cmshr!MSHR@."m_qidx";
+                                          "m_rsb" ::= #cmshr!MSHR@."m_rsb";
+                                          "m_dl_rss_from" ::= #cmshr!MSHR@."m_dl_rss_from";
+                                          "m_dl_rss_recv" ::= #cmshr!MSHR@."m_dl_rss_recv" }];
+               Ret #nmshrs)
+          else (Ret #rmshrs) as nmshrs;
+          Write "mshrs"+o <- #nmshrs;
+          Retv
+      }.
+
+  Definition mshrsLi: Kami.Syntax.Modules :=
     MODULE {
         Register ("mshrs"+o): Array (Struct MSHR) numSlots <- Default
         with Register ("rqs"+o): Array (Struct KMsg) numSlots <- Default
