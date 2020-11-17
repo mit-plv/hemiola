@@ -35,7 +35,7 @@ Definition l1IndexSz: nat := 8.
 Definition l1LgWay: nat := 2.
 Definition l1NumPRqs: nat := 2.
 Definition l1NumCRqs: nat := 4.
-Definition l1PredNumVictim: nat := 3.
+Definition l1PredNumVictim: nat := Nat.pred l1NumCRqs.
 Definition l1MshrSlotSz: nat := S (Nat.log2 (l1NumPRqs + l1NumCRqs - 1)).
 Definition l1Cache (oidx: IdxT): Modules :=
   mesiL1 oidx l1IndexSz l1LgWay l1PredNumVictim.
@@ -70,20 +70,20 @@ Definition llMshrs (oidx: IdxT): Modules :=
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((build_controller_l1
-      (H2 := MesiCompLineRW l1LgWay 0) (mshrNumPRqs := l1NumPRqs) (mshrNumCRqs := l1NumCRqs)
-      l1IndexSz l1PredNumVictim (existT _ _ (hl1 oidx)))
+      (H2 := MesiCompLineRW l1LgWay 0)
+      l1IndexSz l1NumPRqs l1NumCRqs l1PredNumVictim (existT _ _ (hl1 oidx)))
      ++ l1Cache oidx ++ l1Mshrs oidx)%kami.
 
 Definition kl2c (oidx: IdxT): Modules :=
   ((build_controller_li_2
-      (H2 := MesiCompLineRW l2LgWay l2EDirLgWay) (mshrNumPRqs := l2NumPRqs) (mshrNumCRqs := l2NumCRqs)
-      l2IndexSz l2PredNumVictim (existT _ _ (hli topo oidx)))
+      (H2 := MesiCompLineRW l2LgWay l2EDirLgWay)
+      l2IndexSz l2NumPRqs l2NumCRqs l2PredNumVictim (existT _ _ (hli topo oidx)))
      ++ l2Cache oidx ++ l2Mshrs oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
   ((build_controller_li_2_no_ints
-      (H2 := MesiCompLineRW llLgWay llEDirLgWay) (mshrNumPRqs := llNumPRqs) (mshrNumCRqs := llNumCRqs)
-      llIndexSz llPredNumVictim (existT _ _ (hli topo oidx)))
+      (H2 := MesiCompLineRW llLgWay llEDirLgWay)
+      llIndexSz llNumPRqs llNumCRqs llPredNumVictim (existT _ _ (hli topo oidx)))
      ++ llCache oidx ++ llMshrs oidx)%kami.
 
 Definition k: Modules :=

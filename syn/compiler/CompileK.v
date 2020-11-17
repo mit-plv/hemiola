@@ -92,7 +92,6 @@ Section Compile.
   Let mshrNumSlots := S predMshrNumSlots.
   Let mshrSlotSz := S (Nat.log2 predMshrNumSlots).
   Let MshrId := Bit mshrSlotSz.
-  Local Notation MSHR := (MSHR mshrNumPRqs mshrNumCRqs).
 
   (** Victims *)
   Variable predNumVictims: nat.
@@ -979,9 +978,7 @@ Section Compile.
                             "type" ::= $$MRq;
                             "addr" ::= #paddr;
                             "value" ::= $$Default };
-        LET mshr <- STRUCT { "m_status" ::= mshrValid;
-                             "m_next" ::= $$Default;
-                             "m_is_ul" ::= $$true;
+        LET mshr <- STRUCT { "m_is_ul" ::= $$true;
                              "m_addr" ::= #paddr;
                              "m_qidx" ::= $$Default;
                              "m_rsb" ::= $$false;

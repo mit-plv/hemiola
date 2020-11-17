@@ -37,7 +37,6 @@ End Directory.
 
 Section Instances.
   Context `{TopoConfig}.
-  Variables mshrNumPRqs mshrNumCRqs: nat.
 
   Instance MesiCompExtType: CompExtType :=
     {| kind_of_hetype := fun het => match het with
@@ -45,11 +44,11 @@ Section Instances.
                                     end
     |}.
 
-  Arguments compile_bexp {_ _ _ _ _ _ _ _ _ _ _} _ _ _ {_}.
+  Arguments compile_bexp {_ _ _ _ _ _ _ _ _} _ _ _ {_}.
   Fixpoint compile_dir_exp
            (var: Kind -> Type) {het}
            (msgIn: var (Struct KMsg))
-           (mshr: var (Struct (MSHR mshrNumPRqs mshrNumCRqs)))
+           (mshr: var (Struct MSHR))
            (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
            (he: heexp (hvar_of var) het): Expr var (SyntaxKind (kind_of het)) :=
     (match he in (hexp_dir _ h) return (Expr var (SyntaxKind (kind_of h))) with
@@ -108,7 +107,7 @@ Section Instances.
   Definition compile_dir_OPrec
              (var: Kind -> Type)
              (msgIn: var (Struct KMsg))
-             (mshr: var (Struct (MSHR mshrNumPRqs mshrNumCRqs)))
+             (mshr: var (Struct MSHR))
              (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
@@ -122,7 +121,7 @@ Section Instances.
                (compile_bexp msgIn mshr ostvars cidx) != $0
      end)%kami_expr.
 
-  Instance MesiCompExtExp: CompExtExp mshrNumPRqs mshrNumCRqs :=
+  Instance MesiCompExtExp: CompExtExp :=
     {| compile_eexp := compile_dir_exp;
        compile_eoprec := compile_dir_OPrec
     |}.
@@ -249,7 +248,7 @@ Require Import Hemiola.Ex.TopoTemplate.
 Section Cache.
   Context `{TopoConfig}.
   Variables (oidx: IdxT)
-            (indexSz lgWay edirLgWay predNumVictims mshrSlotSz: nat).
+            (indexSz lgWay edirLgWay predNumVictims: nat).
 
   Definition BitsPerByte := 8.
   Definition offsetSz := Nat.log2 (Nat.div hcfg_addr_sz BitsPerByte) + hcfg_line_values_lg.
