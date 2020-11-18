@@ -55,14 +55,14 @@ Definition llMshrs (oidx: IdxT): Modules :=
 
 Definition kl1c (oidx: IdxT): Modules :=
   ((build_controller_l1
-      (H2 := MesiCompLineRW l1LgWay 0) (mshrNumPRqs := l1NumPRqs) (mshrNumCRqs := l1NumCRqs)
-      l1IndexSz l1PredNumVictim (existT _ _ (hl1 oidx)))
+      (H2 := MesiCompLineRW l1LgWay 0)
+      l1IndexSz l1NumPRqs l1NumCRqs l1PredNumVictim (existT _ _ (hl1 oidx)))
      ++ l1Cache oidx ++ l1Mshrs oidx)%kami.
 
 Definition kllc (oidx: IdxT): Modules :=
   ((build_controller_li_2_no_ints
-      (H2 := MesiCompLineRW llLgWay llEDirLgWay) (mshrNumPRqs := llNumPRqs) (mshrNumCRqs := llNumCRqs)
-      llIndexSz llPredNumVictim (existT _ _ (hli topo oidx)))
+      (H2 := MesiCompLineRW llLgWay llEDirLgWay)
+      llIndexSz llNumPRqs llNumCRqs llPredNumVictim (existT _ _ (hli topo oidx)))
      ++ llCache oidx ++ llMshrs oidx)%kami.
 
 Definition k: Modules :=

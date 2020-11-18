@@ -11,8 +11,6 @@ import HCCWrapper::*;
 import HCCTypes::*;
 import HMemBank::*;
 
-typedef MemAddrSz BAddrSz;
-
 typedef Bit#(64) CycleCnt;
 interface CCTest;
     method Action start(CycleCnt maxCycle);
@@ -397,6 +395,7 @@ module mkCCTestCheck#(CC mem)(CCTest);
     endmethod
 endmodule
 
+typedef 11 RandAddrSz;
 // Access ratio between read and write, used throughout all testers
 typedef 2 LgRWRatio; // 1/4 (=1/2^2) accesses of writes
 
@@ -420,7 +419,7 @@ module mkCCTestRandom#(CC mem)(CCTest);
 
     Vector#(L1Num, Reg#(Bit#(64))) marks <- replicateM(mkReg(0));
 
-    function Bit#(64) getAddr (Bit#(BAddrSz) baddr);
+    function Bit#(64) getAddr (Bit#(RandAddrSz) baddr);
         Bit#(AddrOffset) pad = 0;
         Bit#(64) addr = zeroExtend({baddr, pad});
         return addr;
@@ -452,7 +451,7 @@ module mkCCTestRandom#(CC mem)(CCTest);
     end
     for (Integer i = 0; i < valueOf(L1Num); i=i+1) begin
         rule rq_addr_upd;
-            Bit#(BAddrSz) baddr = truncate(rq_baddr_rand[i].value);
+            Bit#(RandAddrSz) baddr = truncate(rq_baddr_rand[i].value);
             rq_baddr_rand[i].next();
             let addr = getAddr(baddr);
             rq_addr[i] <= addr;

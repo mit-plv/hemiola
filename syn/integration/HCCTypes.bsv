@@ -22,6 +22,8 @@ typedef TLog#(ValueByte) ValueOffset; // 3
 typedef TLog#(LineSz) LineOffset; // 2
 typedef TAdd#(LineOffset, ValueOffset) AddrOffset; // 5
 
-typedef 13 LLIndexSz;
-typedef Bit#(LLIndexSz) LLIndex;
-typedef Struct34 LLDmaRq;
+typedef 10 LLCacheSz;
+typedef 4 LLLgWay;
+typedef TAdd#(LLCacheSz, LLLgWay) LLSz;
+typedef Bit#(LLSz) LLIndex;
+typedef Struct32 LLDmaRq;
