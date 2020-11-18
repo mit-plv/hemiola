@@ -95,6 +95,7 @@ typedef 9 IndexSz;
 typedef TAdd#(AddrOffset, IndexSz) IEAddrOffset;
 module mkCCTestCheckIdxEquiv#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bit#(LLCacheSz)) memInitCount <- mkReg(0);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
@@ -125,9 +126,9 @@ module mkCCTestCheckIdxEquiv#(CC mem)(CCTest);
         return truncate(addr >> valueOf(AddrOffset));
     endfunction
 
-    // FIXME: may have to wait for a while, for caches to be initialized
-    rule mem_init_done (!memInit);
-        memInit <= True;
+    rule mem_init_count (!memInit);
+        memInitCount <= memInitCount + 1;
+        memInit <= (memInitCount == maxBound);
     endrule
 
     rule inc_cycle (memInit && onTest);
@@ -246,6 +247,7 @@ endmodule
 
 module mkCCTestCheck#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bit#(LLCacheSz)) memInitCount <- mkReg(0);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
@@ -276,9 +278,9 @@ module mkCCTestCheck#(CC mem)(CCTest);
         return truncate(addr >> valueOf(AddrOffset));
     endfunction
 
-    // FIXME: may have to wait for a while, for caches to be initialized
-    rule mem_init_done (!memInit);
-        memInit <= True;
+    rule mem_init_count (!memInit);
+        memInitCount <= memInitCount + 1;
+        memInit <= (memInitCount == maxBound);
     endrule
 
     rule inc_cycle (memInit && onTest);
@@ -401,6 +403,7 @@ typedef 2 LgRWRatio; // 1/4 (=1/2^2) accesses of writes
 
 module mkCCTestRandom#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bit#(LLCacheSz)) memInitCount <- mkReg(0);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
@@ -425,9 +428,9 @@ module mkCCTestRandom#(CC mem)(CCTest);
         return addr;
     endfunction
 
-    // FIXME: may have to wait for a while, for caches to be initialized
-    rule mem_init_done (!memInit);
-        memInit <= True;
+    rule mem_init_count (!memInit);
+        memInitCount <= memInitCount + 1;
+        memInit <= (memInitCount == maxBound);
     endrule
 
     rule inc_cycle (memInit && onTest);
@@ -537,6 +540,7 @@ typedef 10 LgL1DSz;
 
 module mkCCTestIsolated#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bit#(LLCacheSz)) memInitCount <- mkReg(0);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
@@ -561,9 +565,9 @@ module mkCCTestIsolated#(CC mem)(CCTest);
         return addr;
     endfunction
 
-    // FIXME: may have to wait for a while, for caches to be initialized
-    rule mem_init_done (!memInit);
-        memInit <= True;
+    rule mem_init_count (!memInit);
+        memInitCount <= memInitCount + 1;
+        memInit <= (memInitCount == maxBound);
     endrule
 
     rule inc_cycle (memInit && onTest);
@@ -684,6 +688,7 @@ typedef 32 NumTlCycles;
 
 module mkCCTestShared#(CC mem)(CCTest);
     Reg#(Bool) memInit <- mkReg(False);
+    Reg#(Bit#(LLCacheSz)) memInitCount <- mkReg(0);
     Reg#(Bool) onTest <- mkReg(False);
     Reg#(CycleCnt) maxCycle <- mkReg(0);
     Reg#(CycleCnt) curCycle <- mkReg(0);
@@ -712,9 +717,9 @@ module mkCCTestShared#(CC mem)(CCTest);
         return addr;
     endfunction
 
-    // FIXME: may have to wait for a while, for caches to be initialized
-    rule mem_init_done (!memInit);
-        memInit <= True;
+    rule mem_init_count (!memInit);
+        memInitCount <= memInitCount + 1;
+        memInit <= (memInitCount == maxBound);
     endrule
 
     rule inc_cycle (memInit && onTest);
