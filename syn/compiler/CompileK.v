@@ -979,7 +979,6 @@ Section Compile.
                             "addr" ::= #paddr;
                             "value" ::= $$Default };
         LET mshr <- STRUCT { "m_is_ul" ::= $$true;
-                             "m_addr" ::= #paddr;
                              "m_qidx" ::= $$Default;
                              "m_rsb" ::= $$false;
                              "m_dl_rss_from" ::= $$Default;
