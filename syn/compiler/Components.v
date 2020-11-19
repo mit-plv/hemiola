@@ -474,7 +474,7 @@ Section MSHR.
          | S n' =>
            let m := el1#[$$(natToWord slotSz (numPRqs - n))] in
            let st := el2#[$$(natToWord slotSz (numPRqs - n))] in
-           let nx := el3#[$$(natToWord slotSz (numSlots - n))] in
+           let nx := el3#[$$(natToWord slotSz (numPRqs - n))] in
            (IF (cond m st nx) then tc (numPRqs - n)%nat m else pmfix3 n')
          end)%kami_expr.
       Definition pmiter3 := pmfix3 numPRqs.
@@ -485,7 +485,7 @@ Section MSHR.
          | S n' =>
            let m := el1#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
            let st := el2#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
-           let nx := el3#[$$(natToWord slotSz (numSlots - n))] in
+           let nx := el3#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
            (IF (cond m st nx) then tc (numCRqs - n + numPRqs)%nat m else cmfix3 n')
          end)%kami_expr.
       Definition cmiter3 := cmfix3 numCRqs.
@@ -532,7 +532,7 @@ Section MSHR.
            let m := el1#[$$(natToWord slotSz (numPRqs - n))] in
            let a := el2#[$$(natToWord slotSz (numPRqs - n))] in
            let st := el3#[$$(natToWord slotSz (numPRqs - n))] in
-           let nx := el4#[$$(natToWord slotSz (numSlots - n))] in
+           let nx := el4#[$$(natToWord slotSz (numPRqs - n))] in
            (IF (cond m a st nx) then tc (numPRqs - n)%nat m else pmfix4 n')
          end)%kami_expr.
       Definition pmiter4 := pmfix4 numPRqs.
@@ -544,7 +544,7 @@ Section MSHR.
            let m := el1#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
            let a := el2#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
            let st := el3#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
-           let nx := el4#[$$(natToWord slotSz (numSlots - n))] in
+           let nx := el4#[$$(natToWord slotSz (numCRqs - n + numPRqs))] in
            (IF (cond m a st nx) then tc (numCRqs - n + numPRqs)%nat m else cmfix4 n')
          end)%kami_expr.
       Definition cmiter4 := cmfix4 numCRqs.

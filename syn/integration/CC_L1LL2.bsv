@@ -4330,13 +4330,11 @@ module mkModule59#(function ActionValue#(Struct1) deq_fifo0010(),
     Reg#(Bit#(1)) rr_cRq2_00 <- mkReg(unpack(0));
 
     rule inc_rr_cRq2_00;
-        $display ("Rule fired: inc_rr_cRq2_00 at %t", $time);
         let x_0 = (rr_cRq2_00);
         rr_cRq2_00 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_cRq2_00;
-        $display ("Rule fired: accept0_cRq2_00 at %t", $time);
         let x_0 = (rr_cRq2_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0000();
@@ -4346,7 +4344,6 @@ module mkModule59#(function ActionValue#(Struct1) deq_fifo0010(),
     endrule
 
     rule accept1_cRq2_00;
-        $display ("Rule fired: accept1_cRq2_00 at %t", $time);
         let x_0 = (rr_cRq2_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo0010();
@@ -4369,13 +4366,11 @@ module mkModule60#(function ActionValue#(Struct1) deq_fifo0011(),
     Reg#(Bit#(1)) rr_cRs2_00 <- mkReg(unpack(0));
 
     rule inc_rr_cRs2_00;
-        $display ("Rule fired: inc_rr_cRs2_00 at %t", $time);
         let x_0 = (rr_cRs2_00);
         rr_cRs2_00 <= (x_0) + ((Bit#(1))'(1'h1));
     endrule
 
     rule accept0_cRs2_00;
-        $display ("Rule fired: accept0_cRs2_00 at %t", $time);
         let x_0 = (rr_cRs2_00);
         when ((x_0) == ((Bit#(1))'(1'h0)), noAction);
         let x_1 <- deq_fifo0001();
@@ -4385,7 +4380,6 @@ module mkModule60#(function ActionValue#(Struct1) deq_fifo0011(),
     endrule
 
     rule accept1_cRs2_00;
-        $display ("Rule fired: accept1_cRs2_00 at %t", $time);
         let x_0 = (rr_cRs2_00);
         when ((x_0) == ((Bit#(1))'(1'h1)), noAction);
         let x_1 <- deq_fifo0011();
@@ -4406,7 +4400,6 @@ module mkModule61#(function Action enq_fifoPInput_00(Struct2 _),
     (Module61);
 
     rule parent_convert_00;
-        $display ("Rule fired: parent_convert_00 at %t", $time);
         let x_0 <- deq_fifo002();
         Struct2 x_1 = (Struct2 {in_msg : x_0, in_msg_from :
         {((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}});
@@ -4570,7 +4563,6 @@ module mkModule64#(function Action enq_fifoCRqInput_000(Struct2 _),
     (Module64);
 
     rule child_convert_000;
-        $display ("Rule fired: child_convert_000 at %t", $time);
         let x_0 <- deq_fifo00000();
         Struct2 x_1 = (Struct2 {in_msg : x_0, in_msg_from :
         {((Bit#(2))'(2'h0)),((Bit#(1))'(1'h0))}});
@@ -4589,7 +4581,6 @@ module mkModule65#(function Action enq_fifoPInput_000(Struct2 _),
     (Module65);
 
     rule parent_convert_000;
-        $display ("Rule fired: parent_convert_000 at %t", $time);
         let x_0 <- deq_fifo0002();
         Struct2 x_1 = (Struct2 {in_msg : x_0, in_msg_from :
         {((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}});
@@ -4698,7 +4689,6 @@ module mkModule68#(function Action enq_fifoCRqInput_001(Struct2 _),
     (Module68);
 
     rule child_convert_001;
-        $display ("Rule fired: child_convert_001 at %t", $time);
         let x_0 <- deq_fifo00100();
         Struct2 x_1 = (Struct2 {in_msg : x_0, in_msg_from :
         {((Bit#(2))'(2'h0)),((Bit#(1))'(1'h0))}});
@@ -4717,7 +4707,6 @@ module mkModule69#(function Action enq_fifoPInput_001(Struct2 _),
     (Module69);
 
     rule parent_convert_001;
-        $display ("Rule fired: parent_convert_001 at %t", $time);
         let x_0 <- deq_fifo0012();
         Struct2 x_1 = (Struct2 {in_msg : x_0, in_msg_from :
         {((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}});
@@ -5536,7 +5525,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     (Module75);
 
     rule rule_in_prq_00;
-        $display ("Rule fired: rule_in_prq_00 at %t", $time);
         let x_0 <- deq_fifoPInput_00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -5559,7 +5547,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_in_prs_00;
-        $display ("Rule fired: rule_in_prs_00 at %t", $time);
         let x_0 <- deq_fifoPInput_00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -5577,7 +5564,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_in_retry_00;
-        $display ("Rule fired: rule_in_retry_00 at %t", $time);
         let x_0 <- getWait_00();
         Struct1 x_1 = ((x_0).r_msg);
         let x_2 <- victims__00__findVictim((x_1).addr);
@@ -5588,7 +5574,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_in_invrs_00;
-        $display ("Rule fired: rule_in_invrs_00 at %t", $time);
         let x_0 <- deq_fifoPInput_00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -5602,7 +5587,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_in_crq_00;
-        $display ("Rule fired: rule_in_crq_00 at %t", $time);
         let x_0 <- deq_fifoCRqInput_00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -5626,7 +5610,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_in_crs_00;
-        $display ("Rule fired: rule_in_crs_00 at %t", $time);
         let x_0 <- deq_fifoCRsInput_00();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h1)), noAction);
@@ -5636,7 +5619,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_in_rsrel_00;
-        $display ("Rule fired: rule_in_rsrel_00 at %t", $time);
         let x_0 <- getDLReady_00();
         let x_1 <- startRelease_00((x_0).r_id);
         Struct1 x_2 = (Struct1 {id : unpack(0), type_ : unpack(0), addr :
@@ -5648,7 +5630,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_ir_cache_00;
-        $display ("Rule fired: rule_ir_cache_00 at %t", $time);
         let x_0 <- deq_fifoN2I_00();
         when (! (((x_0).ir_by_victim).valid), noAction);
         Struct1 x_1 = ((x_0).ir_msg);
@@ -5657,14 +5638,12 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_ir_victims_00;
-        $display ("Rule fired: rule_ir_victims_00 at %t", $time);
         let x_0 <- deq_fifoN2I_00();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L_00(x_0);
     endrule
 
     rule rule_lr_cache_00;
-        $display ("Rule fired: rule_lr_cache_00 at %t", $time);
         let x_0 <- deq_fifoI2L_00();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__00__infoRsValueRq(((x_0).ir_msg).addr);
@@ -5674,7 +5653,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_lr_victims_00;
-        $display ("Rule fired: rule_lr_victims_00 at %t", $time);
         let x_0 <- deq_fifoI2L_00();
         when (((x_0).ir_by_victim).valid, noAction);
         Bit#(3) x_1 = (((x_0).ir_by_victim).data);
@@ -5689,7 +5667,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_000000;
-        $display ("Rule fired: rule_exec_00_000000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -5772,7 +5749,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_001000;
-        $display ("Rule fired: rule_exec_00_001000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -5856,7 +5832,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_01000;
-        $display ("Rule fired: rule_exec_00_01000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -5913,7 +5888,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_03000;
-        $display ("Rule fired: rule_exec_00_03000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -5974,7 +5948,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_10000;
-        $display ("Rule fired: rule_exec_00_10000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6069,7 +6042,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_11000;
-        $display ("Rule fired: rule_exec_00_11000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6126,7 +6098,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_14000;
-        $display ("Rule fired: rule_exec_00_14000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6187,7 +6158,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_15000;
-        $display ("Rule fired: rule_exec_00_15000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6244,7 +6214,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_25000;
-        $display ("Rule fired: rule_exec_00_25000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6304,7 +6273,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_2600000;
-        $display ("Rule fired: rule_exec_00_2600000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6385,7 +6353,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_2601000;
-        $display ("Rule fired: rule_exec_00_2601000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6477,7 +6444,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_261000;
-        $display ("Rule fired: rule_exec_00_261000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6566,7 +6532,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_27000;
-        $display ("Rule fired: rule_exec_00_27000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6655,7 +6620,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_28000;
-        $display ("Rule fired: rule_exec_00_28000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6715,7 +6679,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_290000;
-        $display ("Rule fired: rule_exec_00_290000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6796,7 +6759,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_291000;
-        $display ("Rule fired: rule_exec_00_291000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6885,7 +6847,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_210000;
-        $display ("Rule fired: rule_exec_00_210000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -6977,7 +6938,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_211000;
-        $display ("Rule fired: rule_exec_00_211000 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7080,7 +7040,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_000001;
-        $display ("Rule fired: rule_exec_00_000001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7163,7 +7122,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_001001;
-        $display ("Rule fired: rule_exec_00_001001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7247,7 +7205,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_01001;
-        $display ("Rule fired: rule_exec_00_01001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7304,7 +7261,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_03001;
-        $display ("Rule fired: rule_exec_00_03001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7365,7 +7321,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_10001;
-        $display ("Rule fired: rule_exec_00_10001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7460,7 +7415,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_11001;
-        $display ("Rule fired: rule_exec_00_11001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7517,7 +7471,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_14001;
-        $display ("Rule fired: rule_exec_00_14001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7578,7 +7531,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_15001;
-        $display ("Rule fired: rule_exec_00_15001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7635,7 +7587,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_25001;
-        $display ("Rule fired: rule_exec_00_25001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7695,7 +7646,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_2600001;
-        $display ("Rule fired: rule_exec_00_2600001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7776,7 +7726,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_2601001;
-        $display ("Rule fired: rule_exec_00_2601001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7868,7 +7817,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_261001;
-        $display ("Rule fired: rule_exec_00_261001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -7957,7 +7905,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_27001;
-        $display ("Rule fired: rule_exec_00_27001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8046,7 +7993,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_28001;
-        $display ("Rule fired: rule_exec_00_28001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8106,7 +8052,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_290001;
-        $display ("Rule fired: rule_exec_00_290001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8187,7 +8132,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_291001;
-        $display ("Rule fired: rule_exec_00_291001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8276,7 +8220,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_210001;
-        $display ("Rule fired: rule_exec_00_210001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8368,7 +8311,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_211001;
-        $display ("Rule fired: rule_exec_00_211001 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8471,7 +8413,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_020;
-        $display ("Rule fired: rule_exec_00_020 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8584,7 +8525,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_021;
-        $display ("Rule fired: rule_exec_00_021 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8689,7 +8629,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_041;
-        $display ("Rule fired: rule_exec_00_041 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8798,7 +8737,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_05;
-        $display ("Rule fired: rule_exec_00_05 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8875,7 +8813,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_06;
-        $display ("Rule fired: rule_exec_00_06 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -8936,7 +8873,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_071;
-        $display ("Rule fired: rule_exec_00_071 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9044,7 +8980,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_12;
-        $display ("Rule fired: rule_exec_00_12 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9145,7 +9080,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_13;
-        $display ("Rule fired: rule_exec_00_13 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9219,7 +9153,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_161;
-        $display ("Rule fired: rule_exec_00_161 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9311,7 +9244,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_170;
-        $display ("Rule fired: rule_exec_00_170 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9387,7 +9319,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_171;
-        $display ("Rule fired: rule_exec_00_171 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9464,7 +9395,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_190;
-        $display ("Rule fired: rule_exec_00_190 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9517,7 +9447,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_191;
-        $display ("Rule fired: rule_exec_00_191 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9577,7 +9506,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_192;
-        $display ("Rule fired: rule_exec_00_192 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9630,7 +9558,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_11010;
-        $display ("Rule fired: rule_exec_00_11010 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9722,7 +9649,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_11011;
-        $display ("Rule fired: rule_exec_00_11011 at %t", $time);
         let x_0 <- deq_fifoL2E_00();
         Struct6 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -9814,7 +9740,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_20;
-        $display ("Rule fired: rule_exec_00_20 at %t", $time);
         let x_0 <- victims__00__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);
@@ -9852,7 +9777,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_21;
-        $display ("Rule fired: rule_exec_00_21 at %t", $time);
         let x_0 <- victims__00__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);
@@ -9891,7 +9815,6 @@ module mkModule75#(function Action canImm_00(Bit#(64) _),
     endrule
 
     rule rule_exec_00_23;
-        $display ("Rule fired: rule_exec_00_23 at %t", $time);
         let x_0 <- victims__00__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);
@@ -9959,7 +9882,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     (Module76);
 
     rule rule_in_prq_000;
-        $display ("Rule fired: rule_in_prq_000 at %t", $time);
         let x_0 <- deq_fifoPInput_000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -9982,7 +9904,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_prs_000;
-        $display ("Rule fired: rule_in_prs_000 at %t", $time);
         let x_0 <- deq_fifoPInput_000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -10000,7 +9921,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_retry_000;
-        $display ("Rule fired: rule_in_retry_000 at %t", $time);
         let x_0 <- getWait_000();
         Struct1 x_1 = ((x_0).r_msg);
         let x_2 <- victims__000__findVictim((x_1).addr);
@@ -10011,7 +9931,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_invrs_000;
-        $display ("Rule fired: rule_in_invrs_000 at %t", $time);
         let x_0 <- deq_fifoPInput_000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h0))}),
@@ -10025,7 +9944,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_crq_000;
-        $display ("Rule fired: rule_in_crq_000 at %t", $time);
         let x_0 <- deq_fifoCRqInput_000();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -10049,7 +9967,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_ir_cache_000;
-        $display ("Rule fired: rule_ir_cache_000 at %t", $time);
         let x_0 <- deq_fifoN2I_000();
         when (! (((x_0).ir_by_victim).valid), noAction);
         Struct1 x_1 = ((x_0).ir_msg);
@@ -10058,14 +9975,12 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_ir_victims_000;
-        $display ("Rule fired: rule_ir_victims_000 at %t", $time);
         let x_0 <- deq_fifoN2I_000();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L_000(x_0);
     endrule
 
     rule rule_lr_cache_000;
-        $display ("Rule fired: rule_lr_cache_000 at %t", $time);
         let x_0 <- deq_fifoI2L_000();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__000__infoRsValueRq(((x_0).ir_msg).addr);
@@ -10075,7 +9990,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_lr_victims_000;
-        $display ("Rule fired: rule_lr_victims_000 at %t", $time);
         let x_0 <- deq_fifoI2L_000();
         when (((x_0).ir_by_victim).valid, noAction);
         Bit#(2) x_1 = (((x_0).ir_by_victim).data);
@@ -10090,7 +10004,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_00;
-        $display ("Rule fired: rule_exec_000_00 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10144,7 +10057,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_01;
-        $display ("Rule fired: rule_exec_000_01 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10199,7 +10111,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_020;
-        $display ("Rule fired: rule_exec_000_020 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10279,7 +10190,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_021;
-        $display ("Rule fired: rule_exec_000_021 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10359,7 +10269,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_03;
-        $display ("Rule fired: rule_exec_000_03 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10435,7 +10344,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_100;
-        $display ("Rule fired: rule_exec_000_100 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10516,7 +10424,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_101;
-        $display ("Rule fired: rule_exec_000_101 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10581,7 +10488,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_11;
-        $display ("Rule fired: rule_exec_000_11 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10636,7 +10542,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_12;
-        $display ("Rule fired: rule_exec_000_12 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10724,7 +10629,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_130;
-        $display ("Rule fired: rule_exec_000_130 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10800,7 +10704,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_131;
-        $display ("Rule fired: rule_exec_000_131 at %t", $time);
         let x_0 <- deq_fifoL2E_000();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -10876,7 +10779,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_20;
-        $display ("Rule fired: rule_exec_000_20 at %t", $time);
         let x_0 <- victims__000__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);
@@ -10913,7 +10815,6 @@ module mkModule76#(function Action victims__000__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_000_21;
-        $display ("Rule fired: rule_exec_000_21 at %t", $time);
         let x_0 <- victims__000__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);
@@ -10987,7 +10888,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     (Module77);
 
     rule rule_in_prq_001;
-        $display ("Rule fired: rule_in_prq_001 at %t", $time);
         let x_0 <- deq_fifoPInput_001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -11010,7 +10910,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_prs_001;
-        $display ("Rule fired: rule_in_prs_001 at %t", $time);
         let x_0 <- deq_fifoPInput_001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -11028,7 +10927,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_retry_001;
-        $display ("Rule fired: rule_in_retry_001 at %t", $time);
         let x_0 <- getWait_001();
         Struct1 x_1 = ((x_0).r_msg);
         let x_2 <- victims__001__findVictim((x_1).addr);
@@ -11039,7 +10937,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_invrs_001;
-        $display ("Rule fired: rule_in_invrs_001 at %t", $time);
         let x_0 <- deq_fifoPInput_001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when ((x_1) == ({((Bit#(2))'(2'h2)),((Bit#(1))'(1'h1))}),
@@ -11053,7 +10950,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_in_crq_001;
-        $display ("Rule fired: rule_in_crq_001 at %t", $time);
         let x_0 <- deq_fifoCRqInput_001();
         Bit#(3) x_1 = ((x_0).in_msg_from);
         when (((x_1)[2:1]) == ((Bit#(2))'(2'h0)), noAction);
@@ -11077,7 +10973,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_ir_cache_001;
-        $display ("Rule fired: rule_ir_cache_001 at %t", $time);
         let x_0 <- deq_fifoN2I_001();
         when (! (((x_0).ir_by_victim).valid), noAction);
         Struct1 x_1 = ((x_0).ir_msg);
@@ -11086,14 +10981,12 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_ir_victims_001;
-        $display ("Rule fired: rule_ir_victims_001 at %t", $time);
         let x_0 <- deq_fifoN2I_001();
         when (((x_0).ir_by_victim).valid, noAction);
         let x_1 <- enq_fifoI2L_001(x_0);
     endrule
 
     rule rule_lr_cache_001;
-        $display ("Rule fired: rule_lr_cache_001 at %t", $time);
         let x_0 <- deq_fifoI2L_001();
         when (! (((x_0).ir_by_victim).valid), noAction);
         let x_1 <- cache__001__infoRsValueRq(((x_0).ir_msg).addr);
@@ -11103,7 +10996,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_lr_victims_001;
-        $display ("Rule fired: rule_lr_victims_001 at %t", $time);
         let x_0 <- deq_fifoI2L_001();
         when (((x_0).ir_by_victim).valid, noAction);
         Bit#(2) x_1 = (((x_0).ir_by_victim).data);
@@ -11118,7 +11010,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_00;
-        $display ("Rule fired: rule_exec_001_00 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11172,7 +11063,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_01;
-        $display ("Rule fired: rule_exec_001_01 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11227,7 +11117,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_020;
-        $display ("Rule fired: rule_exec_001_020 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11307,7 +11196,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_021;
-        $display ("Rule fired: rule_exec_001_021 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11387,7 +11275,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_03;
-        $display ("Rule fired: rule_exec_001_03 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11463,7 +11350,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_100;
-        $display ("Rule fired: rule_exec_001_100 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11544,7 +11430,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_101;
-        $display ("Rule fired: rule_exec_001_101 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11609,7 +11494,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_11;
-        $display ("Rule fired: rule_exec_001_11 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11664,7 +11548,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_12;
-        $display ("Rule fired: rule_exec_001_12 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11752,7 +11635,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_130;
-        $display ("Rule fired: rule_exec_001_130 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11828,7 +11710,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_131;
-        $display ("Rule fired: rule_exec_001_131 at %t", $time);
         let x_0 <- deq_fifoL2E_001();
         Struct39 x_1 = ((x_0).lr_ir_pp);
         Bit#(3) x_2 = ((x_1).ir_msg_from);
@@ -11904,7 +11785,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_20;
-        $display ("Rule fired: rule_exec_001_20 at %t", $time);
         let x_0 <- victims__001__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);
@@ -11941,7 +11821,6 @@ module mkModule77#(function Action victims__001__setVictimRq(Bit#(64) _),
     endrule
 
     rule rule_exec_001_21;
-        $display ("Rule fired: rule_exec_001_21 at %t", $time);
         let x_0 <- victims__001__getFirstVictim();
         Bit#(64) x_1 = ((x_0).victim_addr);
         Struct11 x_2 = ((x_0).victim_info);

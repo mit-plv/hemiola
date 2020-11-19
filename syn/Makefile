@@ -34,7 +34,8 @@ mesi_comp: Makefile.coq
 	$(MAKE) -f Makefile.coq $(MESI_EXT_VO)
 
 BSV_EXT ?= kami/Kami/Ext/Ocaml
-BSV_EXT_FLAGS ?= -d
+# BSV_EXT_FLAGS ?= -d
+BSV_EXT_FLAGS ?=
 BSV_TOP_NAME ?= CC
 MESI_EXT_BSV_NAME ?= $(BSV_TOP_NAME).bsv
 
