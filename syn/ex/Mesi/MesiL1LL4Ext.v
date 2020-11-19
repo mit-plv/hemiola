@@ -32,7 +32,7 @@ Definition dtr := fst (tree2Topo topo 0).
 Definition l1IndexSz: nat := 8.
 Definition l1LgWay: nat := 2.
 Definition l1NumPRqs: nat := 2.
-Definition l1NumCRqs: nat := 4.
+Definition l1NumCRqs: nat := 2.
 Definition l1PredNumVictim: nat := Nat.pred l1NumCRqs.
 Definition l1MshrSlotSz: nat := S (Nat.log2 (l1NumPRqs + l1NumCRqs - 1)).
 Definition l1Cache (oidx: IdxT): Modules :=
@@ -40,11 +40,11 @@ Definition l1Cache (oidx: IdxT): Modules :=
 Definition l1Mshrs (oidx: IdxT): Modules :=
   mshrsL1 oidx l1NumPRqs l1NumCRqs (mshrConflictF (indexSz := l1IndexSz)).
 
-(* 256KB LL: 2^9 * 2^4 * 32B *)
-Definition llIndexSz: nat := 9.
+(* 512KB LL: 2^10 * 2^4 * 32B *)
+Definition llIndexSz: nat := 10.
 Definition llLgWay: nat := 4.
 Definition llEDirLgWay: nat := 3.
-Definition llNumPRqs: nat := 4.
+Definition llNumPRqs: nat := 0.
 Definition llNumCRqs: nat := 8.
 Definition llPredNumVictim: nat := Nat.pred llNumCRqs.
 Definition llMshrSlotSz: nat := S (Nat.log2 (llNumPRqs + llNumCRqs - 1)).
