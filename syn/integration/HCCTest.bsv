@@ -913,8 +913,8 @@ module mkCCTestSharedPair#(CC mem)(CCTest);
                 Bit#(LgL1DSz) saddr = zeroExtend(saddrTrunc);
                 // Here the trick is to set the sharing index based on (i / 2);
                 // (2n)-th and (2n+1)-th L1 caches will have the same shared region.
-                let shIdx = fromInteger(valueOf(ShIdx)) + fromInteger(i / 2);
-                let shAddr = getAddr(fromInteger(valueOf(ShIdx)), saddr);
+                Bit#(ExShIdxSz) shIdx = fromInteger(valueOf(ShIdx) + i / 2);
+                let shAddr = getAddr(shIdx, saddr);
                 rq_addr[i] <= shAddr;
             end
             else begin
