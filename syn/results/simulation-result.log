@@ -1,0 +1,7 @@
+- Simulation count: 500000
+- Result
+
+Protocols, all-shared, pair-shared, ex:sh=1:1, ex:sh=4:1, ex:sh=8:1
+Hem3, 129459, 434063, 252797, 381801, 497991
+Hem2, 134927, 399919, 318727, 456674, 561957
+RiscyOO, 167978, 395612, 318521, 493851, 684476
