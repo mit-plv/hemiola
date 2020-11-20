@@ -1,0 +1,28 @@
+read_checkpoint ./Synth/mkPcieTop/mkPcieTop-synth.dcp
+    Elapsed time 1 seconds
+link_design
+    Elapsed time 68 seconds
+read_xdc /home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc
+    Elapsed time 0 seconds
+read_xdc /home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc
+    Elapsed time 9 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-link.dcp
+    Elapsed time 39 seconds
+opt_design
+    Elapsed time 638 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-opt.dcp
+    Elapsed time 42 seconds
+place_design
+    Elapsed time 1330 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-place.dcp
+    Elapsed time 48 seconds
+phys_opt_design
+    Elapsed time 128 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-phys-opt.dcp
+    Elapsed time 46 seconds
+route_design
+    Elapsed time 817 seconds
+write_checkpoint -force ./Impl/TopDown/top-post-route.dcp
+    Elapsed time 57 seconds
+write_bitstream -bin_file -force Impl/TopDown/mkTop.bit
+    Elapsed time 102 seconds

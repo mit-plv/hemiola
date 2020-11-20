@@ -1,0 +1,271 @@
+Command: phys_opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7vx485t'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7vx485t'
+INFO: [Common 17-1223] The version limit for your license is '2020.06' and will expire in -141 days. A version limit expiration means that, although you may be able to continue to use the current version of tools or IP with this license, you will not be eligible for any updates or new releases.
+Netlist sorting complete. Time (s): cpu = 00:00:00.29 ; elapsed = 00:00:00.32 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115846 ; free virtual = 219443
+WARNING: [Constraints 18-1079] Register host_pcieHostTop_ep7/portalReset/reset_meta_reg and host_pcieHostTop_ep7/portalReset/reset_hold_reg[1] are from the same synchronizer and have the ASYNC_REG property set, but could not be placed into the same slice due to constraints or mismatched control signals on the registers.
+
+Starting Physical Synthesis Task
+
+Phase 1 Physical Synthesis Initialization
+INFO: [Physopt 32-721] Multithreading enabled for phys_opt_design using a maximum of 8 CPUs
+WARNING: [Place 30-34] Design utilization is very high. Please run report_utilization command to see design utilization.
+Phase 1 Physical Synthesis Initialization | Checksum: 1e6548093
+
+Time (s): cpu = 00:03:28 ; elapsed = 00:00:42 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115847 ; free virtual = 219444
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=-0.047 | TNS=-0.064 |
+
+Phase 2 Fanout Optimization
+INFO: [Physopt 32-76] Pass 1. Identified 19 candidate nets for fanout optimization.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_arbiter/tlp_out_fifo/d0di. Replicated 4 times.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_csr/bramRequestFifo/data0_reg[183]_i_1__25_n_0. Replicated 3 times.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/RAM_reg_0_i_32__31_n_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/RAM_reg_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/fromPcieTraceBram_cbram_bram/fromPcieTraceBram_cbram_bram_WEA was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_out_fifo_0/d1di. Replicated 2 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg[152]_i_4__1_n_0. Replicated 4 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_arbiter/tlp_out_fifo/d0h. Replicated 3 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_csr/readResponseFifo/data0_reg_reg[38]_0. Replicated 2 times.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_2 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_mvec_1/readDataFifo/p_0_in8_out. Replicated 1 times.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_dispatcher/tlp_out_fifo_0/data0_reg[152]_i_2__4_n_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg[152]_i_2__2_n_0. Replicated 5 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[21]_rep_n_0. Replicated 2 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_2/E[0]. Replicated 2 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_mvec_0/readDataFifo/D_OUT[118]_i_1__20_n_0. Replicated 1 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[22]_rep_n_0. Replicated 2 times.
+INFO: [Physopt 32-29] End Pass 1. Optimized 12 nets. Created 31 new instances.
+
+INFO: [Physopt 32-76] Pass 2. Identified 5 candidate nets for fanout optimization.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/RAM_reg_0_i_32__31_n_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/RAM_reg_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_csr/bramRequestFifo/data0_reg[183]_i_1__25_n_0_repN_2. Replicated 1 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg[152]_i_2__2_n_0_repN. Replicated 1 times.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_csr/bramRequestFifo/data0_reg[183]_i_1__25_n_0_repN. Replicated 1 times.
+INFO: [Physopt 32-29] End Pass 2. Optimized 3 nets. Created 3 new instances.
+
+INFO: [Physopt 32-76] Pass 3. Identified 4 candidate nets for fanout optimization.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/RAM_reg_0_i_32__31_n_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/RAM_reg_0. Replicated 2 times.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/fromPcieTraceBram_cbram_bram/fromPcieTraceBram_cbram_bram_WEA was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg[152]_i_2__2_n_0_repN_5 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-29] End Pass 3. Optimized 1 net. Created 2 new instances.
+
+INFO: [Physopt 32-76] Pass 4. Identified 2 candidate nets for fanout optimization.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/toPcieTraceBram_cbram_bram/WEA was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-572] Net host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/RAM_reg_0_i_32__31_n_0 was not replicated.
+Resolution: phys_opt_design can be forced to replicate a net driver using the option -force_replication_on_nets <list of net objects>.
+INFO: [Physopt 32-29] End Pass 4. Optimized 0 net. Created 0 new instance.
+
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=-0.047 | TNS=-0.064 |
+Netlist sorting complete. Time (s): cpu = 00:00:00.48 ; elapsed = 00:00:00.49 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115846 ; free virtual = 219444
+Phase 2 Fanout Optimization | Checksum: 162aa8680
+
+Time (s): cpu = 00:04:23 ; elapsed = 00:01:05 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115846 ; free virtual = 219444
+
+Phase 3 Placement Based Optimization
+INFO: [Physopt 32-660] Identified 100 candidate nets for placement-based optimization.
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg_reg[4].  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg[100]_i_5
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg_reg[94][4].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg[68]_i_1
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/data1_reg_reg[68].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/data1_reg[68]_i_3
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/data1_reg_reg[22]_0.  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/data1_reg[118]_i_4
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg_reg[63][22].  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg[54]_i_1
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/data1_reg_reg[54].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/data1_reg[54]_i_3
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg_reg[12].  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg[108]_i_6
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg_reg[63][12].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg[44]_i_1
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg[44]_i_2_n_0.  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg[44]_i_2
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/data1_reg_reg[12]_0.  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/data1_reg[108]_i_3
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg_reg[94][11].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg[76]_i_1
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg[76]_i_2_n_0.  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/data1_reg[76]_i_2
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_tlpOutFifo/data0_reg[44]_i_1__3_n_0.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_tlpOutFifo/data0_reg[44]_i_1__3
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg_reg[12].  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/data1_reg[108]_i_5
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/data1_reg_reg[76].  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/data1_reg[76]_i_3
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg_i_38__0
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeReadyFifo/memSlaveEngine_writeBurstCount_reg[2].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeReadyFifo/RDY_slave_write_server_writeData_put_INST_0_i_1
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeReadyFifo/memSlaveEngine_writeBurstCount_reg[0]_0.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeReadyFifo/RDY_slave_write_server_writeData_put_INST_0_i_5
+INFO: [Physopt 32-662] Processed net memCnx_1_0_writeCnx_dataCnx_putProbe_PROBE_VALID.  Did not re-place instance memCnx_1_0_writeCnx_dataCnx_putProbe_PROBE_VALID_inferred_i_1
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[5].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[5]
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/D[4].  Re-placed instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg_i_17__0
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg_0.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg_i_39__1
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCountFifo/RDY_slave_write_server_writeData_put_INST_0_i_2_n_0.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCountFifo/RDY_slave_write_server_writeData_put_INST_0_i_2
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCountFifo/RDY_slave_write_server_writeData_put.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCountFifo/RDY_slave_write_server_writeData_put_INST_0
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCountFifo/RDY_slave_write_server_writeData_put_INST_0_i_7_n_0.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCountFifo/RDY_slave_write_server_writeData_put_INST_0_i_7
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[3].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[3]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_tlpOutFifo/data0_reg[68]_i_1__2_n_0.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_tlpOutFifo/data0_reg[68]_i_1__2
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/toPcieTraceBram_cbram_bram/WEA.  Did not re-place instance host_pcieHostTop_pciehost_traceif/toPcieTraceBram_cbram_bram/RAM_reg_0_i_31__31
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/RAM_reg_0.  Did not re-place instance host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/RAM_reg_0_i_33__31
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/bramRequestFifo/host_pcieHostTop_pciehost_csr_traceClient_bramClient_request_get[110].  Did not re-place instance host_pcieHostTop_pciehost_csr/bramRequestFifo/data0_reg_reg[203]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/tlpTraceBramWrAddrFifo/ADDRARDADDR[8].  Did not re-place instance host_pcieHostTop_pciehost_traceif/tlpTraceBramWrAddrFifo/RAM_reg_0_i_3__31
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_csr/bramRequestFifo/RAM_reg_10.  Re-placed instance host_pcieHostTop_pciehost_csr/bramRequestFifo/RAM_reg_0_i_32__32
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/isRootBroadcastMessage_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[8].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[8]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[2].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[2]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[6].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[6]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_0/tlp_in_fifo_0_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_0/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/full_reg_reg_1.  Did not re-place instance host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/full_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_1/completionMimo_ifc_rDataCount[1].  Did not re-place instance host_pcieHostTop_pciehost_mvec_1/completionMimo_ifc_rDataCount_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[4].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[4]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/bramRequestFifo/data0_reg_reg[1]_0.  Did not re-place instance host_pcieHostTop_pciehost_csr/bramRequestFifo/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[9].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[9]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/routeFrom_reg_n_0_[1].  Did not re-place instance host_pcieHostTop_pciehost_arbiter/routeFrom_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_1/completionMimo_ifc_rDataCount[0].  Did not re-place instance host_pcieHostTop_pciehost_mvec_1/completionMimo_ifc_rDataCount_reg[0]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/fromPcieTraceBram_cbram_counter_0_positive_reg.  Did not re-place instance host_pcieHostTop_pciehost_traceif/fromPcieTraceBram_cbram_counter_0_positive_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_1/tlp_in_fifo_1_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_1/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_2/tlp_in_fifo_2_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_2/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[1].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/bramMuxReg_responseFifo_rv_reg[192]_0.  Did not re-place instance host_pcieHostTop_pciehost_traceif/tlpTracingReg_reg
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/D_OUT[0].  Re-placed instance host_pcieHostTop_pciehost_traceif/isRootBroadcastMessage/data0_reg_reg[0]
+INFO: [Physopt 32-662] Processed net GetPutWithClocks_inst_mkConnectionWithClocks_synchronizer/dDoutReg[1].  Did not re-place instance GetPutWithClocks_inst_mkConnectionWithClocks_synchronizer/dDoutReg_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/tlpBusResponseFifo_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_traceif/tlpBusResponseFifo/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_user_i/txcompliance_reg2.  Did not re-place instance host_pcieHostTop_ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_user_i/txcompliance_reg2_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_8_addr_lo__read[19].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_8_reg[19]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_0/completionMimo_ifc_rDataCount[2].  Did not re-place instance host_pcieHostTop_pciehost_mvec_0/completionMimo_ifc_rDataCount_reg[2]
+INFO: [Physopt 32-662] Processed net GetPutWithClocks_inst_mkConnectionWithClocks_synchronizer/dDoutReg[0].  Did not re-place instance GetPutWithClocks_inst_mkConnectionWithClocks_synchronizer/dDoutReg_reg[0]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_3/tlp_in_fifo_3_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_3/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/tlp_out_fifo/full_reg_reg_0.  Did not re-place instance host_pcieHostTop_pciehost_arbiter/tlp_out_fifo/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrWagOneHotFifo792/csrWagOneHotFifo792_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_csr/csrWagOneHotFifo792/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[7].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[7]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_2_addr_lo__read[23].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_2_reg[23]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/routeFrom_reg_n_0_[0].  Did not re-place instance host_pcieHostTop_pciehost_arbiter/routeFrom_reg[0]
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/Q[146].  Re-placed instance host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg_reg[146]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/csrRagBeatFifo_D_OUT[21].  Did not re-place instance host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[21]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrWagIsMsixAddrFifo/csrWagIsMsixAddrFifo_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_csr/csrWagIsMsixAddrFifo/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/toPcieTraceBram_cbram_counter_0_positive_reg.  Did not re-place instance host_pcieHostTop_pciehost_traceif/toPcieTraceBram_cbram_counter_0_positive_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/writeDoneFifo/writeDoneFifo_FULL_N.  Did not re-place instance host_pcieHostTop_pciehost_csr/writeDoneFifo/full_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_out_fifo_0/tlp_out_fifo_0_FULL_N.  Did not re-place instance host_pcieHostTop_pciehost_dispatcher/tlp_out_fifo_0/full_reg_reg
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[22]_rep__0_n_0.  Re-placed instance host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[22]_rep__0
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_user_i/txelecidle_reg2.  Did not re-place instance host_pcieHostTop_ep7/pcie_ep/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[1].pipe_user_i/txelecidle_reg2_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_1/completionMimo_ifc_rDataCount[2].  Did not re-place instance host_pcieHostTop_pciehost_mvec_1/completionMimo_ifc_rDataCount_reg[2]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_14_addr_lo__read[7].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_14_reg[7]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/Q[144].  Did not re-place instance host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg_reg[144]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_1/readDataFifo/readDataFifo_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_mvec_1/readDataFifo/hasodata_reg
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[23]_rep_n_0.  Re-placed instance host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[23]_rep
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrOneHotFifo774/csrOneHotFifo774_D_OUT[22].  Did not re-place instance host_pcieHostTop_pciehost_csr/csrOneHotFifo774/data0_reg_reg[22]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrWagBeatFifo/Q[0].  Did not re-place instance host_pcieHostTop_pciehost_csr/csrWagBeatFifo/data0_reg_reg[0]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount[0].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeBurstCount_reg[0]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_4_addr_lo__read[7].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_4_reg[7]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/csrRagBeatFifo_D_OUT[28].  Did not re-place instance host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[28]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_dispatcher/routeToPort_reg_n_0_[1].  Did not re-place instance host_pcieHostTop_pciehost_dispatcher/routeToPort_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_2_tlpTracingReg_D_IN.  Did not re-place instance host_pcieHostTop_pciehost_csr/tlpTracingReg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_1_addr_lo__read[23].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_1_reg[23]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrWagOneHotFifo768/csrWagOneHotFifo768_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_csr/csrWagOneHotFifo768/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_1/completionMimoDeqCount[1].  Did not re-place instance host_pcieHostTop_pciehost_mvec_1/completionMimoDeqCount_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/writeDataFifo/writeDataFifo_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_csr/writeDataFifo/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_rRdPtr_reg__0[1].  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_rRdPtr_reg[1]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/Q[145].  Did not re-place instance host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg_reg[145]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_mvec_1/completionMimoDeqCount[2].  Did not re-place instance host_pcieHostTop_pciehost_mvec_1/completionMimoDeqCount_reg[2]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_13_addr_lo__read[13].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_13_reg[13]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/csrOneHotFifo774/csrOneHotFifo774_D_OUT[21].  Did not re-place instance host_pcieHostTop_pciehost_csr/csrOneHotFifo774/data0_reg_reg[21]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_9_addr_lo__read[24].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_9_reg[24]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_readReqFifo/memSlaveEngine_readReqFifo_EMPTY_N.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_readReqFifo/empty_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_1_addr_lo__read[31].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_1_reg[31]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_2/Q[152].  Did not re-place instance host_pcieHostTop_pciehost_arbiter/tlp_in_fifo_2/data0_reg_reg[152]
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_traceif/tlpToBusFifo/RAM_reg_8.  Did not re-place instance host_pcieHostTop_pciehost_traceif/tlpToBusFifo/full_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/Q[147].  Did not re-place instance host_pcieHostTop_pciehost_dispatcher/tlp_in_fifo/data0_reg_reg[147]
+INFO: [Physopt 32-663] Processed net host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[21]_rep__0_n_0.  Re-placed instance host_pcieHostTop_pciehost_csr/csrRagBeatFifo/data0_reg_reg[21]_rep__0
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_tlpOutFifo/memSlaveEngine_tlpOutFifo_FULL_N.  Did not re-place instance host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_tlpOutFifo/full_reg_reg
+INFO: [Physopt 32-662] Processed net host_pcieHostTop_pciehost_csr/host_pcieHostTop_pciehost_csr_msixEntry_7_addr_lo__read[31].  Did not re-place instance host_pcieHostTop_pciehost_csr/msix_entry_7_reg[31]
+INFO: [Physopt 32-661] Optimized 16 nets.  Re-placed 16 instances.
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=0.033 | TNS=0.000 |
+Netlist sorting complete. Time (s): cpu = 00:00:00.34 ; elapsed = 00:00:00.38 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115847 ; free virtual = 219446
+Phase 3 Placement Based Optimization | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:18 ; elapsed = 00:01:36 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115847 ; free virtual = 219446
+
+Phase 4 Rewire
+INFO: [Physopt 32-670] No setup violation found.  Rewire was not performed.
+Phase 4 Rewire | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:18 ; elapsed = 00:01:37 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115847 ; free virtual = 219446
+
+Phase 5 Critical Cell Optimization
+INFO: [Physopt 32-670] No setup violation found.  Critical Cell Optimization was not performed.
+Phase 5 Critical Cell Optimization | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:19 ; elapsed = 00:01:37 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115848 ; free virtual = 219446
+
+Phase 6 DSP Register Optimization
+INFO: [Physopt 32-670] No setup violation found.  DSP Register Optimization was not performed.
+Phase 6 DSP Register Optimization | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:19 ; elapsed = 00:01:38 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115848 ; free virtual = 219446
+
+Phase 7 BRAM Register Optimization
+INFO: [Physopt 32-670] No setup violation found.  BRAM Register Optimization was not performed.
+Phase 7 BRAM Register Optimization | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:20 ; elapsed = 00:01:39 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115848 ; free virtual = 219446
+
+Phase 8 Shift Register Optimization
+INFO: [Physopt 32-670] No setup violation found.  Shift Register Optimization was not performed.
+Phase 8 Shift Register Optimization | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:21 ; elapsed = 00:01:39 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115848 ; free virtual = 219446
+
+Phase 9 Critical Pin Optimization
+INFO: [Physopt 32-670] No setup violation found.  Critical Pin Optimization was not performed.
+Phase 9 Critical Pin Optimization | Checksum: 14c18504a
+
+Time (s): cpu = 00:05:21 ; elapsed = 00:01:40 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115848 ; free virtual = 219446
+
+Phase 10 Very High Fanout Optimization
+INFO: [Physopt 32-76] Pass 1. Identified 1 candidate net for fanout optimization.
+INFO: [Physopt 32-81] Processed net host_pcieHostTop_ep7/pcie_ep/inst/inst/user_reset_out. Replicated 3 times.
+INFO: [Physopt 32-29] End Pass 1. Optimized 1 net. Created 3 new instances.
+
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=0.033 | TNS=0.000 |
+Netlist sorting complete. Time (s): cpu = 00:00:00.33 ; elapsed = 00:00:00.33 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115851 ; free virtual = 219449
+Phase 10 Very High Fanout Optimization | Checksum: 1e5ac64f8
+
+Time (s): cpu = 00:05:43 ; elapsed = 00:01:51 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115851 ; free virtual = 219449
+
+Phase 11 BRAM Enable Optimization
+Phase 11 BRAM Enable Optimization | Checksum: 1e5ac64f8
+
+Time (s): cpu = 00:05:44 ; elapsed = 00:01:52 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115851 ; free virtual = 219449
+Netlist sorting complete. Time (s): cpu = 00:00:00.28 ; elapsed = 00:00:00.29 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115851 ; free virtual = 219449
+INFO: [Physopt 32-603] Post Physical Optimization Timing Summary | WNS=0.033 | TNS=0.000 |
+
+Summary of Physical Synthesis Optimizations
+============================================
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  Optimization       |  WNS Gain (ns)  |  TNS Gain (ns)  |  Added Cells  |  Removed Cells  |  Optimized Cells/Nets  |  Dont Touch  |  Iterations  |  Elapsed (s)  |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  Fanout             |          0.000  |          0.000  |           36  |              0  |                    16  |           0  |           1  |           19  |
+|  Placement Based    |          0.080  |          0.064  |            0  |              0  |                    16  |           0  |           1  |           30  |
+|  Rewire             |          0.000  |          0.000  |            0  |              0  |                     0  |           0  |           0  |            0  |
+|  Critical Cell      |          0.000  |          0.000  |            0  |              0  |                     0  |           0  |           0  |            0  |
+|  DSP Register       |          0.000  |          0.000  |            0  |              0  |                     0  |           0  |           0  |            0  |
+|  BRAM Register      |          0.000  |          0.000  |            0  |              0  |                     0  |           0  |           0  |            0  |
+|  Shift Register     |          0.000  |          0.000  |            0  |              0  |                     0  |           0  |           0  |            0  |
+|  Very High Fanout   |          0.000  |          0.000  |            3  |              0  |                     1  |           0  |           1  |           10  |
+|  Critical Pin       |          0.000  |          0.000  |            0  |              0  |                     0  |           0  |           0  |            0  |
+|  Total              |          0.080  |          0.064  |           39  |              0  |                    33  |           0  |           3  |           60  |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+WARNING: [Constraints 18-1079] Register host_pcieHostTop_ep7/portalReset/reset_meta_reg and host_pcieHostTop_ep7/portalReset/reset_hold_reg[1] are from the same synchronizer and have the ASYNC_REG property set, but could not be placed into the same slice due to constraints or mismatched control signals on the registers.
+Ending Physical Synthesis Task | Checksum: 1ad51be80
+
+Time (s): cpu = 00:05:50 ; elapsed = 00:01:58 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115851 ; free virtual = 219449
+INFO: [Common 17-83] Releasing license: Implementation
+221 Infos, 41 Warnings, 10 Critical Warnings and 0 Errors encountered.
+phys_opt_design completed successfully
+phys_opt_design: Time (s): cpu = 00:06:15 ; elapsed = 00:02:07 . Memory (MB): peak = 6365.418 ; gain = 0.000 ; free physical = 115851 ; free virtual = 219449

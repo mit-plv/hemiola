@@ -1,0 +1,39 @@
+buffer /home/joonwonc/workspace/fpga-binaries/hem2.l1ll4/ubuntu.exe
+fpgajtag: elf input file, len 5275952 class 2
+fpgajtag: unzip input file, len 4785990
+fpgajtag: Digilent:Digilent Adept USB Device:210203A024E7; bcd:700
+count 2/3 cortex -1 dcount 2 trail 0
+STATUS 00500018 done 0 release_done 0 eos 10 startup_state 4
+STATUS 00500018 done 0 release_done 0 eos 10 startup_state 4
+STATUS 0002107a done 0 release_done 0 eos 10 startup_state 0
+fpgajtag: Starting to send file
+fpgajtag: Done sending file
+fpgajtag: bypass already programmed ae
+STATUS 0002107a done 0 release_done 0 eos 10 startup_state 0
+Running /usr/bin/pciescan.sh
++ PATH=/home/joonwonc/bin:/home/joonwonc/.local/bin:/opt/Xilinx15.4/Vivado/2015.4/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/opt/bluespec/Bluespec-2017.07.A/lib//bin:/sbin
++ for devid in 1be7:c100 1be7:b100
+++ lspci -d 1be7:c100
+++ sed -e 's/ .*//'
++ BLUEDEVICE=03:00.0
++ '[' 03:00.0 '!=' '' ']'
++ sh -c 'echo 1 >/sys/bus/pci/devices/0000:03:00.0/remove'
++ for devid in 1be7:c100 1be7:b100
+++ lspci -d 1be7:b100
+++ sed -e 's/ .*//'
++ BLUEDEVICE=
++ '[' '' '!=' '' ']'
++ sleep 1
++ lsmod
++ grep -q pcieportal
++ rmmod pcieportal
++ lsmod
++ grep -q bluenoc
++ sleep 1
++ sh -c 'echo 1 >/sys/bus/pci/rescan'
++ sleep 1
+subprocess pid 1649 completed status=0 0
+[initPortalHardwareOnce:225] fd 5 len 0
+Set the number of cycles: 4000000000
+Test done, #responses: 1137587960
+Mark: 1

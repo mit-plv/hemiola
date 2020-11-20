@@ -1,0 +1,36 @@
+Copyright 1986-2016 Xilinx, Inc. All Rights Reserved.
+------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2016.2 (lin64) Build 1577090 Thu Jun  2 16:32:35 MDT 2016
+| Date         : Wed Nov 18 22:07:26 2020
+| Host         : umma running 64-bit Ubuntu 18.04.4 LTS
+| Command      : report_datasheet -file ./Impl/TopDown/top-post-route_datasheet.txt
+| Design       : mkPcieTop
+| Device       : 7vx485t-ffg1761
+| Speed File   : -2  PRODUCTION 1.12 2014-09-11
+------------------------------------------------------------------------------------
+
+Data Sheet Report
+
+Input Ports Setup/Hold
+
+--------------+-----------------------+---------+-------+---------------+---------+---------------+---------+---------------------+
+Reference     | Input                 | IO Reg  | Delay |     Setup(ns) | Process |      Hold(ns) | Process | Internal            |
+Clock         | Port                  | Type    | Type  | to Clk (Edge) | Corner  | to Clk (Edge) | Corner  | Clock               |
+--------------+-----------------------+---------+-------+---------------+---------+---------------+---------+---------------------+
+txoutclk_x1y0 | RST_N_pci_sys_reset_n | FDCE    | -     |     2.679 (r) | FAST    |    -0.114 (r) | SLOW    | clk_125mhz_mux_x1y0 |
+txoutclk_x1y0 | RST_N_pci_sys_reset_n | FDCE    | -     |     2.679 (r) | FAST    |    -0.114 (r) | SLOW    | clk_250mhz_mux_x1y0 |
+txoutclk_x1y0 | RST_N_pci_sys_reset_n | FDPE    | -     |     3.372 (r) | FAST    |     0.137 (r) | SLOW    | userclk2            |
+--------------+-----------------------+---------+-------+---------------+---------+---------------+---------+---------------------+
+
+
+Setup between Clocks
+
+--------------+---------------+---------------+---------+---------------+---------+---------------+---------+---------------+---------+
+Source        | Destination   |  Src:Rise     | Process |  Src:Rise     | Process |  Src:Fall     | Process |  Src:Fall     | Process |
+Clock         | Clock         | Dest:Rise(ns) | Corner  | Dest:Fall(ns) | Corner  | Dest:Rise(ns) | Corner  | Dest:Fall(ns) | Corner  |
+--------------+---------------+---------------+---------+---------------+---------+---------------+---------+---------------+---------+
+pci_refclk    | pci_refclk    |         0.971 | SLOW    |               |         |               |         |               |         |
+txoutclk_x1y0 | txoutclk_x1y0 |        37.608 | SLOW    |         6.536 | SLOW    |               |         |               |         |
+--------------+---------------+---------------+---------+---------------+---------+---------------+---------+---------------+---------+
+
+

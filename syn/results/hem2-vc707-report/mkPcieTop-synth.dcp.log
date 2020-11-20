@@ -1,0 +1,2 @@
+Command: read_checkpoint ./Synth/mkPcieTop/mkPcieTop-synth.dcp
+WARNING: [Vivado 12-4167] The checkpoint part 'xc7vx485tffg1761-2' does not match the current project part 'xc7vx485tffg1157-1'.

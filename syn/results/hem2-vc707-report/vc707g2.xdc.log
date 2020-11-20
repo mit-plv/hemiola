@@ -1,0 +1,11 @@
+Parsing XDC File [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc]
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk_p'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc:17]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc:17]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk_n'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc:18]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc:18]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk_*'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc:59]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc:59]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+Finished Parsing XDC File [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/vc707g2.xdc]

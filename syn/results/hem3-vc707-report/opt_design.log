@@ -1,0 +1,74 @@
+Command: opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7vx485t'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7vx485t'
+INFO: [Common 17-1223] The version limit for your license is '2020.06' and will expire in -141 days. A version limit expiration means that, although you may be able to continue to use the current version of tools or IP with this license, you will not be eligible for any updates or new releases.
+Running DRC as a precondition to command opt_design
+
+Starting DRC Task
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Project 1-461] DRC finished with 0 Errors
+INFO: [Project 1-462] Please refer to the DRC report (report_drc) for more information.
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:02 . Memory (MB): peak = 3735.602 ; gain = 40.016 ; free physical = 117012 ; free virtual = 220334
+
+Starting Logic Optimization Task
+Implement Debug Cores | Checksum: 107015035
+
+Phase 1 Retarget
+INFO: [Opt 31-138] Pushed 4 inverter(s) to 51 load pin(s).
+WARNING: [Constraints 18-1079] Register host_pcieHostTop_ep7/portalReset/reset_meta_reg and host_pcieHostTop_ep7/portalReset/reset_hold_reg[1] are from the same synchronizer and have the ASYNC_REG property set, but could not be placed into the same slice due to constraints or mismatched control signals on the registers.
+INFO: [Opt 31-49] Retargeted 0 cell(s).
+Phase 1 Retarget | Checksum: fae38478
+
+Time (s): cpu = 00:00:23 ; elapsed = 00:00:24 . Memory (MB): peak = 3735.602 ; gain = 0.000 ; free physical = 117008 ; free virtual = 220335
+
+Phase 2 Constant Propagation
+INFO: [Opt 31-138] Pushed 8 inverter(s) to 16 load pin(s).
+WARNING: [Constraints 18-1079] Register host_pcieHostTop_ep7/portalReset/reset_meta_reg and host_pcieHostTop_ep7/portalReset/reset_hold_reg[1] are from the same synchronizer and have the ASYNC_REG property set, but could not be placed into the same slice due to constraints or mismatched control signals on the registers.
+INFO: [Opt 31-10] Eliminated 3157 cells.
+Phase 2 Constant Propagation | Checksum: 14508acbf
+
+Time (s): cpu = 00:00:50 ; elapsed = 00:00:50 . Memory (MB): peak = 3735.602 ; gain = 0.000 ; free physical = 117309 ; free virtual = 220669
+
+Phase 3 Sweep
+INFO: [Opt 31-12] Eliminated 15130 unconnected nets.
+INFO: [Opt 31-129] Inserted BUFG to drive high-fanout reset|set|enable net. BUFG cell: host_pcieHostTop_ep7/portalReset/p_0_in_BUFG_inst, Net: host_pcieHostTop_ep7/portalReset/p_0_in
+WARNING: [Constraints 18-1079] Register host_pcieHostTop_ep7/portalReset/reset_meta_reg and host_pcieHostTop_ep7/portalReset/reset_hold_reg[1] are from the same synchronizer and have the ASYNC_REG property set, but could not be placed into the same slice due to constraints or mismatched control signals on the registers.
+INFO: [Opt 31-11] Eliminated 5128 unconnected cells.
+Phase 3 Sweep | Checksum: 1793ed14c
+
+Time (s): cpu = 00:01:33 ; elapsed = 00:01:33 . Memory (MB): peak = 3735.602 ; gain = 0.000 ; free physical = 115947 ; free virtual = 219321
+
+Starting Connectivity Check Task
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:01 . Memory (MB): peak = 3735.602 ; gain = 0.000 ; free physical = 115947 ; free virtual = 219321
+Ending Logic Optimization Task | Checksum: 1793ed14c
+
+Time (s): cpu = 00:01:36 ; elapsed = 00:01:36 . Memory (MB): peak = 3735.602 ; gain = 0.000 ; free physical = 115947 ; free virtual = 219321
+
+Starting Power Optimization Task
+INFO: [Pwropt 34-132] Skipping clock gating for clocks with a period < 2.00 ns.
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Running Vector-less Activity Propagation...
+
+Finished Running Vector-less Activity Propagation
+INFO: [Pwropt 34-9] Applying IDT optimizations ...
+INFO: [Pwropt 34-10] Applying ODC optimizations ...
+
+
+Starting PowerOpt Patch Enables Task
+INFO: [Pwropt 34-162] WRITE_MODE attribute of 537 BRAM(s) out of a total of 872 has been updated to save power. Run report_power_opt to get a complete listing of the BRAMs updated.
+INFO: [Pwropt 34-201] Structural ODC has moved 0 WE to EN ports
+Number of BRAM Ports augmented: 768 newly gated: 40 Total Ports: 1744
+Number of Flops added for Enable Generation: 8
+
+Ending PowerOpt Patch Enables Task | Checksum: 12030ce8f
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 6285.379 ; gain = 0.000 ; free physical = 115993 ; free virtual = 219439
+Ending Power Optimization Task | Checksum: 12030ce8f
+
+Time (s): cpu = 00:10:14 ; elapsed = 00:08:58 . Memory (MB): peak = 6285.379 ; gain = 2549.777 ; free physical = 115994 ; free virtual = 219439
+INFO: [Common 17-83] Releasing license: Implementation
+42 Infos, 14 Warnings, 10 Critical Warnings and 0 Errors encountered.
+opt_design completed successfully
+opt_design: Time (s): cpu = 00:11:55 ; elapsed = 00:10:38 . Memory (MB): peak = 6285.379 ; gain = 2589.797 ; free physical = 115994 ; free virtual = 219439

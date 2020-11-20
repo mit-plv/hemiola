@@ -1,0 +1,30 @@
+Parsing XDC File [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc]
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk_p'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:3]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports CLK_sys_clk_p]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:3]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk1_300_p'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:4]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports CLK_sys_clk1_300_p]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:4]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-584] No ports matched 'CLK_sys_clk2_300_p'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:5]
+CRITICAL WARNING: [Vivado 12-4739] create_clock:No valid object(s) found for '-objects [get_ports CLK_sys_clk2_300_p]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:5]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+INFO: [Timing 38-35] Done setting XDC timing constraints. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:7]
+get_clocks: Time (s): cpu = 00:00:29 ; elapsed = 00:00:08 . Memory (MB): peak = 3207.469 ; gain = 0.000 ; free physical = 119228 ; free virtual = 222623
+WARNING: [Vivado 12-627] No clocks matched 'sys_clk'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-to [get_clocks sys_clk]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:16]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-627] No clocks matched 'sys_clk'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-from [get_clocks sys_clk]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:17]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-627] No clocks matched 'clk_pll_i'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-to [get_clocks clk_pll_i]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:19]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+WARNING: [Vivado 12-627] No clocks matched 'clk_pll_i'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+CRITICAL WARNING: [Vivado 12-4739] set_max_delay:No valid object(s) found for '-from [get_clocks clk_pll_i]'. [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc:20]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+Finished Parsing XDC File [/home/joonwonc/workspace/bs/connectal/constraints/xilinx/pcie-clocks.xdc]
+read_xdc: Time (s): cpu = 00:00:29 ; elapsed = 00:00:09 . Memory (MB): peak = 3207.469 ; gain = 0.000 ; free physical = 119228 ; free virtual = 222623

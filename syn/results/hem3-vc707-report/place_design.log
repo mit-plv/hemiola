@@ -1,0 +1,300 @@
+Command: place_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7vx485t'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7vx485t'
+INFO: [Common 17-1223] The version limit for your license is '2020.06' and will expire in -141 days. A version limit expiration means that, although you may be able to continue to use the current version of tools or IP with this license, you will not be eligible for any updates or new releases.
+INFO: [DRC 23-27] Running DRC with 8 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+Running DRC as a precondition to command place_design
+INFO: [DRC 23-27] Running DRC with 8 threads
+WARNING: [DRC 23-20] Rule violation (REQP-1839) RAMB36 async control check - The RAMB36E1 host_pcieHostTop_pciehost_csr/changeFifo_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_csr/changeFifo_memory/RAM_reg/ENARDEN (net: host_pcieHostTop_pciehost_csr/changeFifo_memory/RAM_reg_ENARDEN_cooolgate_en_sig_778) which is driven by a register (host_pcieHostTop_ep7/pcie_ep/inst/inst/user_reset_out_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1839) RAMB36 async control check - The RAMB36E1 portalTop_lMemServer_reader_readers_0_serverProcessing_memory/RAM_reg has an input control pin portalTop_lMemServer_reader_readers_0_serverProcessing_memory/RAM_reg/ENARDEN (net: portalTop_lMemServer_reader_readers_0_serverProcessing_memory/WILL_FIRE_RL_portalTop_lMemServer_reader_readers_0_serverProcessing_serverAdapterA_stageReadResponseAlways) which is driven by a register (memCnx_1_0_readCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg/ENBWREN (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg/WEBWE[0] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg/WEBWE[1] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg/WEBWE[2] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/RAM_reg/WEBWE[3] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_0_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg/ENBWREN (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg/WEBWE[0] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg/WEBWE[1] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg/WEBWE[2] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/RAM_reg/WEBWE[3] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_1_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_1) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg/ENBWREN (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_2) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg/WEBWE[0] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_2) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg/WEBWE[1] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_2) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg/WEBWE[2] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_2) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/RAM_reg/WEBWE[3] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_2_memory/CAN_FIRE_RL_memSlaveEngine_writeDataMimo_ifc_enqueue_fifo_2) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg/ENBWREN (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/E[0]) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg/WEBWE[0] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/E[0]) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg/WEBWE[1] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/E[0]) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg/WEBWE[2] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/E[0]) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+WARNING: [DRC 23-20] Rule violation (REQP-1840) RAMB18 async control check - The RAMB18E1 host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg has an input control pin host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/RAM_reg/WEBWE[3] (net: host_pcieHostTop_pciehost_sEngine_0/memSlaveEngine_writeDataMimo_ifc_vfStorage_3_memory/E[0]) which is driven by a register (memCnx_1_0_writeCnx_dataCnx_synchronizer/dNotEmptyReg_reg) that has an active asychronous set or reset. This may cause corruption of the memory contents and/or read values when the set/reset is asserted and is not analyzed by the default static timing analysis. It is suggested to eliminate the use of a set/reset to registers driving this RAMB pin or else use a synchronous reset in which the assertion of the reset is timed by default.
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors, 22 Warnings
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+
+Starting Placer Task
+INFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 8 CPUs
+
+Phase 1 Placer Initialization
+Netlist sorting complete. Time (s): cpu = 00:00:00.37 ; elapsed = 00:00:00.41 . Memory (MB): peak = 6309.391 ; gain = 0.000 ; free physical = 115019 ; free virtual = 218509
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00.28 ; elapsed = 00:00:00.28 . Memory (MB): peak = 6309.391 ; gain = 0.000 ; free physical = 114763 ; free virtual = 218253
+
+Phase 1.1 IO Placement/ Clock Placement/ Build Placer Device
+
+Phase 1.1.1 ParallelPlaceIOClockAndInitTop
+
+Phase 1.1.1.1 Pre-Place Cells
+Phase 1.1.1.1 Pre-Place Cells | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:11 ; elapsed = 00:00:12 . Memory (MB): peak = 6309.391 ; gain = 0.000 ; free physical = 114752 ; free virtual = 218243
+
+Phase 1.1.1.2 Constructing HAPIClkRuleMgr
+Phase 1.1.1.2 Constructing HAPIClkRuleMgr | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:20 ; elapsed = 00:00:35 . Memory (MB): peak = 6309.391 ; gain = 0.000 ; free physical = 115361 ; free virtual = 218851
+WARNING: [Constraints 18-1079] Register host_pcieHostTop_ep7/portalReset/reset_meta_reg and host_pcieHostTop_ep7/portalReset/reset_hold_reg[1] are from the same synchronizer and have the ASYNC_REG property set, but could not be placed into the same slice due to constraints or mismatched control signals on the registers.
+
+Phase 1.1.1.3 DSPChecker
+
+Phase 1.1.1.4 ClockRegionPlacementChecker
+
+Phase 1.1.1.6 IOLockPlacementChecker
+
+Phase 1.1.1.5 IOBufferPlacementChecker
+Phase 1.1.1.3 DSPChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:44 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.7 V7IOVoltageChecker
+Phase 1.1.1.7 V7IOVoltageChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:44 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.8 OverlappingPBlocksChecker
+Phase 1.1.1.8 OverlappingPBlocksChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:44 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+Phase 1.1.1.6 IOLockPlacementChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.9 CheckerForMandatoryPrePlacedCells
+Phase 1.1.1.9 CheckerForMandatoryPrePlacedCells | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219398
+
+Phase 1.1.1.10 CascadeElementConstraintsChecker
+Phase 1.1.1.10 CascadeElementConstraintsChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:45 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.11 HdioRelatedChecker
+Phase 1.1.1.11 HdioRelatedChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:46 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+Phase 1.1.1.5 IOBufferPlacementChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:46 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.12 DisallowedInsts
+Phase 1.1.1.12 DisallowedInsts | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:46 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.13 Laguna PBlock Checker
+Phase 1.1.1.13 Laguna PBlock Checker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:46 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115909 ; free virtual = 219399
+
+Phase 1.1.1.14 ShapePlacementValidityChecker
+Phase 1.1.1.4 ClockRegionPlacementChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:47 ; elapsed = 00:00:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115910 ; free virtual = 219399
+
+Phase 1.1.1.15 CheckerForUnsupportedConstraints
+Phase 1.1.1.15 CheckerForUnsupportedConstraints | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:47 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115910 ; free virtual = 219399
+
+Phase 1.1.1.16 ShapesExcludeCompatibilityChecker
+Phase 1.1.1.16 ShapesExcludeCompatibilityChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:47 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115910 ; free virtual = 219399
+
+Phase 1.1.1.17 IOStdCompatabilityChecker
+Phase 1.1.1.17 IOStdCompatabilityChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:00:48 ; elapsed = 00:00:47 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115910 ; free virtual = 219399
+Phase 1.1.1.14 ShapePlacementValidityChecker | Checksum: 636ea98c
+
+Time (s): cpu = 00:01:10 ; elapsed = 00:01:03 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115911 ; free virtual = 219400
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+
+Phase 1.1.1.18 IO and Clk Clean Up
+
+Phase 1.1.1.18.1 Constructing HAPIClkRuleMgr
+Phase 1.1.1.18.1 Constructing HAPIClkRuleMgr | Checksum: 636ea98c
+
+Time (s): cpu = 00:01:50 ; elapsed = 00:01:46 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115915 ; free virtual = 219404
+Phase 1.1.1.18 IO and Clk Clean Up | Checksum: 636ea98c
+
+Time (s): cpu = 00:01:51 ; elapsed = 00:01:47 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115915 ; free virtual = 219404
+
+Phase 1.1.1.19 Implementation Feasibility check On IDelay
+Phase 1.1.1.19 Implementation Feasibility check On IDelay | Checksum: 636ea98c
+
+Time (s): cpu = 00:01:52 ; elapsed = 00:01:48 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115915 ; free virtual = 219404
+
+Phase 1.1.1.20 Commit IO Placement
+Phase 1.1.1.20 Commit IO Placement | Checksum: ebdab2c9
+
+Time (s): cpu = 00:01:52 ; elapsed = 00:01:48 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115915 ; free virtual = 219404
+Phase 1.1.1 ParallelPlaceIOClockAndInitTop | Checksum: ebdab2c9
+
+Time (s): cpu = 00:01:52 ; elapsed = 00:01:48 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115914 ; free virtual = 219404
+Phase 1.1 IO Placement/ Clock Placement/ Build Placer Device | Checksum: 159338ba3
+
+Time (s): cpu = 00:01:52 ; elapsed = 00:01:48 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115914 ; free virtual = 219404
+
+Phase 1.2 Build Placer Netlist Model
+
+Phase 1.2.1 Place Init Design
+
+Phase 1.2.1.1 Make Others
+Phase 1.2.1.1 Make Others | Checksum: 1b20d5bd1
+
+Time (s): cpu = 00:02:03 ; elapsed = 00:01:59 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115912 ; free virtual = 219401
+
+Phase 1.2.1.2 Init Lut Pin Assignment
+Phase 1.2.1.2 Init Lut Pin Assignment | Checksum: 1b20d5bd1
+
+Time (s): cpu = 00:02:08 ; elapsed = 00:02:03 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115906 ; free virtual = 219395
+Phase 1.2.1 Place Init Design | Checksum: 1e42cdc81
+
+Time (s): cpu = 00:05:06 ; elapsed = 00:03:17 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115900 ; free virtual = 219390
+Phase 1.2 Build Placer Netlist Model | Checksum: 1e42cdc81
+
+Time (s): cpu = 00:05:06 ; elapsed = 00:03:18 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115900 ; free virtual = 219390
+
+Phase 1.3 Constrain Clocks/Macros
+Phase 1.3 Constrain Clocks/Macros | Checksum: 1e42cdc81
+
+Time (s): cpu = 00:05:06 ; elapsed = 00:03:18 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115900 ; free virtual = 219390
+Phase 1 Placer Initialization | Checksum: 1e42cdc81
+
+Time (s): cpu = 00:05:07 ; elapsed = 00:03:18 . Memory (MB): peak = 6325.398 ; gain = 16.008 ; free physical = 115900 ; free virtual = 219390
+
+Phase 2 Global Placement
+Phase 2 Global Placement | Checksum: 1a25e5710
+
+Time (s): cpu = 00:22:49 ; elapsed = 00:12:33 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 114957 ; free virtual = 218403
+
+Phase 3 Detail Placement
+
+Phase 3.1 Commit Multi Column Macros
+Phase 3.1 Commit Multi Column Macros | Checksum: 1a25e5710
+
+Time (s): cpu = 00:23:00 ; elapsed = 00:12:35 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 114911 ; free virtual = 218357
+
+Phase 3.2 Commit Most Macros & LUTRAMs
+Phase 3.2 Commit Most Macros & LUTRAMs | Checksum: 11481354d
+
+Time (s): cpu = 00:28:52 ; elapsed = 00:14:36 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 113921 ; free virtual = 217410
+
+Phase 3.3 Area Swap Optimization
+Phase 3.3 Area Swap Optimization | Checksum: f9cf5bc6
+
+Time (s): cpu = 00:29:02 ; elapsed = 00:14:41 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 113142 ; free virtual = 216631
+
+Phase 3.4 updateClock Trees: DP
+Phase 3.4 updateClock Trees: DP | Checksum: f9cf5bc6
+
+Time (s): cpu = 00:29:03 ; elapsed = 00:14:41 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 113208 ; free virtual = 216697
+
+Phase 3.5 Timing Path Optimizer
+Phase 3.5 Timing Path Optimizer | Checksum: 12a21d473
+
+Time (s): cpu = 00:30:33 ; elapsed = 00:15:15 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 113179 ; free virtual = 216678
+
+Phase 3.6 Fast Optimization
+Phase 3.6 Fast Optimization | Checksum: d4e12399
+
+Time (s): cpu = 00:30:41 ; elapsed = 00:15:19 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 113165 ; free virtual = 216667
+
+Phase 3.7 Small Shape Detail Placement
+Phase 3.7 Small Shape Detail Placement | Checksum: 1385a77ae
+
+Time (s): cpu = 00:33:43 ; elapsed = 00:18:17 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115941 ; free virtual = 219446
+
+Phase 3.8 Re-assign LUT pins
+Phase 3.8 Re-assign LUT pins | Checksum: 14fc91000
+
+Time (s): cpu = 00:34:00 ; elapsed = 00:18:34 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115941 ; free virtual = 219446
+
+Phase 3.9 Pipeline Register Optimization
+Phase 3.9 Pipeline Register Optimization | Checksum: 14fc91000
+
+Time (s): cpu = 00:34:03 ; elapsed = 00:18:37 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115941 ; free virtual = 219446
+
+Phase 3.10 Fast Optimization
+Phase 3.10 Fast Optimization | Checksum: a2730ce4
+
+Time (s): cpu = 00:36:41 ; elapsed = 00:19:31 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115937 ; free virtual = 219444
+Phase 3 Detail Placement | Checksum: a2730ce4
+
+Time (s): cpu = 00:36:44 ; elapsed = 00:19:34 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115937 ; free virtual = 219444
+
+Phase 4 Post Placement Optimization and Clean-Up
+
+Phase 4.1 Post Commit Optimization
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+
+Phase 4.1.1 updateClock Trees: PCOPT
+Phase 4.1.1 updateClock Trees: PCOPT | Checksum: b10af03c
+
+Time (s): cpu = 00:40:34 ; elapsed = 00:20:27 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115930 ; free virtual = 219438
+
+Phase 4.1.2 Post Placement Optimization
+INFO: [Place 30-746] Post Placement Timing Summary WNS=-0.047. For the most accurate timing information please run report_timing.
+Phase 4.1.2 Post Placement Optimization | Checksum: 23ae7cd42
+
+Time (s): cpu = 00:41:14 ; elapsed = 00:21:23 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115936 ; free virtual = 219443
+Phase 4.1 Post Commit Optimization | Checksum: 23ae7cd42
+
+Time (s): cpu = 00:41:17 ; elapsed = 00:21:26 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115936 ; free virtual = 219443
+
+Phase 4.2 Sweep Clock Roots: Post-Placement
+Phase 4.2 Sweep Clock Roots: Post-Placement | Checksum: 23ae7cd42
+
+Time (s): cpu = 00:41:19 ; elapsed = 00:21:28 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115936 ; free virtual = 219444
+
+Phase 4.3 Uram Pipeline Register Optimization
+Phase 4.3 Uram Pipeline Register Optimization | Checksum: 23ae7cd42
+
+Time (s): cpu = 00:41:22 ; elapsed = 00:21:31 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115936 ; free virtual = 219444
+
+Phase 4.4 Post Placement Cleanup
+Phase 4.4 Post Placement Cleanup | Checksum: 23ae7cd42
+
+Time (s): cpu = 00:41:24 ; elapsed = 00:21:33 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115937 ; free virtual = 219444
+
+Phase 4.5 Placer Reporting
+Phase 4.5 Placer Reporting | Checksum: 23ae7cd42
+
+Time (s): cpu = 00:41:27 ; elapsed = 00:21:36 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115937 ; free virtual = 219444
+
+Phase 4.6 Final Placement Cleanup
+Phase 4.6 Final Placement Cleanup | Checksum: 205c65ad1
+
+Time (s): cpu = 00:41:30 ; elapsed = 00:21:39 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115937 ; free virtual = 219445
+Phase 4 Post Placement Optimization and Clean-Up | Checksum: 205c65ad1
+
+Time (s): cpu = 00:41:32 ; elapsed = 00:21:41 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115937 ; free virtual = 219445
+Ending Placer Task | Checksum: 11a1981f9
+
+Time (s): cpu = 00:41:32 ; elapsed = 00:21:41 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115720 ; free virtual = 219227
+INFO: [Common 17-83] Releasing license: Implementation
+61 Infos, 38 Warnings, 10 Critical Warnings and 0 Errors encountered.
+place_design completed successfully
+place_design: Time (s): cpu = 00:42:02 ; elapsed = 00:22:11 . Memory (MB): peak = 6365.418 ; gain = 56.027 ; free physical = 115720 ; free virtual = 219227
