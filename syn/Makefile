@@ -3,8 +3,7 @@ EX_MESI_VS:=$(wildcard ex/Mesi/*.v)
 
 .PHONY: clean
 
-all: Makefile.coq
-	$(MAKE) -f Makefile.coq
+default: mesi_bsv
 
 Makefile.coq: Makefile $(COMPILE_VS) $(EX_MESI_VS)
 	$(COQBIN)coq_makefile -f _CoqProject $(COMPILE_VS) $(EX_MESI_VS) -o Makefile.coq

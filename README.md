@@ -22,10 +22,13 @@ Makefiles
 ---------
 
 - To machine-check the Coq proofs in Hemiola
-  + Check all the framework code: `make` in `./src`
+  + Check all the framework code: `make -j4` in `./src`
   + Only the library code: `make lib` in `./src`
-- To compile the case-study MESI protocol: `make mesi_bsv` in `./syn`
+- To compile Hemiola case-study: `make` in `./syn`
+  + The default source protocol is the 3-level noninclusive MESI protocol.
   + It will generate `./syn/CC.bsv`.
-  + There are some precompiled Bluespec code in `./syn/integration`
+  + All the case-study protocols are precompiled in `./syn/integration`:
+    * `./syn/integration/CC_L1LL4`: the 2-level noninclusive MESI protocol
+    * `./syn/integration/CC_L1L2LL`: the 3-level noninclusive MESI protocol
 - To simulate a compiled protocol: `make` in `./syn/integration/sim`
-- To synthesize a compiled protocol: `make build.vc707g2` in `./syn/integration/syn`
+- To synthesize a compiled protocol: `make -j4 build.vc707g2` in `./syn/integration/syn`
