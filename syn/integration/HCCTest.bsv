@@ -19,7 +19,7 @@ interface CCTest;
     method Bit#(64) getMark();
 endinterface
 
-typedef 10000 DeadlockDetectCnt;
+typedef 20000 DeadlockDetectCnt;
 
 `ifdef RQ_TYPE_SEED
 typedef `RQ_TYPE_SEED RqTypeSeed;
