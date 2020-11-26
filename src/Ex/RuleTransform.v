@@ -19,11 +19,14 @@ Section RssHolder.
         >>=[False]
         (fun rqid => In (rsUpFrom cidx, None) rqid.(rqi_rss)).
 
-  Definition RssFull: OPrec :=
+  Definition RssFullWithId (msgId: IdxT): OPrec :=
     fun ost orq mins =>
       (orq@[downRq])
         >>=[False]
-        (fun rqid => Forall (fun rs => snd rs <> None) rqid.(rqi_rss)).
+        (fun rqid => Forall (fun ors => match snd ors with
+                                        | Some rs => rs.(msg_id) = msgId
+                                        | None => False
+                                        end) rqid.(rqi_rss)).
 
   Fixpoint putRs (midx: IdxT) (msg: Msg) (rss: list (IdxT * option Msg)) :=
     match rss with
@@ -34,11 +37,11 @@ Section RssHolder.
       else rs :: (putRs midx msg rss')
     end.
 
-  Definition addRs (orq: ORq Msg) (cidx: IdxT) (msg: Msg) :=
+  Definition addRs (orq: ORq Msg) (midx: IdxT) (msg: Msg) :=
     (orq@[downRq])
       >>=[orq]
       (fun rqid => orq +[downRq <- {| rqi_msg := rqid.(rqi_msg);
-                                      rqi_rss := putRs (rsUpFrom cidx) msg rqid.(rqi_rss);
+                                      rqi_rss := putRs midx msg rqid.(rqi_rss);
                                       rqi_midx_rsb := rqid.(rqi_midx_rsb) |}]).
 
   Fixpoint retRss (rss: list (IdxT * option Msg)): list (Id Msg) :=
@@ -56,7 +59,7 @@ Section RssHolder.
 
   Variables
     (ridx msgId rqId: IdxT)
-    (prec: OPrec).
+    (prec: OState -> Prop).
 
   Variable (cidx: IdxT).
 
@@ -78,7 +81,8 @@ Section RssHolder.
                              OState * Miv) :=
     rule[ridx]
     :requires (MsgsFrom nil /\ DownLockMsgId MRq rqId /\
-               RssFull /\ prec)
+               DownLockIdxBack /\ RssFullWithId msgId /\
+               fun ost _ _ => prec ost)
     :transition
        (do (st --> (rq <-- getDownLockMsg st.(orq);
                    rsbTo <-- getDownLockIdxBack st.(orq);
@@ -92,25 +96,15 @@ Section RssHolder.
                                 Msg (* the original request *) ->
                                 IdxT (* response back to *) ->
                                 OState * Miv) :=
-    rule[ridx]
-    :requires (MsgsFrom nil /\ DownLockMsgId MRq rqId /\
-               RssFull /\ prec)
-    :transition
-       (do (st --> (idm <-- getFirstIdMsg (getRss st.(orq));
-                   rq <-- getDownLockMsg st.(orq);
-                   rsbTo <-- getDownLockIdxBack st.(orq);
-                   nst ::= trs st.(ost) idm rq rsbTo;
-                    return {{ fst nst,
-                              removeRq st.(orq) downRq,
-                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
+    rsRelease (fun ost ins rq rsbTo => trs ost (getFirstIdMsgI ins) rq rsbTo).
 
 End RssHolder.
 
 Notation "'rule.rsuo' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':from' FROM" :=
-  (rsTakeOne RIDX MSGID RQID FROM) (at level 5).
+  (rsTakeOne RIDX MSGID RQID FROM) (at level 5, only parsing).
 
-Notation "'rule.rsr' '[' RIDX ']' ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsRelease RIDX RQID PREC TRS%trs) (at level 5).
+Notation "'rule.rsr' '[' RIDX ']' ':holding' RQID ':rs-holding' MSGID ':requires' PREC ':transition' TRS" :=
+  (rsRelease RIDX MSGID RQID PREC TRS%trs) (at level 5, only parsing).
 
-Notation "'rule.rsro' '[' RIDX ']' ':holding' RQID ':requires' PREC ':transition' TRS" :=
-  (rsReleaseOne RIDX RQID PREC TRS%trs) (at level 5).
+Notation "'rule.rsro' '[' RIDX ']' ':holding' RQID ':rs-holding' MSGID ':requires' PREC ':transition' TRS" :=
+  (rsReleaseOne RIDX MSGID RQID PREC TRS%trs) (at level 5, only parsing).

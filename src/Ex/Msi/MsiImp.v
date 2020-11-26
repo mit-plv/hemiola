@@ -37,7 +37,8 @@ Section System.
       Definition liDownSRsUpDownRel: Rule :=
         rule.rsro[0~>4~>1]
         :holding msiRqS
-        :requires (fun _ _ _ => True)
+        :rs-holding msiDownRsS
+        :requires (fun _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
@@ -55,7 +56,8 @@ Section System.
       Definition liDownSRsUpUpRel: Rule :=
         rule.rsro[0~>7~>1]
         :holding msiDownRqS
-        :requires (fun _ _ _ => True)
+        :rs-holding msiDownRsS
+        :requires (fun _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
@@ -70,16 +72,29 @@ Section System.
         :holding msiRqM
         :from cidx.
 
+      Definition liDownIRsUpDownSRel: Rule :=
+        rule.rsr[1~>6~>0~>1]
+        :holding msiRqM
+        :rs-holding msiDownRsIS
+        :requires (fun _ => True)
+        :transition
+           (!|ost, mins, rq, rsbTo|
+            --> (ost +#[owned <- false]
+                     +#[status <- invalidate ost#[status]]
+                     +#[dir <- setDirM (objIdxOf rsbTo)],
+                 <| msiRsM; O |>)).
+
       Definition liDownIRsUpDownMOne: Rule :=
-        rule.rsuo[1~>6~>0~>1~~cidx]
+        rule.rsuo[1~>6~>1~>0~~cidx]
         :accepts msiDownRsIM
         :holding msiRqM
         :from cidx.
 
-      Definition liDownIRsUpDownRel: Rule :=
-        rule.rsr[1~>6~>1]
+      Definition liDownIRsUpDownMRel: Rule :=
+        rule.rsr[1~>6~>1~>1]
         :holding msiRqM
-        :requires (fun _ _ _ => True)
+        :rs-holding msiDownRsIM
+        :requires (fun _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -93,22 +108,11 @@ Section System.
         :holding msiDownRqIS
         :from cidx.
 
-      Definition liDownIRsUpUpMOne: Rule :=
-        rule.rsuo[1~>10~>0~>1~~cidx]
-        :accepts msiDownRsIM
-        :holding msiDownRqIM
-        :from cidx.
-
-      Definition liDownIRsUpUpMSOne: Rule :=
-        rule.rsuo[1~>10~>0~>2~~cidx]
-        :accepts msiDownRsIS
-        :holding msiDownRqIM
-        :from cidx.
-
       Definition liDownIRsUpUpSRel: Rule :=
-        rule.rsr[1~>10~>1~>0]
+        rule.rsr[1~>10~>0~>1]
         :holding msiDownRqIS
-        :requires (fun _ _ _ => True)
+        :rs-holding msiDownRsIS
+        :requires (fun _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -116,10 +120,35 @@ Section System.
                      +#[dir <- setDirI],
                  <| msiDownRsIS; O |>)).
 
+      Definition liDownIRsUpUpMOne: Rule :=
+        rule.rsuo[1~>10~>1~>0~~cidx]
+        :accepts msiDownRsIM
+        :holding msiDownRqIM
+        :from cidx.
+
       Definition liDownIRsUpUpMRel: Rule :=
         rule.rsr[1~>10~>1~>1]
         :holding msiDownRqIM
-        :requires (fun _ _ _ => True)
+        :rs-holding msiDownRsIM
+        :requires (fun _ => True)
+        :transition
+           (!|ost, mins, rq, rsbTo|
+            --> (ost +#[owned <- false]
+                     +#[status <- invalidate ost#[status]]
+                     +#[dir <- setDirI],
+                 <| msiDownRsIM; O |>)).
+
+      Definition liDownIRsUpUpMSOne: Rule :=
+        rule.rsuo[1~>10~>2~>0~~cidx]
+        :accepts msiDownRsIS
+        :holding msiDownRqIM
+        :from cidx.
+
+      Definition liDownIRsUpUpMSRel: Rule :=
+        rule.rsr[1~>10~>2~>1]
+        :holding msiDownRqIM
+        :rs-holding msiDownRsIS
+        :requires (fun _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -162,11 +191,12 @@ Section System.
              ++ [liGetSRsDownDown; liDownSRsUpDownRel;
                 liDownSImm oidx; liDownSRqDownDownM tr oidx; liDownSRsUpUpRel]
              (** rules involved with [GetM] *)
-             ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS tr oidx; liDownIRsUpDownRel;
+             ++ [liGetMRsDownDownDirI; liGetMRsDownRqDownDirS tr oidx;
+                liDownIRsUpDownSRel; liDownIRsUpDownMRel;
                 liDownIImmS oidx; liDownIImmM oidx;
                 liDownIRqDownDownDirS tr oidx; liDownIRqDownDownDirM tr oidx;
                 liDownIRqDownDownDirMS tr oidx;
-                liDownIRsUpUpSRel; liDownIRsUpUpMRel]
+                liDownIRsUpUpSRel; liDownIRsUpUpMRel; liDownIRsUpUpMSRel]
              (** rules involved with [Put] *)
              ++ [liInvRqUpUp oidx; liInvRqUpUpWB oidx; liInvRsDownDown; liDropImm];
          obj_rules_valid := _ |}.
@@ -206,6 +236,6 @@ End System.
 Hint Unfold liDownSRsUpDownOne liDownSRsUpDownRel
      liDownSRsUpUpOne liDownSRsUpUpRel
      liDownIRsUpDownSOne liDownIRsUpDownMOne
-     liDownIRsUpDownRel
+     liDownIRsUpDownSRel liDownIRsUpDownMRel
      liDownIRsUpUpSOne liDownIRsUpUpMOne liDownIRsUpUpMSOne
-     liDownIRsUpUpSRel liDownIRsUpUpMRel: MsiRules.
+     liDownIRsUpUpSRel liDownIRsUpUpMRel liDownIRsUpUpMSRel: MsiRules.

@@ -304,7 +304,7 @@ Section System.
         rule.rsudo[0~>4]
         :accepts msiDownRsS
         :holding msiRqS
-        :requires (fun _ _ _ => True)
+        :requires (fun _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
@@ -348,7 +348,7 @@ Section System.
         rule.rsuuo[0~>7]
         :accepts msiDownRsS
         :holding msiDownRqS
-        :requires (fun _ _ _ => True)
+        :requires (fun _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
@@ -455,7 +455,7 @@ Section System.
         rule.rsud[1~>6~>0]
         :accepts msiDownRsIS
         :holding msiRqM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiS)
+        :requires (fun ost => ost#[dir].(dir_st) = msiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -467,7 +467,7 @@ Section System.
         rule.rsud[1~>6~>1]
         :accepts msiDownRsIM
         :holding msiRqM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiM)
+        :requires (fun ost => ost#[dir].(dir_st) = msiM)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -535,7 +535,7 @@ Section System.
         rule.rsuu[1~>10~>0]
         :accepts msiDownRsIS
         :holding msiDownRqIS
-        :requires (fun _ _ _ => True)
+        :requires (fun _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -547,7 +547,7 @@ Section System.
         rule.rsuu[1~>10~>2]
         :accepts msiDownRsIS
         :holding msiDownRqIM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiS)
+        :requires (fun ost => ost#[dir].(dir_st) = msiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -559,7 +559,7 @@ Section System.
         rule.rsuuo[1~>10~>1]
         :accepts msiDownRsIM
         :holding msiDownRqIM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = msiM)
+        :requires (fun ost => ost#[dir].(dir_st) = msiM)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- false]

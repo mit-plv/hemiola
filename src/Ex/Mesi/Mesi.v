@@ -659,7 +659,7 @@ Section System.
         rule.rsudo[0~>4]
         :accepts mesiDownRsS
         :holding mesiRqS
-        :requires (fun _ _ _ => True)
+        :requires (fun _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
@@ -703,7 +703,7 @@ Section System.
         rule.rsuuo[0~>7]
         :accepts mesiDownRsS
         :holding mesiDownRqS
-        :requires (fun _ _ _ => True)
+        :requires (fun _ => True)
         :transition
            (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
@@ -813,7 +813,7 @@ Section System.
         rule.rsud[1~>6~>0]
         :accepts mesiDownRsIS
         :holding mesiRqM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiS)
+        :requires (fun ost => ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -825,7 +825,7 @@ Section System.
         rule.rsud[1~>6~>1]
         :accepts mesiDownRsIM
         :holding mesiRqM
-        :requires (fun ost orq mins => mesiE <= ost#[dir].(dir_st))
+        :requires (fun ost => mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -893,7 +893,7 @@ Section System.
         rule.rsuu[1~>10~>0]
         :accepts mesiDownRsIS
         :holding mesiDownRqIS
-        :requires (fun _ _ _ => True)
+        :requires (fun _ => True)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -905,7 +905,7 @@ Section System.
         rule.rsuu[1~>10~>1]
         :accepts mesiDownRsIM
         :holding mesiDownRqIM
-        :requires (fun ost orq mins => mesiE <= ost#[dir].(dir_st))
+        :requires (fun ost => mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -917,7 +917,7 @@ Section System.
         rule.rsuu[1~>10~>2]
         :accepts mesiDownRsIS
         :holding mesiDownRqIM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiS)
+        :requires (fun ost => ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
