@@ -56,7 +56,9 @@ Section RssHolderOk.
        (fun rqid =>
           RssWf oidx rqid.(rqi_rss) /\
           (rqid.(rqi_midx_rsb)
-                  >>=[True] (fun rsb => forall oidx, rsb <> rsUpFrom oidx))).
+                  >>=[True] (fun rsb =>
+                               forall roidx,
+                                 roidx <> oidx -> rsb <> rsUpFrom roidx))).
 
   Definition RssWfInv (st: State) :=
     forall oidx, (st_orqs st)@[oidx] >>=[True] (fun orq => RssWfORq oidx orq).
@@ -1009,7 +1011,11 @@ Section RssHolderOk.
           apply in_map with (f:= fun idm => (idOf idm, Some (valOf idm))) in H0.
           specialize (H20 _ H0).
           destruct H20 as [cidx [? ?]]; simpl in *; subst.
-          elim (Hrsb cidx); reflexivity.
+          elim (Hrsb cidx).
+          { eapply parentIdxOf_not_eq; [|eassumption].
+            apply tree2Topo_WfDTree.
+          }
+          { reflexivity. }
         * reflexivity.
         * reflexivity.
 
