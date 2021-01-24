@@ -39,7 +39,7 @@ Section RssHolderOk.
   (** Required invariants *)
 
   Definition RssWf (oidx: IdxT) (rss: list (IdxT * option Msg)) :=
-    SubList (map fst rss) (sys_minds impl ++ sys_merqs impl) /\
+    SubList (map fst rss) (sys_minds impl) /\
     NoDup (map fst rss) /\
     Forall (fun iom =>
               exists cidx,
@@ -134,13 +134,10 @@ Section RssHolderOk.
           msgId1 = msgId2).
 
   Definition SpecRulesInR (oidx: IdxT) (irules srules: list Rule) :=
-    forall rule,
-      (In rule irules ->
-       RssEquivRule rule ->
-       In rule srules) /\
-      (forall ridx msgId rqId prec trs,
-          In (rsRelease ridx msgId rqId prec trs) irules ->
-          In (rsUpRule ridx~>1 msgId rqId prec trs) srules).
+    (forall rule, In rule irules -> RssEquivRule rule -> In rule srules) /\
+    (forall ridx msgId rqId prec trs,
+        In (rsRelease ridx msgId rqId prec trs) irules ->
+        In (rsUpRule ridx~>1 msgId rqId prec trs) srules).
 
   Definition SpecRulesIn :=
     forall iobj,
@@ -151,6 +148,132 @@ Section RssHolderOk.
         SpecRulesInR iobj.(obj_idx) iobj.(obj_rules) sobj.(obj_rules).
 
   Hypotheses (Hir: ImplRules) (Hsr: SpecRulesIn).
+
+  Definition implORqsInit: ORqs Msg :=
+    initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
+
+  Hypotheses (Hsi: impl.(sys_oss_inits) = spec.(sys_oss_inits))
+             (Hoii: impl.(sys_orqs_inits) = implORqsInit)
+             (Hosi: spec.(sys_orqs_inits) = implORqsInit).
+
+  Section RssWfImp.
+    Hypothesis (Hgss: GoodRqRsSys topo spec).
+
+    Lemma RssWfInv_init: InvInit impl RssWfInv.
+    Proof.
+      repeat red; intros.
+      simpl; rewrite Hoii.
+      unfold implORqsInit; intros.
+      destruct (in_dec idx_dec oidx (c_li_indices cifc ++ c_l1_indices cifc)).
+      - rewrite initORqs_value by assumption.
+        red; mred.
+      - rewrite initORqs_None by assumption.
+        auto.
+    Qed.
+
+    Lemma RssWfInv_ext_in:
+      forall oss orqs msgs,
+        RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+        forall eins,
+          eins <> nil ->
+          ValidMsgsExtIn impl eins ->
+          RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := enqMsgs eins msgs |}.
+    Proof.
+    Admitted.
+
+    Lemma RssWfInv_ext_out:
+      forall oss orqs msgs,
+        RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
+        forall eouts,
+          eouts <> nil ->
+          Forall (FirstMPI msgs) eouts ->
+          ValidMsgsExtOut impl eouts ->
+          RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := deqMsgs (idsOf eouts) msgs |}.
+    Proof.
+    Admitted.
+
+    Lemma RssWf_putRs:
+      forall oidx rss,
+        RssWf oidx rss ->
+        forall cidx rmsg,
+          parentIdxOf topo cidx = Some oidx ->
+          RssWf oidx (putRs (rsUpFrom cidx) rmsg rss).
+    Proof.
+      induction rss; simpl; intros; auto.
+      destruct a as [midx omsg]; simpl in *.
+      destruct (idx_dec (rsUpFrom cidx) midx); subst.
+    Admitted.
+
+    Lemma RssWfORq_addRs:
+      forall oidx porq,
+        RssWfORq oidx porq ->
+        forall cidx rmsg,
+          parentIdxOf topo cidx = Some oidx ->
+          RssWfORq oidx (addRs porq (rsUpFrom cidx) rmsg).
+    Proof.
+      intros.
+      red in H.
+      red; unfold addRs.
+      destruct porq@[downRq] as [rqid|] eqn:Hrqid; simpl;
+        [|rewrite Hrqid; simpl; auto].
+      mred; simpl in *; dest.
+      split; [|assumption].
+      apply RssWf_putRs; auto.
+    Qed.
+
+    Lemma RssWfInv_step: InvStep impl step_m RssWfInv.
+    Proof.
+      red; intros.
+
+      inv H1;
+        [assumption
+        |apply RssWfInv_ext_in; assumption
+        |apply RssWfInv_ext_out; assumption
+        |].
+
+      red in H0; simpl in H0.
+
+      red; simpl; intros.
+      mred; simpl; [|auto].
+      specialize (H0 (obj_idx obj)).
+      rewrite H6 in H0; simpl in H0.
+
+      move Hsr at bottom.
+      pose proof (Hsr _ H2) as [sobj [HsoIn [Hsoi Hsrr]]].
+      destruct Hsrr as [Hsrr1 Hsrr2].
+      specialize (Hsrr1 _ H3).
+
+      pose proof (Hir _ H2) as [Hirr Hrst].
+      specialize (Hirr _ H3).
+      destruct Hirr as [|[|]].
+
+      - (*! Normal rules *)
+        admit.
+
+      - (*! [RsRelease] *)
+        clear Hrst Hsrr1.
+        destruct H1 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
+        specialize (Hsrr2 _ _ _ _ _ H3).
+        disc_rule_conds_ex.
+        red; mred.
+
+      - (*! [RsTakeOne] *)
+        clear Hrst Hsrr1 Hsrr2 Hrst.
+        destruct H1 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
+        disc_rule_conds_ex.
+        apply RssWfORq_addRs; auto.
+    Qed.
+
+    Lemma good_rqrs_sys_implies_RssWf:
+      InvReachable impl step_m RssWfInv.
+    Proof.
+      eapply inv_reachable.
+      - typeclasses eauto.
+      - apply RssWfInv_init.
+      - apply RssWfInv_step.
+    Qed.
+
+  End RssWfImp.
 
   Section SimRssMP.
 
@@ -205,13 +328,6 @@ Section RssHolderOk.
     st_oss ist = st_oss sst /\
     SimRssORqs (st_orqs ist) (st_orqs sst) /\
     SimRssMP (st_orqs ist) (st_msgs ist) (st_msgs sst).
-
-  Definition implORqsInit: ORqs Msg :=
-    initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
-
-  Hypotheses (Hsi: impl.(sys_oss_inits) = spec.(sys_oss_inits))
-             (Hoii: impl.(sys_orqs_inits) = implORqsInit)
-             (Hosi: spec.(sys_orqs_inits) = implORqsInit).
 
   Lemma mesi_rss_sim_init: sim (initsOf impl) (initsOf spec).
   Proof.
@@ -536,7 +652,8 @@ Section RssHolderOk.
       eexists ((rmidx, rs) :: _); simpl.
       repeat split.
       + constructor; [reflexivity|assumption].
-      + simpl; apply SubList_cons; [assumption|apply H2].
+      + simpl; apply SubList_cons; [|apply H2].
+        apply in_or_app; left; auto.
       + red; simpl; constructor.
         * clear -H5; intro Hx; elim H5; clear H5.
           induction prss as [|[prmidx prs]]; simpl; intros; [elim Hx|].
@@ -888,7 +1005,8 @@ Section RssHolderOk.
 
     move Hsr at bottom.
     pose proof (Hsr _ H1) as [sobj [HsoIn [Hsoi Hsrr]]].
-    specialize (Hsrr rule) as [Hsrr1 Hsrr2].
+    destruct Hsrr as [Hsrr1 Hsrr2].
+    specialize (Hsrr1 rule).
 
     pose proof (Hir _ H1) as [Hirr Hrst].
     specialize (Hirr _ H3).
