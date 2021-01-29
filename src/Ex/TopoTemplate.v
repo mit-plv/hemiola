@@ -2154,6 +2154,54 @@ Section Facts.
     repeat disc_rule_minds; auto.
   Qed.
 
+  Lemma tree2Topo_rqUp_obj:
+    forall tr bidx oidx rqUp,
+      rqEdgeUpFrom (fst (tree2Topo tr bidx)) oidx = Some rqUp ->
+      In rqUp (c_minds (snd (tree2Topo tr bidx))) ->
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ (c_l1_indices (snd (tree2Topo tr bidx)))).
+  Proof.
+    intros.
+    pose proof H.
+    apply rqEdgeUpFrom_Some in H1; [|apply tree2Topo_RqRsChnsOnDTree].
+    destruct H1 as [rsUp [down [pidx ?]]]; dest.
+    apply tree2Topo_child_in in H3.
+    destruct H3; dest; [subst|assumption].
+    assert (In rqUp (c_merqs (snd (tree2Topo tr bidx)))).
+    { rewrite c_merqs_l1_rqUpFrom.
+      apply rqEdgeUpFrom_rqUpFrom in H; subst.
+      apply in_map_iff.
+      exists pidx; auto.
+    }
+    exfalso.
+    eapply DisjList_In_1; [|apply H4|apply H0].
+    apply tree2Topo_minds_merqs_disj.
+  Qed.
+
+  Lemma tree2Topo_down_obj:
+    forall tr bidx oidx down,
+      edgeDownTo (fst (tree2Topo tr bidx)) oidx = Some down ->
+      In down (c_minds (snd (tree2Topo tr bidx))) ->
+      In oidx ((c_li_indices (snd (tree2Topo tr bidx)))
+                 ++ (c_l1_indices (snd (tree2Topo tr bidx)))).
+  Proof.
+    intros.
+    pose proof H.
+    apply edgeDownTo_Some in H1; [|apply tree2Topo_RqRsChnsOnDTree].
+    destruct H1 as [rqUp [rsUp [pidx ?]]]; dest.
+    apply tree2Topo_child_in in H3.
+    destruct H3; dest; [subst|assumption].
+    assert (In down (c_merss (snd (tree2Topo tr bidx)))).
+    { rewrite c_merss_l1_downTo.
+      apply edgeDownTo_downTo in H; subst.
+      apply in_map_iff.
+      exists pidx; auto.
+    }
+    exfalso.
+    eapply DisjList_In_1; [|apply H4|apply H0].
+    apply tree2Topo_minds_merss_disj.
+  Qed.
+
 End Facts.
 
 Ltac solve_in_l1_li :=

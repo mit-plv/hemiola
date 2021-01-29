@@ -36,6 +36,13 @@ Section RssHolderOk.
 
   Variables (impl spec: System).
 
+  Hypotheses (Htierq: sys_merqs impl = c_merqs cifc)
+             (Htiint: sys_minds impl = c_minds cifc)
+             (Htiers: sys_merss impl = c_merss cifc)
+             (Hiserq: sys_merqs impl = sys_merqs spec)
+             (Hisint: sys_minds impl = sys_minds spec)
+             (Hisers: sys_merss impl = sys_merss spec).
+
   (** Required invariants *)
 
   Definition RssWf (oidx: IdxT) (rss: list (IdxT * option Msg)) :=
@@ -157,7 +164,8 @@ Section RssHolderOk.
              (Hosi: spec.(sys_orqs_inits) = implORqsInit).
 
   Section RssWfImp.
-    Hypothesis (Hgss: GoodRqRsSys topo spec).
+    Hypothesis (Hgss: GoodRqRsSys topo spec)
+               (Hers: GoodExtRssSys spec).
 
     Lemma RssWfInv_init: InvInit impl RssWfInv.
     Proof.
@@ -192,24 +200,67 @@ Section RssHolderOk.
     Proof.
     Admitted.
 
+    Lemma putRs_In_index:
+      forall rmidx ors nrmidx nors rss,
+        In (rmidx, ors) (putRs nrmidx nors rss) ->
+        exists ors', In (rmidx, ors') rss.
+    Proof.
+      induction rss as [|[irmidx rs] rss]; simpl; intros; [exfalso; auto|].
+      destruct (idx_dec nrmidx irmidx); subst.
+      - inv H; eauto.
+        inv H0; eauto.
+      - inv H; eauto.
+        specialize (IHrss H0); dest; eauto.
+    Qed.
+
     Lemma RssWf_putRs:
       forall oidx rss,
         RssWf oidx rss ->
-        forall cidx rmsg,
+        forall cidx,
           parentIdxOf topo cidx = Some oidx ->
-          RssWf oidx (putRs (rsUpFrom cidx) rmsg rss).
+          forall rmsg,
+            msg_type rmsg = MRs ->
+            RssWf oidx (putRs (rsUpFrom cidx) rmsg rss).
     Proof.
-      induction rss; simpl; intros; auto.
-      destruct a as [midx omsg]; simpl in *.
-      destruct (idx_dec (rsUpFrom cidx) midx); subst.
-    Admitted.
+      unfold RssWf; intros; dest.
+      assert (map fst (putRs (rsUpFrom cidx) rmsg rss) = map fst rss) as Heq.
+      { clear.
+        induction rss as [|[rmidx rs] rss]; simpl in *; [reflexivity|].
+        destruct (idx_dec (rsUpFrom cidx) rmidx); subst; simpl in *; [reflexivity|].
+        congruence.
+      }
+      rewrite Heq.
+
+      repeat split; try assumption.
+      - rewrite Forall_forall in H3.
+        apply Forall_forall; intros [rmidx ors] ?.
+        apply putRs_In_index in H5; destruct H5 as [oors ?].
+        specialize (H3 _ H5); eauto.
+      - rewrite Forall_forall in H4.
+        apply Forall_forall; intros [rmidx ors] ?; simpl.
+        clear -H1 H4 H5.
+        induction rss as [|[irmidx rs] rss]; simpl in *; [exfalso; auto|].
+        destruct (idx_dec (rsUpFrom cidx) irmidx); subst.
+        + inv H5.
+          * inv H; assumption.
+          * specialize (H4 (rmidx, ors)); simpl in H4.
+            apply H4; auto.
+        + inv H5.
+          * inv H.
+            specialize (H4 (rmidx, ors)); simpl in H4.
+            apply H4; auto.
+          * apply IHrss; auto.
+            intros; apply H4; auto.
+    Qed.
 
     Lemma RssWfORq_addRs:
       forall oidx porq,
         RssWfORq oidx porq ->
-        forall cidx rmsg,
+        forall cidx,
           parentIdxOf topo cidx = Some oidx ->
-          RssWfORq oidx (addRs porq (rsUpFrom cidx) rmsg).
+          forall rmsg,
+            msg_type rmsg = MRs ->
+            RssWfORq oidx (addRs porq (rsUpFrom cidx) rmsg).
     Proof.
       intros.
       red in H.
@@ -219,6 +270,95 @@ Section RssHolderOk.
       mred; simpl in *; dest.
       split; [|assumption].
       apply RssWf_putRs; auto.
+    Qed.
+
+    Lemma rqDown_not_in_merss:
+      forall rqs,
+        ValidMsgsOut impl rqs ->
+        Forall (fun idm => msg_type (valOf idm) = MRq) rqs ->
+        (forall mout, In mout rqs ->
+                      In (idOf mout) (sys_merss impl) ->
+                      msg_type (valOf mout) = MRs) ->
+        SubList (idsOf rqs) (sys_minds impl).
+    Proof.
+      intros; destruct H.
+      red; intros midx ?.
+      pose proof (H _ H3).
+      apply in_map_iff in H3; destruct H3 as [[rmidx rq] ?]; dest; simpl in *; subst.
+      rewrite Forall_forall in H0; specialize (H0 _ H5).
+      specialize (H1 _ H5); simpl in *.
+      apply in_app_or in H4; destruct H4; [assumption|].
+      specialize (H1 H3).
+      rewrite H0 in H1; discriminate.
+    Qed.
+
+    Lemma RqRsDownMatch_RssWf_SubList:
+      forall oidx rqTos rssFrom P,
+        SubList rqTos (sys_minds impl) ->
+        RqRsDownMatch topo oidx rqTos rssFrom P ->
+        SubList (map fst rssFrom) (sys_minds impl).
+    Proof.
+      intros.
+      red; intros rsFrom ?.
+      eapply RqRsDownMatch_rs_rq in H0; [|eassumption].
+      destruct H0 as [cidx [down ?]]; dest.
+      rewrite Htiint; rewrite Htiint in H.
+      apply H in H5.
+      apply tree2Topo_down_obj in H3; [|assumption].
+      apply tree2Topo_obj_chns_minds_SubList in H3.
+      apply rsEdgeUpFrom_rsUpFrom in H4; subst.
+      apply H3; simpl; tauto.
+    Qed.
+
+    (* Lemma combine_Forall_nth_error: *)
+    (*   forall {A} (l1: list A) {B} (l2: list B) P, *)
+    (*     Forall P (combine l1 l2) -> *)
+    (*     forall i e1, *)
+    (*       nth_error l1 i = Some e1 -> *)
+    (*       forall e2, *)
+    (*         nth_error l2 i = Some e2 -> *)
+    (*         P (e1, e2). *)
+    (* Proof. *)
+    (* Admitted. *)
+
+    Lemma RqRsDownMatch_RssWf_NoDup:
+      forall oidx rqTos rssFrom P,
+        NoDup rqTos ->
+        RqRsDownMatch topo oidx rqTos rssFrom P ->
+        NoDup (map fst rssFrom).
+    Proof.
+      unfold RqRsDownMatch; intros; dest.
+      rewrite NoDup_nth_error in H.
+      apply NoDup_nth_error.
+      intros; rewrite map_length, <-H1 in H3.
+      specialize (H i j H3).
+
+      admit.
+    Qed.
+
+    Lemma RqRsDownMatch_RssWf_child_None:
+      forall oidx rqTos rssFrom P,
+        RqRsDownMatch topo oidx rqTos rssFrom P ->
+        Forall (fun iom =>
+                  exists cidx,
+                    parentIdxOf topo cidx = Some oidx /\
+                    rsUpFrom cidx = fst iom) rssFrom /\
+        Forall (fun iom =>
+                  match snd iom with
+                  | Some rs => msg_type rs = MRs
+                  | None => True
+                  end) rssFrom.
+    Proof.
+    Admitted.
+
+    Lemma RssWfORq_downRq_equiv:
+      forall oidx orq1,
+        RssWfORq oidx orq1 ->
+        forall orq2,
+          orq1@[downRq] = orq2@[downRq] ->
+          RssWfORq oidx orq2.
+    Proof.
+      unfold RssWfORq; intros; rewrite <-H0; assumption.
     Qed.
 
     Lemma RssWfInv_step: InvStep impl step_m RssWfInv.
@@ -248,7 +388,99 @@ Section RssHolderOk.
       destruct Hirr as [|[|]].
 
       - (*! Normal rules *)
-        admit.
+        clear Hrst Hsrr2.
+        specialize (Hsrr1 H1).
+        good_rqrs_rule_get rule.
+        good_rqrs_rule_cases rule.
+        1-2: try (disc_rule_conds; fail).
+
+        + (** [RqFwdRule] *)
+          disc_rule_conds.
+          * eapply RssWfORq_downRq_equiv; [eassumption|]; findeq.
+          * eapply RssWfORq_downRq_equiv; [eassumption|]; findeq.
+          * pose proof Hers as Her.
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+            red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
+            red; mred; simpl; split; [|rewrite H37; simpl; auto].
+            red in H34; red.
+            repeat split.
+            { eapply RqRsDownMatch_RssWf_SubList; eauto.
+              eapply rqDown_not_in_merss; auto.
+              rewrite Hisers; assumption.
+            }
+            { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
+            { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+            { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
+
+          * pose proof Hers as Her.
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+            red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
+            red in H34; destruct H34 as [upCIdx [upCObj ?]]; dest.
+            red; mred; simpl; split.
+            { repeat split.
+              { eapply RqRsDownMatch_RssWf_SubList; eauto.
+                eapply rqDown_not_in_merss; auto.
+                rewrite Hisers; assumption.
+              }
+              { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
+              { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+              { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
+            }
+            { rewrite H37; simpl.
+              apply edgeDownTo_downTo in H19; subst.
+              intros; discriminate.
+            }
+
+          * pose proof Hers as Her.
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+            red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
+            red in H32; dest.
+            red; mred; simpl; split.
+            { repeat split.
+              { eapply RqRsDownMatch_RssWf_SubList; eauto.
+                eapply rqDown_not_in_merss; auto.
+                rewrite Hisers; assumption.
+              }
+              { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
+              { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+              { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
+            }
+            { rewrite H37; simpl.
+              apply rsEdgeUpFrom_rsUpFrom in H7; subst.
+              intros; intro Hx; elim H7; inv Hx; auto.
+            }
+
+        + (** [RsBackRule] *)
+          disc_rule_conds.
+          * eapply RssWfORq_downRq_equiv; [eassumption|]; findeq.
+          * eapply RssWfORq_downRq_equiv; [eassumption|]; findeq.
+          * red; mred.
+          * red; mred.
+
+        + (** [RsDownRqDownRule] *)
+          disc_rule_conds.
+          pose proof Hers as Her.
+          red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
+          red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+          red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
+          red in H20; destruct H20 as [upCIdx [upCObj ?]]; dest.
+          red; mred; simpl; split.
+          { repeat split.
+            { eapply RqRsDownMatch_RssWf_SubList; eauto.
+              eapply rqDown_not_in_merss; auto.
+              rewrite Hisers; assumption.
+            }
+            { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
+            { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+            { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
+          }
+          { rewrite H31; simpl.
+            apply edgeDownTo_downTo in H18; subst.
+            intros; discriminate.
+          }
 
       - (*! [RsRelease] *)
         clear Hrst Hsrr1.
