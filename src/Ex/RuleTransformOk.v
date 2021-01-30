@@ -179,27 +179,6 @@ Section RssHolderOk.
         auto.
     Qed.
 
-    Lemma RssWfInv_ext_in:
-      forall oss orqs msgs,
-        RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
-        forall eins,
-          eins <> nil ->
-          ValidMsgsExtIn impl eins ->
-          RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := enqMsgs eins msgs |}.
-    Proof.
-    Admitted.
-
-    Lemma RssWfInv_ext_out:
-      forall oss orqs msgs,
-        RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} ->
-        forall eouts,
-          eouts <> nil ->
-          Forall (FirstMPI msgs) eouts ->
-          ValidMsgsExtOut impl eouts ->
-          RssWfInv {| st_oss := oss; st_orqs := orqs; st_msgs := deqMsgs (idsOf eouts) msgs |}.
-    Proof.
-    Admitted.
-
     Lemma putRs_In_index:
       forall rmidx ors nrmidx nors rss,
         In (rmidx, ors) (putRs nrmidx nors rss) ->
@@ -310,16 +289,31 @@ Section RssHolderOk.
       apply H3; simpl; tauto.
     Qed.
 
-    (* Lemma combine_Forall_nth_error: *)
-    (*   forall {A} (l1: list A) {B} (l2: list B) P, *)
-    (*     Forall P (combine l1 l2) -> *)
-    (*     forall i e1, *)
-    (*       nth_error l1 i = Some e1 -> *)
-    (*       forall e2, *)
-    (*         nth_error l2 i = Some e2 -> *)
-    (*         P (e1, e2). *)
-    (* Proof. *)
-    (* Admitted. *)
+    Lemma combine_nth_fst:
+      forall {A} (l1: list A) {B} (l2: list B),
+        List.length l1 = List.length l2 ->
+        forall i d,
+          fst (nth i (combine l1 l2) d) = nth i l1 (fst d).
+    Proof.
+      induction l1; simpl; intros; [destruct i; reflexivity|].
+      destruct l2 as [|b l2]; [discriminate|].
+      simpl in *.
+      destruct i; [reflexivity|auto].
+    Qed.
+
+    Lemma combine_nth_snd:
+      forall {A} (l1: list A) {B} (l2: list B),
+        List.length l1 = List.length l2 ->
+        forall i d,
+          snd (nth i (combine l1 l2) d) = nth i l2 (snd d).
+    Proof.
+      induction l1; simpl; intros.
+      - destruct l2; [|discriminate].
+        simpl; destruct i; reflexivity.
+      - destruct l2 as [|b l2]; [discriminate|].
+        simpl in *.
+        destruct i; [reflexivity|auto].
+    Qed.
 
     Lemma RqRsDownMatch_RssWf_NoDup:
       forall oidx rqTos rssFrom P,
@@ -329,11 +323,49 @@ Section RssHolderOk.
     Proof.
       unfold RqRsDownMatch; intros; dest.
       rewrite NoDup_nth_error in H.
-      apply NoDup_nth_error.
-      intros; rewrite map_length, <-H1 in H3.
-      specialize (H i j H3).
+      apply NoDup_nth_error; intros.
 
-      admit.
+      assert (j < List.length (map fst rssFrom)).
+      { destruct (Compare_dec.le_lt_dec (List.length (map fst rssFrom)) j); [|assumption].
+        apply nth_error_None in l.
+        rewrite l in H4.
+        apply nth_error_None in H4.
+        lia.
+      }
+
+      rewrite map_length in H3, H5.
+      rewrite Forall_nth in H2.
+      rewrite combine_length, H1, PeanoNat.Nat.min_id in H2.
+      pose proof (H2 _ (ii, (ii, None)) H3); destruct H6 as [icidx ?].
+      pose proof (H2 _ (ii, (ii, None)) H5); destruct H7 as [jcidx ?].
+      dest.
+      rewrite combine_nth_fst in H9, H13 by assumption.
+      rewrite combine_nth_snd in H10, H11, H14, H15 by assumption.
+      simpl in *.
+
+      rewrite <-map_length with (f:= fst) in H3, H5.
+      destruct (nth_error (map fst rssFrom) i) as [irsf|] eqn:Hirsf;
+        [|exfalso; apply nth_error_None in Hirsf; lia].
+      apply nth_error_nth with (d:= ii) in Hirsf.
+      change ii with (fst (ii, (@None Msg))) in Hirsf; rewrite map_nth in Hirsf.
+      rewrite Hirsf in H15.
+      apply eq_sym, nth_error_nth with (d:= ii) in H4.
+      change ii with (fst (ii, (@None Msg))) in H4; rewrite map_nth in H4.
+      rewrite H4 in H11.
+
+      assert (icidx = jcidx); subst.
+      { apply rsEdgeUpFrom_rsUpFrom in H15.
+        apply rsEdgeUpFrom_rsUpFrom in H11.
+        rewrite H15 in H11.
+        inv H11; reflexivity.
+      }
+
+      apply H; [rewrite H1; rewrite map_length in H3; assumption|].
+      rewrite nth_error_nth' with (d:= ii)
+        by (rewrite H1; rewrite map_length in H3; assumption).
+      rewrite nth_error_nth' with (d:= ii)
+        by (rewrite H1; rewrite map_length in H5; assumption).
+      congruence.
     Qed.
 
     Lemma RqRsDownMatch_RssWf_child_None:
@@ -349,7 +381,30 @@ Section RssHolderOk.
                   | None => True
                   end) rssFrom.
     Proof.
-    Admitted.
+      unfold RqRsDownMatch; intros; dest.
+      clear -H0 H1; split.
+      - apply Forall_forall.
+        intros [rmidx ors] ?.
+        eapply In_nth with (d:= (ii, None)) in H.
+        destruct H as [n [? ?]].
+        rewrite Forall_nth in H1.
+        rewrite combine_length, H0, PeanoNat.Nat.min_id in H1.
+        specialize (H1 _ (ii, (ii, None)) H); destruct H1 as [cidx ?]; dest.
+        rewrite combine_nth_snd in H6 by assumption.
+        simpl in *; rewrite H2 in H6; simpl in *.
+        exists cidx; split; [assumption|].
+        apply rsEdgeUpFrom_rsUpFrom in H6; auto.
+      - apply Forall_forall.
+        intros [rmidx ors] ?.
+        eapply In_nth with (d:= (ii, None)) in H.
+        destruct H as [n [? ?]].
+        rewrite Forall_nth in H1.
+        rewrite combine_length, H0, PeanoNat.Nat.min_id in H1.
+        specialize (H1 _ (ii, (ii, None)) H); destruct H1 as [cidx ?]; dest.
+        rewrite combine_nth_snd in H5 by assumption.
+        simpl in *; rewrite H2 in H5; simpl in *.
+        subst; auto.
+    Qed.
 
     Lemma RssWfORq_downRq_equiv:
       forall oidx orq1,
@@ -364,15 +419,9 @@ Section RssHolderOk.
     Lemma RssWfInv_step: InvStep impl step_m RssWfInv.
     Proof.
       red; intros.
-
-      inv H1;
-        [assumption
-        |apply RssWfInv_ext_in; assumption
-        |apply RssWfInv_ext_out; assumption
-        |].
+      inv H1; [assumption..|].
 
       red in H0; simpl in H0.
-
       red; simpl; intros.
       mred; simpl; [|auto].
       specialize (H0 (obj_idx obj)).
