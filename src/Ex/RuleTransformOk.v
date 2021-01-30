@@ -13,19 +13,6 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Lemma concat_map_In:
-  forall {A} (a: A) l,
-    In a l ->
-    forall {B} (f: A -> B) (g: A -> list B),
-      (forall a, In (f a) (g a)) ->
-      In (f a) (List.concat (map g l)).
-Proof.
-  induction l; simpl; intros; auto.
-  destruct H; subst.
-  - apply in_or_app; left; auto.
-  - apply in_or_app; right; auto.
-Qed.
-
 Section RssHolderOk.
   Variable (tr: tree).
   Hypothesis (Htr: tr <> Node nil).

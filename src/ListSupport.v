@@ -75,7 +75,7 @@ Qed.
 
 Section SubDisjEquiv.
   Context {A: Type}.
-  
+
   Definition SubList (l1 l2: list A) := forall e, In e l1 -> In e l2.
   Definition DisjList (l1 l2: list A) := forall e, ~ In e l1 \/ ~ In e l2.
   Definition EquivList (l1 l2: list A) := SubList l1 l2 /\ SubList l2 l1.
@@ -88,7 +88,7 @@ Section SubDisjEquiv.
     unfold SubList; intros; destruct l; auto.
     specialize (H a (or_introl eq_refl)); inv H.
   Qed.
-  
+
   Lemma SubList_cons: forall a l1 l2, In a l2 -> SubList l1 l2 -> SubList (a :: l1) l2.
   Proof. unfold SubList; intros; inv H1; auto. Qed.
 
@@ -107,13 +107,13 @@ Section SubDisjEquiv.
     rewrite Forall_forall in H.
     rewrite Forall_forall; intros; auto.
   Qed.
-  
+
   Lemma SubList_refl: forall l, SubList l l.
   Proof. unfold SubList; intros; auto. Qed.
 
   Lemma SubList_refl': forall l1 l2, l1 = l2 -> SubList l1 l2.
   Proof. intros; subst; apply SubList_refl. Qed.
-  
+
   Lemma SubList_trans:
     forall l1 l2 l3, SubList l1 l2 -> SubList l2 l3 -> SubList l1 l3.
   Proof. unfold SubList; intros; auto. Qed.
@@ -146,7 +146,7 @@ Section SubDisjEquiv.
     inv H5; dest_in.
     elim H4; left; reflexivity.
   Qed.
-  
+
   Lemma SubList_app_1: forall l1 l2 l3, SubList l1 l2 -> SubList l1 (l2 ++ l3).
   Proof.
     unfold SubList; intros; apply in_or_app; left; auto.
@@ -244,7 +244,7 @@ Section SubDisjEquiv.
 
   Lemma EquivList_refl: forall l, EquivList l l.
   Proof. intros; split; apply SubList_refl. Qed.
-  
+
   Lemma EquivList_comm: forall l1 l2, EquivList l1 l2 -> EquivList l2 l1.
   Proof. unfold EquivList; intros; dest; split; auto. Qed.
 
@@ -304,7 +304,7 @@ Section SubDisjEquiv.
     intros; red; intros.
     destruct (in_dec deceqA e l2); auto.
   Qed.
-  
+
   Lemma DisjList_false_spec:
     forall (deceqA : forall x y: A, sumbool (x = y) (x <> y))
            l1 l2,
@@ -316,7 +316,7 @@ Section SubDisjEquiv.
     destruct (in_dec deceqA e l2); auto.
     exfalso; eauto.
   Qed.
-  
+
   Lemma DisjList_nil_1: forall l, DisjList nil l.
   Proof. unfold DisjList; auto. Qed.
 
@@ -353,7 +353,7 @@ Section SubDisjEquiv.
     unfold DisjList; intros.
     specialize (H a); destruct H; auto.
   Qed.
-    
+
   Lemma DisjList_In_2:
     forall a l1 l2,
       DisjList l1 l2 -> In a l1 -> ~ In a l2.
@@ -370,15 +370,15 @@ Section SubDisjEquiv.
     intro Hx; subst.
     specialize (H a2); destruct H; auto.
   Qed.
-  
+
   Lemma DisjList_comm: forall l1 l2, DisjList l1 l2 -> DisjList l2 l1.
-  Proof. 
+  Proof.
     intros. unfold DisjList in *. intros e. specialize (H e). intuition.
   Qed.
 
   Lemma DisjList_SubList: forall sl1 l1 l2, SubList sl1 l1 -> DisjList l1 l2 -> DisjList sl1 l2.
-  Proof. 
-    intros. unfold SubList, DisjList in *. intros e. 
+  Proof.
+    intros. unfold SubList, DisjList in *. intros e.
     specialize (H e). specialize (H0 e). intuition.
   Qed.
 
@@ -410,7 +410,7 @@ Section SubDisjEquiv.
   Qed.
 
   Lemma DisjList_app_1: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l2.
-  Proof. 
+  Proof.
     intros. unfold DisjList in *. intros e.
     destruct (H e); [left | right].
     - assumption.
@@ -418,7 +418,7 @@ Section SubDisjEquiv.
   Qed.
 
   Lemma DisjList_app_2: forall l1 l2 l3, DisjList l1 (l2 ++ l3) -> DisjList l1 l3.
-  Proof. 
+  Proof.
     intros. unfold DisjList in *. intros e.
     destruct (H e); [left | right].
     - assumption.
@@ -457,7 +457,7 @@ Section SubDisjEquiv.
     unfold DisjList; intros.
     destruct (deceqA e a1); subst; firstorder.
   Qed.
-    
+
   Lemma DisjList_singleton_2:
     forall (deceqA : forall x y: A, sumbool (x = y) (x <> y)) l1 a2,
       ~ In a2 l1 ->
@@ -466,7 +466,7 @@ Section SubDisjEquiv.
     unfold DisjList; intros.
     destruct (deceqA e a2); subst; firstorder.
   Qed.
-  
+
   Lemma DisjList_singletons:
     forall (deceqA : forall x y: A, sumbool (x = y) (x <> y)) a1 a2,
       a1 <> a2 -> DisjList [a1] [a2].
@@ -500,7 +500,7 @@ Qed.
 Section Removal.
   Context {A: Type}.
   Hypothesis (eq_dec: forall x y: A, {x = y} + {x <> y}).
-  
+
   Fixpoint removeOnce (a: A) (l: list A) :=
     match l with
     | nil => nil
@@ -520,7 +520,7 @@ Section Removal.
     destruct (eq_dec a a); auto.
     elim n; reflexivity.
   Qed.
-  
+
   Lemma removeL_nil:
     forall l, removeL l l = nil.
   Proof.
@@ -599,7 +599,7 @@ Section Removal.
     specialize (IHl2 _ H).
     eapply removeOnce_In_2; eauto.
   Qed.
-  
+
   Lemma forall_removeOnce:
     forall a l P,
       Forall P l ->
@@ -609,7 +609,7 @@ Section Removal.
     inv H.
     destruct (eq_dec a a0); auto.
   Qed.
-  
+
   Lemma forall_removeL:
     forall l2 l1 P,
       Forall P l1 ->
@@ -695,7 +695,7 @@ Section Removal.
         specialize (IHl H); destruct IHl.
         split; lia.
   Qed.
-  
+
   Lemma removeL_SubList_1:
     forall l1 l2,
       SubList l1 l2 ->
@@ -752,7 +752,7 @@ Section Removal.
     - apply removeL_SubList_2.
     - assumption.
   Qed.
-  
+
   Lemma removeL_app_1:
     forall (l1 l2 l3: list A),
       removeL l1 (l2 ++ l3) =
@@ -1057,7 +1057,7 @@ Section Distribution.
         apply DistrR.
         simpl; auto.
   Qed.
-  
+
 End Distribution.
 
 (** [caseDec], a case statement by decidability *)
@@ -1305,6 +1305,19 @@ Proof.
   - apply concat_DisjList.
     intros; apply In_nth_error in H1; destruct H1 as [n2 ?].
     apply H0 with (n1:= O) (n2:= S n2); auto.
+Qed.
+
+Lemma concat_map_In:
+  forall {A} (a: A) l,
+    In a l ->
+    forall {B} (f: A -> B) (g: A -> list B),
+      (forall a, In (f a) (g a)) ->
+      In (f a) (List.concat (map g l)).
+Proof.
+  induction l; simpl; intros; auto.
+  destruct H; subst.
+  - apply in_or_app; left; auto.
+  - apply in_or_app; right; auto.
 Qed.
 
 Lemma NoDup_app_comm:
@@ -1738,4 +1751,3 @@ Ltac solve_DisjList dec :=
 
 Ltac solve_NoDup :=
   simpl; repeat constructor; solve_not_in.
-
