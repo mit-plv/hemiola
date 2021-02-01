@@ -101,15 +101,16 @@ Section RssHolderOk.
     | None, None => True
     end.
 
-  Definition NoRssChangeTrs (trs: OTrs) :=
+  Definition NoRssChangeTrs (prec: OPrec) (trs: OTrs) :=
     forall ost orq mins nost norq mouts,
+      prec ost orq mins ->
       trs ost orq mins = (nost, norq, mouts) ->
       NoRssChange orq norq.
 
   Definition RssEquivRule (rule: Rule) :=
     RssEquivPrec (rule_precond rule) /\ RssEquivTrs (rule_trs rule) /\
     NoRsUpInputsPrec (rule_precond rule) /\
-    NoRssChangeTrs (rule_trs rule).
+    NoRssChangeTrs (rule_precond rule) (rule_trs rule).
 
   Definition ImplRulesR (oidx: IdxT) (rule: Rule) :=
     (RssEquivRule rule) \/
@@ -597,7 +598,7 @@ Section RssHolderOk.
     SimRssORqs (st_orqs ist) (st_orqs sst) /\
     SimRssMP (st_orqs ist) (st_msgs ist) (st_msgs sst).
 
-  Lemma mesi_rss_sim_init: sim (initsOf impl) (initsOf spec).
+  Lemma rss_holder_rss_sim_init: sim (initsOf impl) (initsOf spec).
   Proof.
     red; repeat ssplit.
     - assumption.
@@ -616,7 +617,7 @@ Section RssHolderOk.
       simpl; mred.
   Qed.
 
-  Lemma mesi_rss_sim_silent:
+  Lemma rss_holder_rss_sim_silent:
     forall ist sst1,
       sim ist sst1 ->
       exists slbl sst2,
@@ -814,7 +815,7 @@ Section RssHolderOk.
       + assumption.
   Qed.
 
-  Lemma mesi_rss_sim_ext_in:
+  Lemma rss_holder_rss_sim_ext_in:
     forall oss orqs msgs sst1,
       sim {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} sst1 ->
       forall eins,
@@ -837,7 +838,7 @@ Section RssHolderOk.
       apply SimRssMP_enqMsgs; assumption.
   Qed.
 
-  Lemma mesi_rss_sim_ext_out:
+  Lemma rss_holder_rss_sim_ext_out:
     forall oss orqs msgs sst1,
       sim {| st_oss := oss; st_orqs := orqs; st_msgs := msgs |} sst1 ->
       forall eouts: list (Id Msg),
@@ -1255,7 +1256,7 @@ Section RssHolderOk.
           end
     end.
 
-  Theorem mesi_rss_sim_ok:
+  Theorem rss_holder_rss_sim_ok:
     InvSim step_m step_m RssWfInv sim impl spec.
   Proof.
     red; intros.
@@ -1263,9 +1264,9 @@ Section RssHolderOk.
     clear H3. (* [RssWfInv ist2] *)
 
     inv H2;
-      [apply mesi_rss_sim_silent; assumption
-      |apply mesi_rss_sim_ext_in; assumption
-      |apply mesi_rss_sim_ext_out; assumption
+      [apply rss_holder_rss_sim_silent; assumption
+      |apply rss_holder_rss_sim_ext_in; assumption
+      |apply rss_holder_rss_sim_ext_out; assumption
       |].
 
     destruct sst1 as [soss1 sorqs1 smsgs1].
@@ -1429,14 +1430,25 @@ Section RssHolderOk.
         eapply SimRssMP_addRs; try eassumption.
   Qed.
 
-  Hypothesis (HwfInv: InvReachable impl step_m RssWfInv).
-  Theorem mesi_ok:
+  Theorem rss_holder_ok_inv:
+    InvReachable impl step_m RssWfInv ->
     (steps step_m) # (steps step_m) |-- impl ⊑ spec.
   Proof.
+    intros.
     eapply invRSim_implies_refinement with (sim:= sim).
     - eassumption.
-    - apply mesi_rss_sim_init.
-    - apply mesi_rss_sim_ok.
+    - apply rss_holder_rss_sim_init.
+    - apply rss_holder_rss_sim_ok.
+  Qed.
+
+  Theorem rss_holder_ok:
+    GoodRqRsSys topo spec ->
+    GoodExtRssSys spec ->
+    (steps step_m) # (steps step_m) |-- impl ⊑ spec.
+  Proof.
+    intros.
+    apply rss_holder_ok_inv.
+    apply good_rqrs_sys_implies_RssWf; assumption.
   Qed.
 
 End RssHolderOk.

@@ -167,7 +167,7 @@ Proof.
   dest; split; auto.
   rewrite <-H1; assumption.
 Qed.
-  
+
 Lemma ValidMsgsExtOut_sys_merss:
   forall `{DecValue} `{oifc: OStateIfc}
          (sys1: System) (eouts: list (Id Msg)),
@@ -254,7 +254,7 @@ Proof.
 Qed.
 
 Lemma steps_split:
-  forall {SystemT StateT LabelT} 
+  forall {SystemT StateT LabelT}
          (step: Step SystemT StateT LabelT) sys st1 st2 ll,
     steps step sys st1 ll st2 ->
     forall ll1 ll2,
@@ -282,7 +282,7 @@ Proof.
 Qed.
 
 Lemma steps_append:
-  forall {SystemT StateT LabelT} 
+  forall {SystemT StateT LabelT}
          (step: Step SystemT StateT LabelT) sys st1 ll1 st2,
     steps step sys st1 ll1 st2 ->
     forall ll2 st3,
@@ -312,7 +312,7 @@ Proof.
   unfold Reachable; intros; dest.
   eexists; eapply steps_append; eauto.
 Qed.
-  
+
 Lemma behaviorOf_app:
   forall {LabelT} `{HasLabel LabelT} (hst1 hst2: list LabelT),
     behaviorOf (hst1 ++ hst2) =
@@ -332,14 +332,19 @@ Proof.
 Qed.
 
 Theorem refines_trans:
-  forall {SystemT StateT LabelT} `{HasInit SystemT StateT} `{HasLabel LabelT}
-         (ss1 ss2 ss3: Steps SystemT StateT LabelT) s1 s2 s3,
+  forall {SystemT1 StateT1} `{HasInit SystemT1 StateT1}
+         {SystemT2 StateT2} `{HasInit SystemT2 StateT2}
+         {LabelT} `{HasLabel LabelT}
+         (ss1: Steps SystemT1 StateT1 LabelT)
+         (ss2: Steps SystemT2 StateT2 LabelT)
+         s1 s2,
     ss1 # ss2 |-- s1 ⊑ s2 ->
-    ss2 # ss3 |-- s2 ⊑ s3 ->
-    ss1 # ss3 |-- s1 ⊑ s3.
+    forall {SystemT3 StateT3} `{HasInit SystemT3 StateT3}
+           (ss3: Steps SystemT3 StateT3 LabelT) s3,
+      ss2 # ss3 |-- s2 ⊑ s3 ->
+      ss1 # ss3 |-- s1 ⊑ s3.
 Proof.
   unfold Refines; intros.
-  specialize (H3 _ (H2 _ H4)).
+  specialize (H5 _ (H3 _ H6)).
   assumption.
 Qed.
-
