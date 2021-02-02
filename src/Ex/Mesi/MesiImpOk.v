@@ -2,7 +2,7 @@ Require Import Bool Vector List String Peano_dec Lia.
 Require Import Common FMap HVector IndexSupport Topology Syntax Semantics StepM SemFacts.
 Require Import RqRsTopo RqRsUtil.
 
-Require Import Ex.SpecInds Ex.Template Ex.RuleTransformOk.
+Require Import Ex.SpecInds Ex.Template Ex.RuleTransform Ex.RuleTransformOk.
 Require Import Ex.Mesi.Mesi Ex.Mesi.MesiTopo Ex.Mesi.MesiImp Ex.Mesi.MesiSim.
 
 Set Implicit Arguments.
@@ -17,82 +17,94 @@ Section MesiImpOk.
   Let topo := fst (tree2Topo tr 0).
   Let cifc := snd (tree2Topo tr 0).
 
-  Lemma NoRssChange_refl: forall orq, NoRssChange orq orq.
+  Lemma UpLockDownTo_refl:
+    forall orq1 orq2,
+      orq1@[upRq] = orq2@[upRq] ->
+      UpLockDownTo orq1 orq2.
   Proof.
-    intros; red; destruct (orq@[downRq]); auto.
+    unfold UpLockDownTo; intros.
+    rewrite H.
+    destruct orq2@[upRq]; auto.
   Qed.
+  Local Hint Extern 4 (UpLockDownTo _ _) => (apply UpLockDownTo_refl; auto).
+
+  Lemma NoRssChange_refl:
+    forall orq1 orq2,
+      orq1@[downRq] = orq2@[downRq] ->
+      NoRssChange orq1 orq2.
+  Proof.
+    unfold NoRssChange; intros.
+    rewrite H.
+    destruct (orq2@[downRq]); auto.
+  Qed.
+  Local Hint Extern 4 (NoRssChange _ _) => (apply NoRssChange_refl; auto).
+
+  Definition RssORqEquivPrec (prec: OPrec) :=
+    forall ost orq1 mins,
+      prec ost orq1 mins ->
+      forall orq2, RssORqEquiv orq1 orq2 -> prec ost orq2 mins.
 
   Lemma immRule_ImplRulesR:
     forall ridx oidx prec trs,
-      RssEquivPrec prec ->
+      RssORqEquivPrec prec ->
       ImplRulesR tr oidx (immRule ridx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      + repeat red in H2; repeat red.
-        red in H1; dest; congruence.
-      + apply H1; assumption.
-      + eapply H; eauto.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H0; red; intros.
+        destruct mins; [exfalso; auto|discriminate].
+      + intros; repeat ssplit; try eassumption.
+        * repeat red in H1; repeat red.
+          red in H4; dest; congruence.
+        * apply H4; assumption.
+        * eapply H; eauto.
     - red; simpl; unfold TrsMTrs; simpl; intros.
-      inv H0; eauto.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H0; red; intros.
-      destruct mins; [exfalso; auto|discriminate].
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      inv H1; apply NoRssChange_refl.
+      inv H1; repeat split; auto.
+      intros; eauto.
   Qed.
 
   Lemma immUpRule_ImplRulesR:
     forall ridx msgId oidx prec trs,
-      RssEquivPrec prec ->
+      RssORqEquivPrec prec ->
       ImplRulesR tr oidx (immUpRule ridx msgId oidx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      + apply H1; assumption.
-      + eapply H; eauto.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H0; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H0; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        * apply H5; assumption.
+        * eapply H; eauto.
     - red; simpl; unfold TrsMTrs; simpl; intros.
       destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      all: inv H0; eauto; fail.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H0; red; intros.
-      destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
-      destruct mins; [|discriminate].
-      inv H0; dest_in; simpl; eauto.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      all: inv H1; apply NoRssChange_refl; fail.
+      all: inv H1; eauto; fail.
   Qed.
 
   Lemma immDownRule_ImplRulesR:
     forall ridx msgId cidx prec trs,
-      RssEquivPrec prec ->
+      RssORqEquivPrec prec ->
       forall oidx,
         ImplRulesR tr oidx (immDownRule ridx msgId cidx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      + repeat red in H4; repeat red.
-        red in H1; dest; congruence.
-      + apply H1; assumption.
-      + eapply H; eauto.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H0; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H0; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        * repeat red in H3; repeat red.
+          red in H6; dest; congruence.
+        * apply H6; assumption.
+        * eapply H; eauto.
     - red; simpl; unfold TrsMTrs; simpl; intros.
       destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      all: inv H0; eauto; fail.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H0; red; intros.
-      destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
-      destruct mins; [|discriminate].
-      inv H0; dest_in; simpl; eauto.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      all: inv H1; apply NoRssChange_refl; fail.
+      all: inv H1; eauto; fail.
   Qed.
 
   Lemma rqUpUpRule_ImplRulesR:
@@ -100,29 +112,27 @@ Section MesiImpOk.
       ImplRulesR tr oidx (rqUpUpRule ridx msgId cidx oidx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      repeat red in H3; repeat red.
-      red in H0; dest; congruence.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        red in H4; dest; congruence.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
       destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      + inv H.
-        eexists; split; [reflexivity|].
-        red in H0; dest.
-        red; repeat split.
-        all: unfold addRq; mred.
-      + inv H; eauto.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H; red; intros.
-      destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
-      destruct mins; [|discriminate].
-      inv H; dest_in; simpl; eauto.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      + inv H0; red; unfold addRq; mred.
-        apply NoRssChange_refl.
-      + inv H0; apply NoRssChange_refl.
+      + inv H0; repeat split.
+        * repeat red in H3; red.
+          unfold addRq; mred; simpl; eauto.
+        * red; unfold addRq; mred.
+          apply NoRssChange_refl; auto.
+        * intros; eexists; split; [reflexivity|].
+          red in H0; dest.
+          red; repeat split.
+          all: unfold addRq; mred.
+      + inv H0; eauto.
   Qed.
 
   Lemma rqUpUpRuleS_ImplRulesR:
@@ -130,23 +140,23 @@ Section MesiImpOk.
       ImplRulesR tr oidx (rqUpUpRuleS ridx oidx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      repeat red in H3; repeat red.
-      red in H0; dest; congruence.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      inv H.
-      eexists; split; [reflexivity|].
-      red in H0; dest.
-      red; repeat split.
-      all: unfold addRqS; mred.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H; red; intros.
-      destruct mins; [exfalso; auto|discriminate].
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      inv H0; red; unfold addRqS; mred.
-      apply NoRssChange_refl.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins; [exfalso; auto|discriminate].
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        red in H3; dest; congruence.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      inv H0; repeat split.
+      + repeat red in H2; red.
+        unfold addRqS; mred; simpl; eauto.
+      + red; unfold addRqS; mred.
+        apply NoRssChange_refl; auto.
+      + intros; eexists; split; [reflexivity|].
+        red in H0; dest.
+        red; repeat split.
+        all: unfold addRqS; mred.
   Qed.
 
   Lemma rqUpDownRule_ImplRulesR:
@@ -154,34 +164,30 @@ Section MesiImpOk.
       ImplRulesR tr oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      repeat red in H3; repeat red.
-      apply H0; assumption.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      + inv H.
-        eexists; split; [reflexivity|].
-        red in H0; dest.
-        red; repeat split.
-        all: try (unfold addRq; mred; fail).
-        clear; unfold addRq; mred.
-        intros; inv H; simpl.
-        eexists; repeat split.
-      + inv H; eauto.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H; red; intros.
-      destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
-      destruct mins; [|discriminate].
-      inv H; dest_in; simpl; eauto.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        apply H4; assumption.
     - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
       destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      + repeat red in H3.
-        inv H0; red; unfold addRq; mred; simpl.
-        apply Forall_forall; intros.
-        apply in_map_iff in H0; dest; subst; reflexivity.
-      + inv H0; apply NoRssChange_refl.
+      + inv H0; repeat split.
+        * red; unfold addRq; mred.
+          apply UpLockDownTo_refl; reflexivity.
+        * repeat red in H3.
+          red; unfold addRq; mred; simpl.
+          apply Forall_forall; intros.
+          apply in_map_iff in H0; dest; subst; reflexivity.
+        * intros; eexists; split; [reflexivity|].
+          red in H0; dest.
+          red; repeat split.
+          all: unfold addRq; mred.
+          eauto.
+      + inv H0; eauto.
   Qed.
 
   Lemma rqUpDownRuleS_ImplRulesR:
@@ -189,28 +195,26 @@ Section MesiImpOk.
       ImplRulesR tr oidx (rqUpDownRuleS ridx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      repeat red in H3; repeat red.
-      apply H0; assumption.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      inv H.
-      eexists; split; [reflexivity|].
-      red in H0; dest.
-      red; repeat split.
-      all: try (unfold addRqS; mred; fail).
-      clear; unfold addRqS; mred.
-      intros; inv H; simpl.
-      eexists; repeat split.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H; red; intros.
-      destruct mins; [exfalso; auto|discriminate].
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins; [exfalso; auto|discriminate].
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        apply H3; assumption.
     - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
-      repeat red in H2.
-      inv H0; red; unfold addRqS; mred; simpl.
-      apply Forall_forall; intros.
-      apply in_map_iff in H0; dest; subst; reflexivity.
+      inv H0; repeat split.
+      + red; unfold addRqS; mred.
+        apply UpLockDownTo_refl; reflexivity.
+      + repeat red in H2.
+        red; unfold addRqS; mred; simpl.
+        apply Forall_forall; intros.
+        apply in_map_iff in H0; dest; subst; reflexivity.
+      + intros; eexists; split; [reflexivity|].
+        red in H0; dest.
+        red; repeat split.
+        all: unfold addRqS; mred.
+        eauto.
   Qed.
 
   Lemma rqDownDownRule_ImplRulesR:
@@ -218,34 +222,30 @@ Section MesiImpOk.
       ImplRulesR tr oidx (rqDownDownRule ridx msgId oidx prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      repeat ssplit; try assumption.
-      repeat red in H3; repeat red.
-      apply H0; assumption.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      + inv H.
-        eexists; split; [reflexivity|].
-        red in H0; dest.
-        red; repeat split.
-        all: try (unfold addRq; mred; fail).
-        clear; unfold addRq; mred.
-        intros; inv H; simpl.
-        eexists; repeat split.
-      + inv H; eauto.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H; red; intros.
-      destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
-      destruct mins; [|discriminate].
-      inv H; dest_in; simpl; eauto.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        apply H4; assumption.
     - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
       destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
-      + repeat red in H3.
-        inv H0; red; unfold addRq; mred; simpl.
-        apply Forall_forall; intros.
-        apply in_map_iff in H0; dest; subst; reflexivity.
-      + inv H0; apply NoRssChange_refl.
+      + inv H0; repeat split.
+        * red; unfold addRq; mred.
+          apply UpLockDownTo_refl; reflexivity.
+        * repeat red in H3.
+          red; unfold addRq; mred; simpl.
+          apply Forall_forall; intros.
+          apply in_map_iff in H0; dest; subst; reflexivity.
+        * intros; eexists; split; [reflexivity|].
+          red in H0; dest.
+          red; repeat split.
+          all: unfold addRq; mred.
+          eauto.
+      + inv H0; eauto.
   Qed.
 
   Ltac destruct_bind :=
@@ -256,87 +256,106 @@ Section MesiImpOk.
 
   Lemma rsDownDownRule_ImplRulesR:
     forall ridx msgId rqId oidx prec trs,
-      RssEquivPrec prec ->
+      RssORqEquivPrec prec ->
       ImplRulesR tr oidx (rsDownDownRule ridx msgId rqId prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H1; dest.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
+      intros; red in H7; dest.
       repeat ssplit; try assumption.
       + red in H0; red; congruence.
+      + red in H2; red; congruence.
       + red in H3; red; congruence.
-      + red in H4; red; congruence.
       + apply H8; assumption.
       + eapply H; eauto; repeat split; assumption.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      unfold getUpLockMsg, getUpLockIdxBack in *.
-      rewrite <-(proj1 H1).
-      do 3 (destruct_bind; simpl in *; [|inv H0; eauto]).
-      inv H0.
-      eexists; split; [reflexivity|].
-      red in H1; dest.
-      red; repeat split.
-      all: try (unfold removeRq; mred; fail).
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      admit.
     - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
-      unfold getUpLockMsg, getUpLockIdxBack in *.
-      do 3 (destruct_bind; simpl in *; [|inv H1; apply NoRssChange_refl]).
-      inv H1.
-      red; unfold removeRq; mred; apply NoRssChange_refl.
+      repeat ssplit.
+      + do 3 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold removeRq; mred.
+      + do 3 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold removeRq; mred.
+        apply NoRssChange_refl; reflexivity.
+      + intros; unfold getUpLockMsg, getUpLockIdxBack in *.
+        rewrite <-(proj1 H8).
+        do 3 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1.
+        eexists; split; [reflexivity|].
+        red in H8; dest.
+        red; repeat split.
+        all: try (unfold removeRq; mred; fail).
   Qed.
-  (** [rsDownDownRuleS] as well... *)
+
+  Lemma rsDownDownRuleS_ImplRulesR:
+    forall ridx msgId oidx prec trs,
+      RssORqEquivPrec prec ->
+      ImplRulesR tr oidx (rsDownDownRuleS ridx msgId prec trs).
+  Proof.
+    intros; left.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
+      intros; red in H6; dest.
+      repeat ssplit; try assumption.
+      + red in H0; red; congruence.
+      + red in H2; red; congruence.
+      + apply H7; assumption.
+      + eapply H; eauto; repeat split; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      repeat ssplit.
+      + destruct_bind; simpl in *; [|inv H1; eauto].
+        inv H1; red; unfold removeRq; mred.
+      + destruct_bind; simpl in *; [|inv H1; eauto].
+        inv H1; red; unfold removeRq; mred.
+        apply NoRssChange_refl; reflexivity.
+      + destruct_bind; simpl in *; [|inv H1; eauto].
+        inv H1.
+        eexists; split; [reflexivity|].
+        red in H1; dest.
+        red; repeat split.
+        all: try (unfold removeRq; mred; fail).
+  Qed.
 
   Lemma rsDownRqDownRule_ImplRulesR:
     forall ridx msgId oidx rqId prec trs,
-      RssEquivPrec prec ->
+      RssORqEquivPrec prec ->
       ImplRulesR tr oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
   Proof.
     intros; left.
-    red; repeat ssplit.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      red in H1; dest.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
+      intros; red in H7; dest.
       repeat ssplit; try assumption.
       + red in H0; red; congruence.
+      + red in H2; red; congruence.
       + red in H3; red; congruence.
-      + red in H4; red; congruence.
       + apply H8; assumption.
       + eapply H; eauto; repeat split; assumption.
-    - red; simpl; unfold TrsMTrs; simpl; intros.
-      unfold getUpLockMsg, getUpLockIdxBack in *.
-      rewrite <-(proj1 H1).
-      do 2 (destruct_bind; simpl in *; [|inv H0; eauto]).
-      inv H0.
-      eexists; split; [reflexivity|].
-      red in H1; dest.
-      red; repeat split.
-      all: try (unfold addRq, removeRq; mred; fail).
-      unfold addRq, removeRq; mred.
-      intros; inv H3; simpl.
-      eexists; repeat split.
-    - red; simpl; unfold OPrecAnd; intros; dest.
-      admit.
     - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
-      unfold getUpLockMsg, getUpLockIdxBack in *.
-      do 2 (destruct_bind; simpl in *; [|inv H1; apply NoRssChange_refl]).
-      inv H1.
-      red; unfold addRq, removeRq; mred.
-      repeat red in H6; rewrite H6; simpl.
-      apply Forall_forall; intros.
-      apply in_map_iff in H1; dest; subst; reflexivity.
+      repeat ssplit.
+      + do 2 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold addRq, removeRq; mred.
+      + do 2 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold addRq, removeRq; mred.
+        repeat red in H6; rewrite H6.
+        simpl; apply Forall_forall; intros.
+        apply in_map_iff in H1; dest; subst; reflexivity.
+      + intros; unfold getUpLockMsg, getUpLockIdxBack in *.
+        rewrite <-(proj1 H8).
+        do 2 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1.
+        eexists; split; [reflexivity|].
+        red in H8; dest.
+        red; repeat split.
+        all: try (unfold addRq, removeRq; mred; fail).
+        unfold addRq, removeRq; mred.
+        intros; inv H10; simpl; eauto.
   Qed.
 
   (*! -- End of util lemmas *)
 
-  Lemma mesi_imp_ImplRulesR:
-    forall obj,
-      In obj (sys_objs (MesiImp.impl Htr)) ->
-      forall rule,
-        In rule (obj_rules obj) ->
-        ImplRulesR tr (obj_idx obj) rule.
+  Lemma mesi_imp_ImplRules: ImplRules tr (MesiImp.impl Htr).
   Proof.
-    intros.
+    red; intros.
     destruct H; [subst|apply in_app_or in H; destruct H].
 
     - (** Main memory *)
@@ -367,6 +386,7 @@ Section MesiImpOk.
         all: try (apply rqUpUpRuleS_ImplRulesR; fail).
         all: try (apply rqDownDownRule_ImplRulesR; fail).
         all: try (apply rsDownDownRule_ImplRulesR; red; simpl; auto; fail).
+        all: try (apply rsDownDownRuleS_ImplRulesR; red; simpl; auto; fail).
         all: try (right; left; repeat eexists; fail).
 
         * apply rsDownDownRule_ImplRulesR.
@@ -378,7 +398,6 @@ Section MesiImpOk.
           red in H0; dest.
           rewrite <-H0.
           repeat split; assumption.
-        * admit. (* [rsDownDownRuleS] *)
 
     - (** L1 cache *)
       apply in_map_iff in H; destruct H as [oidx [? ?]]; subst.
@@ -388,16 +407,11 @@ Section MesiImpOk.
       all: try (apply rqUpUpRule_ImplRulesR; fail).
       all: try (apply rqUpUpRuleS_ImplRulesR; fail).
       all: try (apply rsDownDownRule_ImplRulesR; red; simpl; auto; fail).
-      + admit. (* [rsDownDownRuleS] *)
+      all: try (apply rsDownDownRuleS_ImplRulesR; red; simpl; auto; fail).
   Qed.
-
-  Lemma mesi_imp_ImplRules: ImplRules tr (MesiImp.impl Htr).
-  Proof.
-  Admitted.
 
   Lemma mesi_SpecRulesIn: SpecRulesIn (MesiImp.impl Htr) (Mesi.impl Htr).
   Proof.
-    red.
   Admitted.
 
   Lemma mesi_imp_mesi_ok:

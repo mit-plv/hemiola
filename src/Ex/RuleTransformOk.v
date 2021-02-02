@@ -57,6 +57,13 @@ Section RssHolderOk.
   Definition RssWfInv (st: State) :=
     forall oidx, (st_orqs st)@[oidx] >>=[True] (fun orq => RssWfORq oidx orq).
 
+  Definition UpLockRssORq (oidx: IdxT) (orq: ORq Msg) :=
+    orq@[upRq] >>=[True]
+       (fun rqiu => exists oidx, map fst rqiu.(rqi_rss) = [downTo oidx]).
+
+  Definition UpLockRssInv (st: State) :=
+    forall oidx, (st_orqs st)@[oidx] >>=[True] (fun orq => UpLockRssORq oidx orq).
+
   (** End of the invariants *)
 
   Definition RssORqEquiv (orq1 orq2: ORq Msg) :=
@@ -70,28 +77,26 @@ Section RssHolderOk.
           map fst rqid1.(rqi_rss) = map fst rqid2.(rqi_rss) /\
           rqid1.(rqi_midx_rsb) = rqid2.(rqi_midx_rsb)).
 
-  Definition RssEquivPrec (prec: OPrec) :=
-    forall ost orq1 mins,
-      prec ost orq1 mins ->
-      forall orq2,
-        RssORqEquiv orq1 orq2 -> prec ost orq2 mins.
-
-  Definition RssEquivTrs (trs: OTrs) :=
-    forall ost orq1 mins nost norq1 mouts,
-      trs ost orq1 mins = (nost, norq1, mouts) ->
-      forall orq2,
-        RssORqEquiv orq1 orq2 ->
-        exists norq2,
-          trs ost orq2 mins = (nost, norq2, mouts) /\
-          RssORqEquiv norq1 norq2.
-
   Definition NoRsUpInputs (mins: list (Id Msg)) :=
     forall idm,
       In idm mins ->
       (exists oidx, idOf idm = rqUpFrom oidx \/ idOf idm = downTo oidx).
 
-  Definition NoRsUpInputsPrec (prec: OPrec) :=
-    forall ost orq mins, prec ost orq mins -> NoRsUpInputs mins.
+  Definition RssEquivPrec (prec: OPrec) :=
+    forall ost orq1 mins,
+      prec ost orq1 mins ->
+      (NoRsUpInputs mins \/ MsgsFromORq upRq ost orq1 mins) /\
+      (forall orq2, RssORqEquiv orq1 orq2 -> prec ost orq2 mins).
+
+  Definition UpLockDownTo (orq1 orq2: ORq Msg) :=
+    match orq2@[upRq] with
+    | Some rqiu2 =>
+      match orq1@[upRq] with
+      | Some rqiu1 => rqiu1 = rqiu2
+      | None => exists oidx, map fst rqiu2.(rqi_rss) = [downTo oidx]
+      end
+    | None => True
+    end.
 
   Definition NoRssChange (orq1 orq2: ORq Msg) :=
     match orq1@[downRq], orq2@[downRq] with
@@ -101,16 +106,21 @@ Section RssHolderOk.
     | None, None => True
     end.
 
-  Definition NoRssChangeTrs (prec: OPrec) (trs: OTrs) :=
-    forall ost orq mins nost norq mouts,
-      prec ost orq mins ->
-      trs ost orq mins = (nost, norq, mouts) ->
-      NoRssChange orq norq.
+  Definition RssEquivTrs (prec: OPrec) (trs: OTrs) :=
+    forall ost orq1 mins nost norq1 mouts,
+      prec ost orq1 mins ->
+      trs ost orq1 mins = (nost, norq1, mouts) ->
+      UpLockDownTo orq1 norq1 /\
+      NoRssChange orq1 norq1 /\
+      (forall orq2,
+          RssORqEquiv orq1 orq2 ->
+          exists norq2,
+            trs ost orq2 mins = (nost, norq2, mouts) /\
+            RssORqEquiv norq1 norq2).
 
   Definition RssEquivRule (rule: Rule) :=
-    RssEquivPrec (rule_precond rule) /\ RssEquivTrs (rule_trs rule) /\
-    NoRsUpInputsPrec (rule_precond rule) /\
-    NoRssChangeTrs (rule_precond rule) (rule_trs rule).
+    RssEquivPrec (rule_precond rule) /\
+    RssEquivTrs (rule_precond rule) (rule_trs rule).
 
   Definition ImplRulesR (oidx: IdxT) (rule: Rule) :=
     (RssEquivRule rule) \/
@@ -122,11 +132,9 @@ Section RssHolderOk.
   Definition ImplRules :=
     forall iobj,
       In iobj impl.(sys_objs) ->
-      (forall rule, In rule iobj.(obj_rules) -> ImplRulesR iobj.(obj_idx) rule) /\
-      (forall ridx1 msgId1 cidx1 ridx2 msgId2 cidx2 rqId,
-          In (rsTakeOne ridx1 msgId1 rqId cidx1) iobj.(obj_rules) ->
-          In (rsTakeOne ridx2 msgId2 rqId cidx2) iobj.(obj_rules) ->
-          msgId1 = msgId2).
+      forall rule,
+        In rule iobj.(obj_rules) ->
+        ImplRulesR iobj.(obj_idx) rule.
 
   Definition SpecRulesInR (oidx: IdxT) (irules srules: list Rule) :=
     (forall rule, In rule irules -> RssEquivRule rule -> In rule srules) /\
@@ -151,6 +159,63 @@ Section RssHolderOk.
              (Hoii: impl.(sys_orqs_inits) = implORqsInit)
              (Hosi: spec.(sys_orqs_inits) = implORqsInit).
 
+  Section UpLockRssInv.
+
+    Lemma UpLockRssInv_init: InvInit impl UpLockRssInv.
+    Proof.
+      repeat red; intros.
+      simpl; rewrite Hoii.
+      unfold implORqsInit; intros.
+      destruct (in_dec idx_dec oidx (c_li_indices cifc ++ c_l1_indices cifc)).
+      - rewrite initORqs_value by assumption; red; mred.
+      - rewrite initORqs_None by assumption; auto.
+    Qed.
+
+    Lemma UpLockRssInv_step: InvStep impl step_m UpLockRssInv.
+    Proof.
+      red; intros.
+      inv H1; [assumption..|].
+
+      red in H0; simpl in H0.
+      red; simpl; intros.
+      mred; simpl; [|auto].
+      specialize (H0 (obj_idx obj)).
+      rewrite H6 in H0; simpl in H0.
+
+      move Hsr at bottom.
+      pose proof (Hsr _ H2) as [sobj [HsoIn [Hsoi Hsrr]]].
+      destruct Hsrr as [Hsrr1 Hsrr2].
+      specialize (Hsrr1 _ H3).
+
+      specialize (Hir _ H2 _ H3).
+      destruct Hir as [|[|]].
+
+      - (*! Normal rules *)
+        red in H1; dest.
+        specialize (H4 _ _ _ _ _ _ H9 H10); dest.
+        red in H4; red in H0; red.
+        destruct (norq@[upRq]) as [nrqiu|]; simpl in *; [|auto].
+        destruct (porq@[upRq]) as [prqiu|]; simpl in *.
+        + subst; assumption.
+        + assumption.
+
+      - (*! [RsRelease] *)
+        clear Hsrr1.
+        destruct H1 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
+        specialize (Hsrr2 _ _ _ _ _ H3).
+        disc_rule_conds_ex.
+        red; mred.
+
+      - (*! [RsTakeOne] *)
+        clear Hsrr1 Hsrr2.
+        destruct H1 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
+        disc_rule_conds_ex.
+        red; unfold addRs; mred.
+        simpl; mred.
+    Qed.
+
+  End UpLockRssInv.
+
   Section RssWfImp.
     Hypothesis (Hgss: GoodRqRsSys topo spec)
                (Hers: GoodExtRssSys spec).
@@ -161,10 +226,8 @@ Section RssHolderOk.
       simpl; rewrite Hoii.
       unfold implORqsInit; intros.
       destruct (in_dec idx_dec oidx (c_li_indices cifc ++ c_l1_indices cifc)).
-      - rewrite initORqs_value by assumption.
-        red; mred.
-      - rewrite initORqs_None by assumption.
-        auto.
+      - rewrite initORqs_value by assumption; red; mred.
+      - rewrite initORqs_None by assumption; auto.
     Qed.
 
     Lemma putRs_In_index:
@@ -420,12 +483,11 @@ Section RssHolderOk.
       destruct Hsrr as [Hsrr1 Hsrr2].
       specialize (Hsrr1 _ H3).
 
-      pose proof (Hir _ H2) as [Hirr Hrst].
-      specialize (Hirr _ H3).
-      destruct Hirr as [|[|]].
+      specialize (Hir _ H2 _ H3).
+      destruct Hir as [|[|]].
 
       - (*! Normal rules *)
-        clear Hrst Hsrr2.
+        clear Hsrr2.
         specialize (Hsrr1 H1).
         good_rqrs_rule_get rule.
         good_rqrs_rule_cases rule.
@@ -520,14 +582,14 @@ Section RssHolderOk.
           }
 
       - (*! [RsRelease] *)
-        clear Hrst Hsrr1.
+        clear Hsrr1.
         destruct H1 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
         specialize (Hsrr2 _ _ _ _ _ H3).
         disc_rule_conds_ex.
         red; mred.
 
       - (*! [RsTakeOne] *)
-        clear Hrst Hsrr1 Hsrr2 Hrst.
+        clear Hsrr1 Hsrr2.
         destruct H1 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
         disc_rule_conds_ex.
         apply RssWfORq_addRs; auto.
@@ -1256,12 +1318,31 @@ Section RssHolderOk.
           end
     end.
 
+  Lemma UpLockRssORq_MsgsFromORq_NoRsUpInputs:
+    forall oidx porq,
+      UpLockRssORq oidx porq ->
+      forall post ins,
+        MsgsFromORq upRq post porq ins ->
+        NoRsUpInputs ins.
+  Proof.
+    intros.
+    red in H, H0.
+    destruct (porq@[upRq]) as [prqiu|]; [|exfalso; auto].
+    simpl in *; dest.
+    rewrite H in H0.
+    red; intros [rmidx rmsg] ?.
+    apply in_map with (f:= idOf) in H1.
+    setoid_rewrite H0 in H1.
+    dest_in; simpl in *; subst.
+    eauto.
+  Qed.
+
   Theorem rss_holder_rss_sim_ok:
-    InvSim step_m step_m RssWfInv sim impl spec.
+    InvSim step_m step_m (fun st => UpLockRssInv st /\ RssWfInv st) sim impl spec.
   Proof.
     red; intros.
-    rename H1 into Hwf. (* [RssWfInv ist1] *)
-    clear H3. (* [RssWfInv ist2] *)
+    destruct H1 as [Hul Hwf]. (* [UpLockRssInv ist1 /\ RssWfInv ist1] *)
+    clear H3. (* for [ist2] *)
 
     inv H2;
       [apply rss_holder_rss_sim_silent; assumption
@@ -1277,21 +1358,29 @@ Section RssHolderOk.
     destruct Hsrr as [Hsrr1 Hsrr2].
     specialize (Hsrr1 rule).
 
-    pose proof (Hir _ H1) as [Hirr Hrst].
-    specialize (Hirr _ H3).
-    destruct Hirr as [|[|]].
+    specialize (Hir _ H1 _ H3).
+    destruct Hir as [|[|]].
 
     - (*! Normal rules *)
-      clear Hrst Hsrr2.
+      clear Hsrr2.
       specialize (Hsrr1 H3 H0).
 
       disc_SimRssORqs obj.
 
       (* Discharge [RssEquivRule] to get the transition for the spec. *)
       pose proof H10.
-      apply (proj1 (proj2 H0)) in H15.
-      specialize (H15 _ H14).
-      destruct H15 as [sorq2 [? ?]].
+      apply H0 in H15; [|assumption]; dest.
+      specialize (H17 _ H14).
+      destruct H17 as [sorq2 [? ?]].
+
+      assert (NoRsUpInputs ins) as Hins.
+      { red in H0; dest.
+        specialize (H0 _ _ _ H9); dest.
+        destruct H0; [assumption|].
+        red in Hul; simpl in Hul.
+        specialize (Hul (obj_idx obj)); rewrite H6 in Hul; simpl in Hul.
+        eapply UpLockRssORq_MsgsFromORq_NoRsUpInputs; eauto.
+      }
 
       do 2 eexists.
       repeat ssplit; [reflexivity|..].
@@ -1299,9 +1388,7 @@ Section RssHolderOk.
       + econstructor.
         1-4: eassumption.
         { exact H13. }
-        { eapply SimRssMP_NoRsUpInputs_first; eauto.
-          apply H0 in H9; assumption.
-        }
+        { eapply SimRssMP_NoRsUpInputs_first; eauto. }
         { destruct H8; split; [|assumption].
           rewrite Hsminds, Hserqs.
           rewrite Himinds, Hierqs in H8.
@@ -1321,12 +1408,11 @@ Section RssHolderOk.
       + red; simpl; repeat ssplit; [reflexivity|..].
         * apply SimRssORqs_next_ord; auto.
         * apply SimRssMP_enqMsgs.
-          apply SimRssMP_deqMsgs; [|apply H0 in H9; assumption].
-          eapply SimRssMP_ORqs_change_silent; try eassumption.
-          apply H0 in H10; assumption.
+          apply SimRssMP_deqMsgs; [|assumption].
+          eapply SimRssMP_ORqs_change_silent; eassumption.
 
     - (*! [RsRelease] *)
-      clear Hrst Hsrr1.
+      clear Hsrr1.
       destruct H0 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
       specialize (Hsrr2 _ _ _ _ _ H3).
 
@@ -1415,7 +1501,7 @@ Section RssHolderOk.
           { rewrite H8; apply Hwfo. }
 
     - (*! [RsTakeOne] *)
-      clear Hrst Hsrr1 Hsrr2 Hrst.
+      clear Hsrr1 Hsrr2.
       destruct H0 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
       disc_SimRssORqs obj.
       disc_rule_conds_ex.
@@ -1436,7 +1522,13 @@ Section RssHolderOk.
   Proof.
     intros.
     eapply invRSim_implies_refinement with (sim:= sim).
-    - eassumption.
+    - instantiate (1:= fun st => UpLockRssInv st /\ RssWfInv st).
+      red; intros; split.
+      + eapply inv_reachable; [..|eassumption].
+        * typeclasses eauto.
+        * apply UpLockRssInv_init.
+        * apply UpLockRssInv_step.
+      + apply H; assumption.
     - apply rss_holder_rss_sim_init.
     - apply rss_holder_rss_sim_ok.
   Qed.
