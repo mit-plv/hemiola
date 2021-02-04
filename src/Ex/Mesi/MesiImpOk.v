@@ -44,12 +44,12 @@ Section MesiImpOk.
       prec ost orq1 mins ->
       forall orq2, RssORqEquiv orq1 orq2 -> prec ost orq2 mins.
 
-  Lemma immRule_ImplRulesR:
-    forall ridx oidx prec trs,
+  Lemma immRule_RssEquivRule:
+    forall ridx prec trs,
       RssORqEquivPrec prec ->
-      ImplRulesR tr oidx (immRule ridx prec trs).
+      RssEquivRule (immRule ridx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H0; red; intros.
@@ -64,12 +64,12 @@ Section MesiImpOk.
       intros; eauto.
   Qed.
 
-  Lemma immUpRule_ImplRulesR:
+  Lemma immUpRule_RssEquivRule:
     forall ridx msgId oidx prec trs,
       RssORqEquivPrec prec ->
-      ImplRulesR tr oidx (immUpRule ridx msgId oidx prec trs).
+      RssEquivRule (immUpRule ridx msgId oidx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H0; red; intros.
@@ -84,13 +84,12 @@ Section MesiImpOk.
       all: inv H1; eauto; fail.
   Qed.
 
-  Lemma immDownRule_ImplRulesR:
+  Lemma immDownRule_RssEquivRule:
     forall ridx msgId cidx prec trs,
       RssORqEquivPrec prec ->
-      forall oidx,
-        ImplRulesR tr oidx (immDownRule ridx msgId cidx prec trs).
+      RssEquivRule (immDownRule ridx msgId cidx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H0; red; intros.
@@ -107,11 +106,11 @@ Section MesiImpOk.
       all: inv H1; eauto; fail.
   Qed.
 
-  Lemma rqUpUpRule_ImplRulesR:
+  Lemma rqUpUpRule_RssEquivRule:
     forall ridx msgId cidx oidx prec trs,
-      ImplRulesR tr oidx (rqUpUpRule ridx msgId cidx oidx prec trs).
+      RssEquivRule (rqUpUpRule ridx msgId cidx oidx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H; red; intros.
@@ -135,11 +134,11 @@ Section MesiImpOk.
       + inv H0; eauto.
   Qed.
 
-  Lemma rqUpUpRuleS_ImplRulesR:
+  Lemma rqUpUpRuleS_RssEquivRule:
     forall ridx oidx prec trs,
-      ImplRulesR tr oidx (rqUpUpRuleS ridx oidx prec trs).
+      RssEquivRule (rqUpUpRuleS ridx oidx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H; red; intros.
@@ -159,11 +158,11 @@ Section MesiImpOk.
         all: unfold addRqS; mred.
   Qed.
 
-  Lemma rqUpDownRule_ImplRulesR:
+  Lemma rqUpDownRule_RssEquivRule:
     forall ridx msgId cidx oidx prec trs,
-      ImplRulesR tr oidx (rqUpDownRule ridx msgId cidx oidx prec trs).
+      RssEquivRule (rqUpDownRule ridx msgId cidx oidx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H; red; intros.
@@ -190,11 +189,11 @@ Section MesiImpOk.
       + inv H0; eauto.
   Qed.
 
-  Lemma rqUpDownRuleS_ImplRulesR:
-    forall ridx oidx prec trs,
-      ImplRulesR tr oidx (rqUpDownRuleS ridx prec trs).
+  Lemma rqUpDownRuleS_RssEquivRule:
+    forall ridx prec trs,
+      RssEquivRule (rqUpDownRuleS ridx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H; red; intros.
@@ -217,11 +216,11 @@ Section MesiImpOk.
         eauto.
   Qed.
 
-  Lemma rqDownDownRule_ImplRulesR:
+  Lemma rqDownDownRule_RssEquivRule:
     forall ridx msgId oidx prec trs,
-      ImplRulesR tr oidx (rqDownDownRule ridx msgId oidx prec trs).
+      RssEquivRule (rqDownDownRule ridx msgId oidx prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split.
       + left; red in H; red; intros.
@@ -254,12 +253,12 @@ Section MesiImpOk.
     | H: context [bind ?o ?c] |- _ => destruct o
     end.
 
-  Lemma rsDownDownRule_ImplRulesR:
-    forall ridx msgId rqId oidx prec trs,
+  Lemma rsDownDownRule_RssEquivRule:
+    forall ridx msgId rqId prec trs,
       RssORqEquivPrec prec ->
-      ImplRulesR tr oidx (rsDownDownRule ridx msgId rqId prec trs).
+      RssEquivRule (rsDownDownRule ridx msgId rqId prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
       intros; red in H7; dest.
@@ -286,12 +285,12 @@ Section MesiImpOk.
         all: try (unfold removeRq; mred; fail).
   Qed.
 
-  Lemma rsDownDownRuleS_ImplRulesR:
-    forall ridx msgId oidx prec trs,
+  Lemma rsDownDownRuleS_RssEquivRule:
+    forall ridx msgId prec trs,
       RssORqEquivPrec prec ->
-      ImplRulesR tr oidx (rsDownDownRuleS ridx msgId prec trs).
+      RssEquivRule (rsDownDownRuleS ridx msgId prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
       intros; red in H6; dest.
@@ -315,12 +314,12 @@ Section MesiImpOk.
         all: try (unfold removeRq; mred; fail).
   Qed.
 
-  Lemma rsDownRqDownRule_ImplRulesR:
+  Lemma rsDownRqDownRule_RssEquivRule:
     forall ridx msgId oidx rqId prec trs,
       RssORqEquivPrec prec ->
-      ImplRulesR tr oidx (rsDownRqDownRule ridx msgId oidx rqId prec trs).
+      RssEquivRule (rsDownRqDownRule ridx msgId oidx rqId prec trs).
   Proof.
-    intros; left.
+    intros.
     red; split.
     - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
       intros; red in H7; dest.
@@ -353,73 +352,111 @@ Section MesiImpOk.
 
   (*! -- End of util lemmas *)
 
-  Lemma mesi_imp_ImplRules: ImplRules tr (MesiImp.impl Htr).
+  Lemma mesi_ImplRules: ImplRules tr (MesiImp.impl Htr) (Mesi.impl Htr).
   Proof.
     red; intros.
     destruct H; [subst|apply in_app_or in H; destruct H].
 
     - (** Main memory *)
-      simpl in H0.
-      unfold memRulesFromChildren in H0.
-      apply concat_In in H0; dest.
+      eexists; repeat split; [left; reflexivity|].
+      red; simpl; intros.
+      left; split; [|assumption].
+      unfold memRulesFromChildren in H.
+      apply concat_In in H; dest.
       apply in_map_iff in H; dest; subst.
       dest_in.
-      all: apply immDownRule_ImplRulesR; red; simpl; auto.
+      all: apply immDownRule_RssEquivRule; red; simpl; auto.
 
     - (** Li cache *)
       apply in_map_iff in H; destruct H as [oidx [? ?]]; subst; simpl in *.
-      apply in_app_or in H0; destruct H0.
+      eexists; repeat split;
+        [right; apply in_or_app; left;
+         apply in_map_iff; eexists; repeat split; eassumption
+        |reflexivity|].
+
+      red; intros.
+      apply in_app_or in H; destruct H.
 
       + apply concat_In in H; destruct H as [crls [? ?]].
         apply in_map_iff in H; destruct H as [cidx [? ?]]; subst.
-        apply Topology.subtreeChildrenIndsOf_parentIdxOf in H2;
-          [|apply tree2Topo_WfDTree].
+        pose proof (subtreeChildrenIndsOf_parentIdxOf
+                      (tree2Topo_WfDTree tr 0) _ _ H2) as Hp.
         dest_in.
-        all: try (apply immDownRule_ImplRulesR; red; simpl; auto; fail).
-        all: try (apply rqUpUpRule_ImplRulesR; fail).
-        all: try (apply rqUpDownRule_ImplRulesR; fail).
-        all: try (right; right; repeat eexists; assumption).
+
+        Ltac li_cidx_RssEquivRule equiv_thm cidx :=
+          left; split;
+          [apply equiv_thm; red; simpl; auto; fail
+          |apply in_or_app; left;
+           apply in_concat;
+           eexists; split;
+           [apply in_map_iff; exists cidx; split; [reflexivity|assumption]
+           |simpl; tauto]].
+
+        all: try (li_cidx_RssEquivRule immDownRule_RssEquivRule cidx).
+        all: try (li_cidx_RssEquivRule rqUpUpRule_RssEquivRule cidx).
+        all: try (li_cidx_RssEquivRule rqUpDownRule_RssEquivRule cidx).
+        all: try (right; right; right; repeat eexists; assumption).
 
       + dest_in.
-        all: try (apply immRule_ImplRulesR; red; simpl; auto; fail).
-        all: try (apply immUpRule_ImplRulesR; red; simpl; auto; fail).
-        all: try (apply rqUpUpRuleS_ImplRulesR; fail).
-        all: try (apply rqDownDownRule_ImplRulesR; fail).
-        all: try (apply rsDownDownRule_ImplRulesR; red; simpl; auto; fail).
-        all: try (apply rsDownDownRuleS_ImplRulesR; red; simpl; auto; fail).
-        all: try (right; left; repeat eexists; fail).
 
-        * apply rsDownDownRule_ImplRulesR.
-          red; unfold getUpLockIdxBackI, getUpLockIdxBack; simpl; intros.
-          red in H0; dest.
-          congruence.
-        * apply rsDownRqDownRule_ImplRulesR.
-          red; unfold RsDownRqDownSoundPrec, getUpLockIdxBackI, getUpLockIdxBack; simpl; intros.
-          red in H0; dest.
-          rewrite <-H0.
-          repeat split; assumption.
+        Ltac li_RssEquivRule equiv_thm :=
+          left; split;
+          [apply equiv_thm; red; simpl; auto; fail
+          |apply in_or_app; right; simpl; tauto].
+
+        all: try (li_RssEquivRule immRule_RssEquivRule).
+        all: try (li_RssEquivRule immUpRule_RssEquivRule).
+        all: try (li_RssEquivRule rqUpUpRuleS_RssEquivRule).
+        all: try (li_RssEquivRule rqDownDownRule_RssEquivRule).
+        all: try (li_RssEquivRule rsDownDownRule_RssEquivRule).
+        all: try (li_RssEquivRule rsDownDownRuleS_RssEquivRule).
+        all: try (right; left; repeat eexists;
+                  apply in_or_app; right; simpl; tauto).
+        all: try (right; right; left; repeat eexists;
+                  apply in_or_app; right; simpl; tauto).
+
+        * left; split.
+          { apply rsDownDownRule_RssEquivRule.
+            red; unfold getUpLockIdxBackI, getUpLockIdxBack; simpl; intros.
+            red in H1; dest.
+            congruence.
+          }
+          { apply in_or_app; right; simpl; tauto. }
+        * left; split.
+          { apply rsDownRqDownRule_RssEquivRule.
+            red; unfold RsDownRqDownSoundPrec, getUpLockIdxBackI, getUpLockIdxBack; simpl; intros.
+            red in H1; dest.
+            rewrite <-H1.
+            repeat split; assumption.
+          }
+          { apply in_or_app; right; simpl; tauto. }
 
     - (** L1 cache *)
       apply in_map_iff in H; destruct H as [oidx [? ?]]; subst.
+      eexists; repeat split;
+        [right; apply in_or_app; right;
+         apply in_map_iff; eexists; repeat split; assumption|].
+      red; intros.
       dest_in.
-      all: try (apply immUpRule_ImplRulesR; red; simpl; auto; fail).
-      all: try (apply immDownRule_ImplRulesR; red; simpl; auto; fail).
-      all: try (apply rqUpUpRule_ImplRulesR; fail).
-      all: try (apply rqUpUpRuleS_ImplRulesR; fail).
-      all: try (apply rsDownDownRule_ImplRulesR; red; simpl; auto; fail).
-      all: try (apply rsDownDownRuleS_ImplRulesR; red; simpl; auto; fail).
-  Qed.
 
-  Lemma mesi_SpecRulesIn: SpecRulesIn (MesiImp.impl Htr) (Mesi.impl Htr).
-  Proof.
-  Admitted.
+      Ltac l1_RssEquivRule equiv_thm :=
+        left; split;
+        [apply equiv_thm; red; simpl; auto; fail
+        |simpl; tauto].
+
+      all: try (l1_RssEquivRule immUpRule_RssEquivRule).
+      all: try (l1_RssEquivRule immDownRule_RssEquivRule).
+      all: try (l1_RssEquivRule rqUpUpRule_RssEquivRule).
+      all: try (l1_RssEquivRule rqUpUpRuleS_RssEquivRule).
+      all: try (l1_RssEquivRule rsDownDownRule_RssEquivRule).
+      all: try (l1_RssEquivRule rsDownDownRuleS_RssEquivRule).
+  Qed.
 
   Lemma mesi_imp_mesi_ok:
     (steps step_m) # (steps step_m) |-- (MesiImp.impl Htr) ⊑ (Mesi.impl Htr).
   Proof.
     apply rss_holder_ok with (tr:= tr); try reflexivity.
-    - apply mesi_imp_ImplRules.
-    - apply mesi_SpecRulesIn.
+    - apply mesi_ImplRules.
     - simpl; rewrite !map_app, !map_map, !map_id.
       rewrite app_comm_cons.
       rewrite <-c_li_indices_head_rootOf by assumption.

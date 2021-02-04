@@ -122,35 +122,29 @@ Section RssHolderOk.
     RssEquivPrec (rule_precond rule) /\
     RssEquivTrs (rule_precond rule) (rule_trs rule).
 
-  Definition ImplRulesR (oidx: IdxT) (rule: Rule) :=
-    (RssEquivRule rule) \/
-    (exists ridx msgId rqId prec trs, rule = rsRelease ridx msgId rqId prec trs) \/
-    (exists ridx msgId rqId cidx,
-        parentIdxOf topo cidx = Some oidx /\
-        rule = rsTakeOne ridx msgId rqId cidx).
+  Definition ImplRulesR (oidx: IdxT) (irules srules: list Rule) :=
+    forall rule,
+      In rule irules ->
+      (RssEquivRule rule /\ In rule srules) \/
+      (exists ridx msgId rqId prec trs,
+          rule = rsRelease ridx~>1 msgId rqId prec trs /\
+          In (rsUpRule ridx msgId rqId prec trs) srules) \/
+      (exists ridx msgId rqId prec trs,
+          rule = rsReleaseOne ridx~>1 msgId rqId prec trs /\
+          In (rsUpRuleOne ridx msgId rqId prec trs) srules) \/
+      (exists ridx msgId rqId cidx,
+          parentIdxOf topo cidx = Some oidx /\
+          rule = rsTakeOne ridx msgId rqId cidx).
 
   Definition ImplRules :=
-    forall iobj,
-      In iobj impl.(sys_objs) ->
-      forall rule,
-        In rule iobj.(obj_rules) ->
-        ImplRulesR iobj.(obj_idx) rule.
-
-  Definition SpecRulesInR (oidx: IdxT) (irules srules: list Rule) :=
-    (forall rule, In rule irules -> RssEquivRule rule -> In rule srules) /\
-    (forall ridx msgId rqId prec trs,
-        In (rsRelease ridx msgId rqId prec trs) irules ->
-        In (rsUpRule ridx~>1 msgId rqId prec trs) srules).
-
-  Definition SpecRulesIn :=
     forall iobj,
       In iobj impl.(sys_objs) ->
       exists sobj,
         In sobj spec.(sys_objs) /\
         iobj.(obj_idx) = sobj.(obj_idx) /\
-        SpecRulesInR iobj.(obj_idx) iobj.(obj_rules) sobj.(obj_rules).
+        ImplRulesR iobj.(obj_idx) iobj.(obj_rules) sobj.(obj_rules).
 
-  Hypotheses (Hir: ImplRules) (Hsr: SpecRulesIn).
+  Hypotheses (Hir: ImplRules).
 
   Definition implORqsInit: ORqs Msg :=
     initORqs (cifc.(c_li_indices) ++ cifc.(c_l1_indices)).
@@ -182,33 +176,32 @@ Section RssHolderOk.
       specialize (H0 (obj_idx obj)).
       rewrite H6 in H0; simpl in H0.
 
-      move Hsr at bottom.
-      pose proof (Hsr _ H2) as [sobj [HsoIn [Hsoi Hsrr]]].
-      destruct Hsrr as [Hsrr1 Hsrr2].
-      specialize (Hsrr1 _ H3).
-
-      specialize (Hir _ H2 _ H3).
-      destruct Hir as [|[|]].
+      move Hir at bottom.
+      pose proof (Hir _ H2) as [sobj [HsoIn [Hoi Hrr]]].
+      specialize (Hrr _ H3).
+      destruct Hrr as [|[|[|]]].
 
       - (*! Normal rules *)
-        red in H1; dest.
-        specialize (H4 _ _ _ _ _ _ H9 H10); dest.
-        red in H4; red in H0; red.
+        dest; red in H1; dest.
+        specialize (H13 _ _ _ _ _ _ H9 H10); dest.
+        red in H13; red in H0; red.
         destruct (norq@[upRq]) as [nrqiu|]; simpl in *; [|auto].
         destruct (porq@[upRq]) as [prqiu|]; simpl in *.
         + subst; assumption.
         + assumption.
 
       - (*! [RsRelease] *)
-        clear Hsrr1.
-        destruct H1 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
-        specialize (Hsrr2 _ _ _ _ _ H3).
+        destruct H1 as [ridx [msgId [rqId [prec [trs [? ?]]]]]]; subst rule.
+        disc_rule_conds_ex.
+        red; mred.
+
+      - (*! [RsReleaseOne] *)
+        destruct H1 as [ridx [msgId [rqId [prec [trs [? ?]]]]]]; subst rule.
         disc_rule_conds_ex.
         red; mred.
 
       - (*! [RsTakeOne] *)
-        clear Hsrr1 Hsrr2.
-        destruct H1 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
+        destruct H1 as [ridx [msgId [rqId [cidx [? ?]]]]]; subst rule.
         disc_rule_conds_ex.
         red; unfold addRs; mred.
         simpl; mred.
@@ -478,17 +471,13 @@ Section RssHolderOk.
       specialize (H0 (obj_idx obj)).
       rewrite H6 in H0; simpl in H0.
 
-      move Hsr at bottom.
-      pose proof (Hsr _ H2) as [sobj [HsoIn [Hsoi Hsrr]]].
-      destruct Hsrr as [Hsrr1 Hsrr2].
-      specialize (Hsrr1 _ H3).
-
-      specialize (Hir _ H2 _ H3).
-      destruct Hir as [|[|]].
+      move Hir at bottom.
+      pose proof (Hir _ H2) as [sobj [HsoIn [Hoi Hrr]]].
+      specialize (Hrr _ H3).
+      destruct Hrr as [|[|[|]]].
 
       - (*! Normal rules *)
-        clear Hsrr2.
-        specialize (Hsrr1 H1).
+        dest.
         good_rqrs_rule_get rule.
         good_rqrs_rule_cases rule.
         1-2: try (disc_rule_conds; fail).
@@ -499,24 +488,24 @@ Section RssHolderOk.
           * eapply RssWfORq_downRq_equiv; [eassumption|]; findeq.
           * pose proof Hers as Her.
             red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
-            red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ H4).
             red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
-            red; mred; simpl; split; [|rewrite H37; simpl; auto].
-            red in H34; red.
+            red; mred; simpl; split; [|rewrite H38; simpl; auto].
+            red in H35; red.
             repeat split.
             { eapply RqRsDownMatch_RssWf_SubList; eauto.
               eapply rqDown_not_in_merss; auto.
               rewrite Hisers; assumption.
             }
             { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
-            { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+            { eapply RqRsDownMatch_RssWf_child_None; rewrite Hoi; eassumption. }
             { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
 
           * pose proof Hers as Her.
             red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
-            red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ H4).
             red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
-            red in H34; destruct H34 as [upCIdx [upCObj ?]]; dest.
+            red in H35; destruct H35 as [upCIdx [upCObj ?]]; dest.
             red; mred; simpl; split.
             { repeat split.
               { eapply RqRsDownMatch_RssWf_SubList; eauto.
@@ -524,19 +513,19 @@ Section RssHolderOk.
                 rewrite Hisers; assumption.
               }
               { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
-              { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+              { eapply RqRsDownMatch_RssWf_child_None; rewrite Hoi; eassumption. }
               { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
             }
-            { rewrite H37; simpl.
-              apply edgeDownTo_downTo in H19; subst.
+            { rewrite H38; simpl.
+              apply edgeDownTo_downTo in H20; subst.
               intros; discriminate.
             }
 
           * pose proof Hers as Her.
             red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
-            red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+            red in Her; rewrite Forall_forall in Her; specialize (Her _ H4).
             red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
-            red in H32; dest.
+            red in H33; dest.
             red; mred; simpl; split.
             { repeat split.
               { eapply RqRsDownMatch_RssWf_SubList; eauto.
@@ -544,11 +533,11 @@ Section RssHolderOk.
                 rewrite Hisers; assumption.
               }
               { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
-              { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+              { eapply RqRsDownMatch_RssWf_child_None; rewrite Hoi; eassumption. }
               { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
             }
-            { rewrite H37; simpl.
-              apply rsEdgeUpFrom_rsUpFrom in H7; subst.
+            { rewrite H38; simpl.
+              apply rsEdgeUpFrom_rsUpFrom in H13; subst.
               intros; intro Hx; elim H7; inv Hx; auto.
             }
 
@@ -563,9 +552,9 @@ Section RssHolderOk.
           disc_rule_conds.
           pose proof Hers as Her.
           red in Her; rewrite Forall_forall in Her; specialize (Her _ HsoIn).
-          red in Her; rewrite Forall_forall in Her; specialize (Her _ Hsrr1).
+          red in Her; rewrite Forall_forall in Her; specialize (Her _ H4).
           red in Her; specialize (Her _ _ _ _ _ _ H9 H10).
-          red in H20; destruct H20 as [upCIdx [upCObj ?]]; dest.
+          red in H21; destruct H21 as [upCIdx [upCObj ?]]; dest.
           red; mred; simpl; split.
           { repeat split.
             { eapply RqRsDownMatch_RssWf_SubList; eauto.
@@ -573,24 +562,26 @@ Section RssHolderOk.
               rewrite Hisers; assumption.
             }
             { eapply RqRsDownMatch_RssWf_NoDup; [apply H11|eassumption]. }
-            { eapply RqRsDownMatch_RssWf_child_None; rewrite Hsoi; eassumption. }
+            { eapply RqRsDownMatch_RssWf_child_None; rewrite Hoi; eassumption. }
             { eapply RqRsDownMatch_RssWf_child_None; eassumption. }
           }
-          { rewrite H31; simpl.
-            apply edgeDownTo_downTo in H18; subst.
+          { rewrite H32; simpl.
+            apply edgeDownTo_downTo in H19; subst.
             intros; discriminate.
           }
 
       - (*! [RsRelease] *)
-        clear Hsrr1.
-        destruct H1 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
-        specialize (Hsrr2 _ _ _ _ _ H3).
+        destruct H1 as [ridx [msgId [rqId [prec [trs [? ?]]]]]]; subst rule.
+        disc_rule_conds_ex.
+        red; mred.
+
+      - (*! [RsReleaseOne] *)
+        destruct H1 as [ridx [msgId [rqId [prec [trs [? ?]]]]]]; subst rule.
         disc_rule_conds_ex.
         red; mred.
 
       - (*! [RsTakeOne] *)
-        clear Hsrr1 Hsrr2.
-        destruct H1 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
+        destruct H1 as [ridx [msgId [rqId [cidx [? ?]]]]]; subst rule.
         disc_rule_conds_ex.
         apply RssWfORq_addRs; auto.
     Qed.
@@ -993,6 +984,37 @@ Section RssHolderOk.
       + congruence.
   Qed.
 
+  Lemma RssFullOne_spec:
+    forall oidx orq,
+      RssWfORq oidx orq ->
+      forall msgId ost mins,
+        RssFullOne msgId ost orq mins ->
+        exists rqid,
+          orq@[downRq] = Some rqid /\
+          exists rs,
+            rqid.(rqi_rss) = [(idOf rs, Some (valOf rs))] /\
+            msg_id (valOf rs) = msgId /\
+            ValidMsgsIn impl [rs] /\
+            [rs] = getRss orq.
+  Proof.
+    unfold RssFullOne, getRss; intros.
+    red in H.
+    destruct orq@[downRq] as [rqid|]; simpl in *; [dest|exfalso; auto].
+    clear H2; red in H; dest.
+    exists rqid; repeat split.
+    destruct (rqi_rss rqid) as [|[rmidx rs] rss]; [discriminate|].
+    destruct rss; [|discriminate].
+    clear H0 H2.
+    inv H1; inv H3; inv H4; clear H6 H7 H8. (* [Forall ..] *)
+    apply SubList_cons_inv in H; dest; clear H0.
+    simpl in *; destruct rs as [rs|]; [|exfalso; auto].
+    eexists (rmidx, rs); simpl.
+    repeat split; try assumption.
+    - simpl; apply SubList_cons; [|apply SubList_nil].
+      apply in_or_app; left; auto.
+    - repeat constructor; intro Hx; auto.
+  Qed.
+
   Lemma RssORqEquiv_addRs:
     forall orq1 orq2,
       RssORqEquiv orq1 orq2 ->
@@ -1353,25 +1375,20 @@ Section RssHolderOk.
     destruct sst1 as [soss1 sorqs1 smsgs1].
     red in H0; simpl in H0; dest; subst.
 
-    move Hsr at bottom.
-    pose proof (Hsr _ H1) as [sobj [HsoIn [Hsoi Hsrr]]].
-    destruct Hsrr as [Hsrr1 Hsrr2].
-    specialize (Hsrr1 rule).
-
-    specialize (Hir _ H1 _ H3).
-    destruct Hir as [|[|]].
+    move Hir at bottom.
+    pose proof (Hir _ H1) as [sobj [HsoIn [Hoi Hrr]]].
+    specialize (Hrr _ H3).
+    destruct Hrr as [|[|[|]]].
 
     - (*! Normal rules *)
-      clear Hsrr2.
-      specialize (Hsrr1 H3 H0).
-
+      dest.
       disc_SimRssORqs obj.
 
       (* Discharge [RssEquivRule] to get the transition for the spec. *)
       pose proof H10.
-      apply H0 in H15; [|assumption]; dest.
-      specialize (H17 _ H14).
-      destruct H17 as [sorq2 [? ?]].
+      apply H0 in H16; [|assumption]; dest.
+      specialize (H18 _ H15).
+      destruct H18 as [sorq2 [? ?]].
 
       assert (NoRsUpInputs ins) as Hins.
       { red in H0; dest.
@@ -1387,7 +1404,7 @@ Section RssHolderOk.
 
       + econstructor.
         1-4: eassumption.
-        { exact H13. }
+        { exact H14. }
         { eapply SimRssMP_NoRsUpInputs_first; eauto. }
         { destruct H8; split; [|assumption].
           rewrite Hsminds, Hserqs.
@@ -1412,18 +1429,15 @@ Section RssHolderOk.
           eapply SimRssMP_ORqs_change_silent; eassumption.
 
     - (*! [RsRelease] *)
-      clear Hsrr1.
-      destruct H0 as [ridx [msgId [rqId [prec [trs ?]]]]]; subst rule.
-      specialize (Hsrr2 _ _ _ _ _ H3).
-
+      destruct H0 as [ridx [msgId [rqId [prec [trs [? ?]]]]]]; subst rule.
       disc_SimRssORqs obj.
       disc_RssWfInv obj.
 
       (* Discharge precondition and transition *)
       disc_rule_conds_ex.
       destruct ins; [clear H7 H8 H9 H12|discriminate].
-      eapply RssFullWithId_spec in H16; [|eassumption].
-      destruct H16 as [rqid [? [rss [? [? [? ?]]]]]]; subst rss.
+      eapply RssFullWithId_spec in H17; [|eassumption].
+      destruct H17 as [rqid [? [rss [? [? [? ?]]]]]]; subst rss.
       disc_RssWfORq obj.
       disc_rule_conds_ex.
       disc_RssORqEquiv.
@@ -1435,8 +1449,8 @@ Section RssHolderOk.
         * eassumption.
         * eassumption.
         * reflexivity.
-        * rewrite <-Hsoi; eassumption.
-        * rewrite <-Hsoi; eassumption.
+        * rewrite <-Hoi; eassumption.
+        * rewrite <-Hoi; eassumption.
         * red in Hwfo; dest.
           eapply SimRssMP_rss_full_first; eauto.
           { rewrite <-Hoinds.
@@ -1449,41 +1463,41 @@ Section RssHolderOk.
           rewrite Hserqs, Hsminds; assumption.
         * repeat split.
           { red; rewrite H7; simpl.
-            rewrite <-H14, H8.
+            rewrite <-H15, H8.
             rewrite map_map; reflexivity.
           }
           { assumption. }
           { red; rewrite H7; simpl.
-            rewrite <-H13, Hmsg; simpl; split; [assumption|reflexivity].
+            rewrite <-H14, Hmsg; simpl; split; [assumption|reflexivity].
           }
           { red; rewrite H7; simpl.
-            rewrite <-H16, Hidx; simpl; auto.
+            rewrite <-H17, Hidx; simpl; auto.
           }
           { red; red in Hwfo; dest.
             apply Forall_forall; intros [rmidx rs] ?; simpl.
-            apply in_map with (f:= fun idm => (idOf idm, Some (valOf idm))) in H22; simpl in H22.
-            rewrite Forall_forall in H21; specialize (H21 _ H22).
+            apply in_map with (f:= fun idm => (idOf idm, Some (valOf idm))) in H23; simpl in H23.
+            rewrite Forall_forall in H22; specialize (H22 _ H23).
             assumption.
           }
           { assumption. }
 
         * simpl; unfold TrsMTrs, getDownLockMsg, getDownLockIdxBack; simpl.
           rewrite H7; simpl.
-          rewrite <-H13, Hmsg, <-H16, Hidx; simpl.
+          rewrite <-H14, Hmsg, <-H17, Hidx; simpl.
           reflexivity.
         * destruct H11.
           split; [|assumption].
           rewrite Himinds, Hierss in H11.
           rewrite Hsminds, Hserss; assumption.
         * red in Hwfo; dest.
-          simpl; clear -H20 Hrsb.
+          simpl; clear -H21 Hrsb.
           apply (DisjList_false_spec idx_dec).
           intros midx; intros; dest_in.
-          rewrite Forall_forall in H20.
+          rewrite Forall_forall in H21.
           apply in_map_iff in H; destruct H as [[rmidx rs] [? ?]]; simpl in *; subst.
           apply in_map with (f:= fun idm => (idOf idm, Some (valOf idm))) in H0.
-          specialize (H20 _ H0).
-          destruct H20 as [cidx [? ?]]; simpl in *; subst.
+          specialize (H21 _ H0).
+          destruct H21 as [cidx [? ?]]; simpl in *; subst.
           elim (Hrsb cidx).
           { eapply parentIdxOf_not_eq; [|eassumption].
             apply tree2Topo_WfDTree.
@@ -1493,16 +1507,98 @@ Section RssHolderOk.
         * reflexivity.
 
       + red; simpl; repeat ssplit; [congruence|..].
-        * rewrite <-Hsoi.
+        * rewrite <-Hoi.
           apply SimRssORqs_removeRq; [assumption|assumption|congruence].
         * eapply SimRssMP_enqMP.
           eapply SimRssMP_removeRq; eauto.
           { apply H12. }
           { rewrite H8; apply Hwfo. }
 
+    - (*! [RsReleaseOne] *)
+      destruct H0 as [ridx [msgId [rqId [prec [trs [? ?]]]]]]; subst rule.
+      disc_SimRssORqs obj.
+      disc_RssWfInv obj.
+
+      (* Discharge precondition and transition *)
+      disc_rule_conds_ex.
+      destruct ins; [clear H7 H8 H9 H12|discriminate].
+      eapply RssFullOne_spec in H17; [|eassumption].
+      destruct H17 as [rqid [? [rs [? [? [? ?]]]]]].
+      disc_RssWfORq obj.
+      disc_rule_conds_ex.
+      disc_RssORqEquiv.
+
+      eexists (RlblInt _ _ _ _); eexists.
+      repeat ssplit; [simpl; reflexivity|..].
+
+      + econstructor.
+        * eassumption.
+        * eassumption.
+        * reflexivity.
+        * rewrite <-Hoi; eassumption.
+        * rewrite <-Hoi; eassumption.
+        * red in Hwfo; dest.
+          eapply SimRssMP_rss_full_first; eauto.
+          { rewrite <-Hoinds.
+            apply in_map_iff; eauto.
+          }
+          { congruence. }
+          { congruence. }
+          { instantiate (1:= [rs]); assumption. }
+        * destruct H12; split; [|assumption].
+          rewrite Hierqs, Himinds in H12.
+          rewrite Hserqs, Hsminds; assumption.
+        * repeat split.
+          { red; rewrite H7; simpl.
+            rewrite <-H14, H8.
+            reflexivity.
+          }
+          { red; rewrite H7; simpl.
+            rewrite <-H9, Hmsg; simpl; split; [assumption|reflexivity].
+          }
+          { red; rewrite H7; simpl.
+            rewrite <-H17, Hidx; simpl; auto.
+          }
+          { red; red in Hwfo; dest.
+            repeat constructor.
+            inv H22; assumption.
+          }
+          { assumption. }
+
+        * simpl; unfold TrsMTrs, getDownLockMsg, getDownLockIdxBack; simpl.
+          rewrite H7; simpl.
+          rewrite <-H9, Hmsg, <-H17, Hidx; simpl.
+          reflexivity.
+        * destruct H11.
+          split; [|assumption].
+          rewrite Himinds, Hierss in H11.
+          rewrite Hsminds, Hserss; assumption.
+        * red in Hwfo; dest.
+          simpl.
+          apply (DisjList_false_spec idx_dec).
+          intros midx; intros; dest_in.
+          inv H21; simpl in *; dest.
+          apply Hrsb with (roidx:= x); [|auto].
+          eapply parentIdxOf_not_eq; [|eassumption].
+          apply tree2Topo_WfDTree.
+        * reflexivity.
+        * reflexivity.
+
+      + red; simpl; repeat ssplit.
+        * rewrite <-H15; simpl; congruence.
+        * rewrite <-Hoi.
+          apply SimRssORqs_removeRq; [assumption|assumption|congruence].
+        * rewrite <-H15; simpl.
+          eapply SimRssMP_enqMP.
+          replace (deqMP (fst rs) smsgs1) with (deqMsgs (idsOf (getRss porq)) smsgs1)
+            by (rewrite <-H15; reflexivity).
+          eapply SimRssMP_removeRq; eauto.
+          { rewrite <-H15; repeat constructor; auto. }
+          { rewrite <-H15, H8; reflexivity. }
+          { rewrite H8; apply Hwfo. }
+
     - (*! [RsTakeOne] *)
-      clear Hsrr1 Hsrr2.
-      destruct H0 as [ridx [msgId [rqId [cidx ?]]]]; dest; subst rule.
+      destruct H0 as [ridx [msgId [rqId [cidx [? ?]]]]]; subst rule.
       disc_SimRssORqs obj.
       disc_rule_conds_ex.
       disc_RssWfInv obj.

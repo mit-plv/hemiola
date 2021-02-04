@@ -575,7 +575,7 @@ Section Compile.
            | HDownLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
            | HDownLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-           | HRssFull =>
+           | HRssFull _ =>
              (** The below assertion is already checked in [inputRsRel] *)
              (* Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from");  *)
              cont
@@ -844,7 +844,7 @@ Section Compile.
 
       Definition check_rule_rssfull_prec_rqrs (rrp: HOPrecR): bool :=
         match rrp with
-        | HRssFull => true
+        | HRssFull _ => true
         | _ => false
         end.
       Fixpoint check_rule_rssfull_prec (rp: HOPrecT hvarU): bool :=

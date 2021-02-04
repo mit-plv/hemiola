@@ -28,6 +28,17 @@ Section RssHolder.
                                         | None => False
                                         end) rqid.(rqi_rss)).
 
+  Definition RssFullOne (msgId: IdxT): OPrec :=
+    fun ost orq mins =>
+      (orq@[downRq])
+        >>=[False]
+        (fun rqid =>
+           List.length rqid.(rqi_rss) = 1 /\
+           Forall (fun ors => match snd ors with
+                              | Some rs => rs.(msg_id) = msgId
+                              | None => False
+                              end) rqid.(rqi_rss)).
+
   Fixpoint putRs (midx: IdxT) (msg: Msg) (rss: list (IdxT * option Msg)) :=
     match rss with
     | nil => nil
@@ -96,7 +107,17 @@ Section RssHolder.
                                 Msg (* the original request *) ->
                                 IdxT (* response back to *) ->
                                 OState * Miv) :=
-    rsRelease (fun ost ins rq rsbTo => trs ost (getFirstIdMsgI ins) rq rsbTo).
+    rule[ridx]
+    :requires (MsgsFrom nil /\ DownLockMsgId MRq rqId /\
+               DownLockIdxBack /\ RssFullOne msgId /\
+               fun ost _ _ => prec ost)
+    :transition
+       (do (st --> (rq <-- getDownLockMsg st.(orq);
+                   rsbTo <-- getDownLockIdxBack st.(orq);
+                   nst ::= trs st.(ost) (getFirstIdMsgI (getRss st.(orq))) rq rsbTo;
+                    return {{ fst nst,
+                              removeRq st.(orq) downRq,
+                              [(rsbTo, rsMsg rq.(msg_addr) (snd nst))] }}))).
 
 End RssHolder.
 

@@ -76,7 +76,7 @@ Section System.
         rule.rsr[1~>6~>0~>1]
         :holding mesiRqM
         :rs-holding mesiDownRsIS
-        :requires (fun _ => True)
+        :requires (fun ost => ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -94,7 +94,7 @@ Section System.
         rule.rsr[1~>6~>1~>1]
         :holding mesiRqM
         :rs-holding mesiDownRsIM
-        :requires (fun _ => True)
+        :requires (fun ost => mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -130,7 +130,7 @@ Section System.
         rule.rsr[1~>10~>1~>1]
         :holding mesiDownRqIM
         :rs-holding mesiDownRsIM
-        :requires (fun _ => True)
+        :requires (fun ost => mesiE <= ost#[dir].(dir_st))
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
@@ -148,7 +148,7 @@ Section System.
         rule.rsr[1~>10~>2~>1]
         :holding mesiDownRqIM
         :rs-holding mesiDownRsIS
-        :requires (fun _ => True)
+        :requires (fun ost => ost#[dir].(dir_st) = mesiS)
         :transition
            (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]

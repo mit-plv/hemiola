@@ -178,7 +178,7 @@ Section Reify.
         | HDownLockMsg: HOPrecR
         | HDownLockIdxBack: HOPrecR
         | HMsgIdFrom (msgId: IdxT): HOPrecR
-        | HRssFull: HOPrecR.
+        | HRssFull (msgId: IdxT): HOPrecR.
 
         Inductive HMsgFrom: Type :=
         | HMsgFromNil: HMsgFrom
@@ -380,7 +380,7 @@ Section Reify.
         | HDownLockMsg => DownLockMsg ost orq mins
         | HDownLockIdxBack => DownLockIdxBack ost orq mins
         | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
-        | HRssFull => RssFull ost orq mins
+        | HRssFull msgId => RssFullWithId msgId ost orq mins
         end.
 
       Definition interpMsgFrom (mf: HMsgFrom): Prop :=
@@ -577,7 +577,7 @@ Ltac reify_OPrecR t :=
   | DownLockMsg _ _ _ => constr:(HDownLockMsg)
   | DownLockIdxBack _ _ _ => constr:(HDownLockIdxBack)
   | MsgIdsFrom [?msgId] _ _ _ => constr:(HMsgIdFrom msgId)
-  | RssFull _ _ _ => constr:(HRssFull)
+  | RssFullWithId ?msgId _ _ _ => constr:(HRssFull msgId)
   end.
 
 Ltac renote_OPrecRqRs :=
