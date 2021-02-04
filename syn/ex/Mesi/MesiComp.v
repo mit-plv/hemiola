@@ -44,61 +44,62 @@ Section Instances.
                                     end
     |}.
 
-  Arguments compile_bexp {_ _ _ _ _ _ _ _ _} _ _ _ {_}.
+  Arguments compile_bexp {_ _ _ _ _ _ _ _ _} _ _ _ _ {_}.
   Fixpoint compile_dir_exp
            (var: Kind -> Type) {het}
            (msgIn: var (Struct KMsg))
            (mshr: var (Struct MSHR))
+           (frs : var (Struct KMsg))
            (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
            (he: heexp (hvar_of var) het): Expr var (SyntaxKind (kind_of het)) :=
     (match he in (hexp_dir _ h) return (Expr var (SyntaxKind (kind_of h))) with
      | HDirC _ => #(HVector.hvec_ith ostvars Mesi.dir)
-     | HDirGetSt dir => ((compile_dir_exp msgIn mshr ostvars dir)!KDir@."dir_st")
-     | HDirGetExcl dir => ((compile_dir_exp msgIn mshr ostvars dir)!KDir@."dir_excl")
-     | HDirGetStO oidx dir => compile_dir_get (compile_bexp msgIn mshr ostvars oidx)
-                                              (compile_dir_exp msgIn mshr ostvars dir)
-     | HDirGetSh dir => ((compile_dir_exp msgIn mshr ostvars dir)!KDir@."dir_sharers")
+     | HDirGetSt dir => ((compile_dir_exp msgIn mshr frs ostvars dir)!KDir@."dir_st")
+     | HDirGetExcl dir => ((compile_dir_exp msgIn mshr frs ostvars dir)!KDir@."dir_excl")
+     | HDirGetStO oidx dir => compile_dir_get (compile_bexp msgIn mshr frs ostvars oidx)
+                                              (compile_dir_exp msgIn mshr frs ostvars dir)
+     | HDirGetSh dir => ((compile_dir_exp msgIn mshr frs ostvars dir)!KDir@."dir_sharers")
      | HDirRemoveSh sh cidx =>
-       bvUnset (compile_dir_exp msgIn mshr ostvars sh) (compile_bexp msgIn mshr ostvars cidx)
+       bvUnset (compile_dir_exp msgIn mshr frs ostvars sh) (compile_bexp msgIn mshr frs ostvars cidx)
      | HDirAddSharer oidx dir =>
-       (let kdir := compile_dir_exp msgIn mshr ostvars dir in
+       (let kdir := compile_dir_exp msgIn mshr frs ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
                  "dir_sharers" ::=
                    IF (kdir!KDir@."dir_st" == mesiS)
-                 then (bvSet (kdir!KDir@."dir_sharers") (compile_bexp msgIn mshr ostvars oidx))
-                 else (bvSingleton _ (compile_bexp msgIn mshr ostvars oidx)) })
+                 then (bvSet (kdir!KDir@."dir_sharers") (compile_bexp msgIn mshr frs ostvars oidx))
+                 else (bvSingleton _ (compile_bexp msgIn mshr frs ostvars oidx)) })
      | HDirRemoveSharer oidx dir =>
-       (let kdir := compile_dir_exp msgIn mshr ostvars dir in
+       (let kdir := compile_dir_exp msgIn mshr frs ostvars dir in
         STRUCT { "dir_st" ::= mesiS;
                  "dir_excl" ::= kdir!KDir@."dir_excl";
                  "dir_sharers" ::= bvUnset (kdir!KDir@."dir_sharers")
-                                           (compile_bexp msgIn mshr ostvars oidx) })
+                                           (compile_bexp msgIn mshr frs ostvars oidx) })
 
      | HDirSetM oidx => (STRUCT { "dir_st" ::= mesiM;
-                                  "dir_excl" ::= compile_bexp msgIn mshr ostvars oidx;
+                                  "dir_excl" ::= compile_bexp msgIn mshr frs ostvars oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetE oidx => (STRUCT { "dir_st" ::= mesiE;
-                                  "dir_excl" ::= compile_bexp msgIn mshr ostvars oidx;
+                                  "dir_excl" ::= compile_bexp msgIn mshr frs ostvars oidx;
                                   "dir_sharers" ::= $$Default })
      | HDirSetS oinds => (STRUCT { "dir_st" ::= mesiS;
                                    "dir_excl" ::= $$Default;
                                    "dir_sharers" ::=
                                      List.fold_left
                                        (fun bv i => bvSet bv i)
-                                       (map (compile_bexp msgIn mshr ostvars) oinds)
+                                       (map (compile_bexp msgIn mshr frs ostvars) oinds)
                                        $$Default })
      | HDirSetI _ => (STRUCT { "dir_st" ::= mesiI;
                                "dir_excl" ::= $$Default;
                                "dir_sharers" ::= $$Default })
 
-     | HRqUpFrom oidx => {$TopoTemplate.rqUpIdx, compile_dir_exp msgIn mshr ostvars oidx}
-     | HRsUpFrom oidx => {$TopoTemplate.rsUpIdx, compile_dir_exp msgIn mshr ostvars oidx}
-     | HDownTo oidx => {$TopoTemplate.downIdx, compile_dir_exp msgIn mshr ostvars oidx}
-     | HRqUpFromM oinds => compile_dir_exp msgIn mshr ostvars oinds
-     | HRsUpFromM oinds => compile_dir_exp msgIn mshr ostvars oinds
-     | HDownToM oinds => compile_dir_exp msgIn mshr ostvars oinds
-     | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp msgIn mshr ostvars se))
+     | HRqUpFrom oidx => {$TopoTemplate.rqUpIdx, compile_dir_exp msgIn mshr frs ostvars oidx}
+     | HRsUpFrom oidx => {$TopoTemplate.rsUpIdx, compile_dir_exp msgIn mshr frs ostvars oidx}
+     | HDownTo oidx => {$TopoTemplate.downIdx, compile_dir_exp msgIn mshr frs ostvars oidx}
+     | HRqUpFromM oinds => compile_dir_exp msgIn mshr frs ostvars oinds
+     | HRsUpFromM oinds => compile_dir_exp msgIn mshr frs ostvars oinds
+     | HDownToM oinds => compile_dir_exp msgIn mshr frs ostvars oinds
+     | HSingleton se => bvSet $$Default (_truncate_ (compile_dir_exp msgIn mshr frs ostvars se))
      | HInvalidate se =>
        (* (IF ((compile_bexp msgIn mshr ostvars se) == mesiNP) then mesiNP else mesiI) *)
        mesiI
@@ -108,17 +109,18 @@ Section Instances.
              (var: Kind -> Type)
              (msgIn: var (Struct KMsg))
              (mshr: var (Struct MSHR))
+             (frs : var (Struct KMsg))
              (ostvars: HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty))
              (pd: heoprec (hvar_of var)): Expr var (SyntaxKind Bool) :=
     (match pd with
      | DirLastSharer cidx =>
        bvIsSingleton (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-                     (compile_bexp msgIn mshr ostvars cidx)
+                     (compile_bexp msgIn mshr frs ostvars cidx)
      | DirNotLastSharer _ =>
        bvCount (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers") > $1
      | DirOtherSharerExists cidx =>
        bvUnset (#(HVector.hvec_ith ostvars Mesi.dir)!KDir@."dir_sharers")
-               (compile_bexp msgIn mshr ostvars cidx) != $0
+               (compile_bexp msgIn mshr frs ostvars cidx) != $0
      end)%kami_expr.
 
   Instance MesiCompExtExp: CompExtExp :=

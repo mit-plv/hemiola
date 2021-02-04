@@ -92,7 +92,8 @@ Section Reify.
     | HMsgValue: hbexp HMsg -> hbexp HValue
     | HOstVal: forall i hbt, Vector.nth host_ty i = Some hbt -> hbexp hbt
     | HUpLockIdxBackI: hbexp HIdxQ
-    | HDownLockIdxBackI: hbexp HIdxQ.
+    | HDownLockIdxBackI: hbexp HIdxQ
+    | HDownLockFirstIdMsgI: hbexp HIdm.
 
   End Basis.
 
@@ -178,7 +179,8 @@ Section Reify.
         | HDownLockMsg: HOPrecR
         | HDownLockIdxBack: HOPrecR
         | HMsgIdFrom (msgId: IdxT): HOPrecR
-        | HRssFull (msgId: IdxT): HOPrecR.
+        | HRssFullWithId (msgId: IdxT): HOPrecR
+        | HRssFullOne (msgId: IdxT): HOPrecR.
 
         Inductive HMsgFrom: Type :=
         | HMsgFromNil: HMsgFrom
@@ -267,6 +269,7 @@ Section Reify.
   Arguments HOstVal {var}.
   Arguments HUpLockIdxBackI {var}.
   Arguments HDownLockIdxBackI {var}.
+  Arguments HDownLockFirstIdMsgI {var}.
   Arguments HBExp {_ _} {var} {hbt}.
   Arguments HEExp {_ _} {var} {ht}.
   Arguments HORqI {_ _} {var}.
@@ -341,6 +344,7 @@ Section Reify.
           end
         | HUpLockIdxBackI => getUpLockIdxBackI orq
         | HDownLockIdxBackI => getDownLockIdxBackI orq
+        | HDownLockFirstIdMsgI => getFirstIdMsgI (getRss orq)
         end.
 
       Definition interpExp {ht} (e: hexp htypeDenote ht): htypeDenote ht :=
@@ -380,7 +384,8 @@ Section Reify.
         | HDownLockMsg => DownLockMsg ost orq mins
         | HDownLockIdxBack => DownLockIdxBack ost orq mins
         | HMsgIdFrom msgId => MsgIdsFrom [msgId] ost orq mins
-        | HRssFull msgId => RssFullWithId msgId ost orq mins
+        | HRssFullWithId msgId => RssFullWithId msgId ost orq mins
+        | HRssFullOne msgId => RssFullOne msgId ost orq mins
         end.
 
       Definition interpMsgFrom (mf: HMsgFrom): Prop :=
@@ -577,7 +582,8 @@ Ltac reify_OPrecR t :=
   | DownLockMsg _ _ _ => constr:(HDownLockMsg)
   | DownLockIdxBack _ _ _ => constr:(HDownLockIdxBack)
   | MsgIdsFrom [?msgId] _ _ _ => constr:(HMsgIdFrom msgId)
-  | RssFullWithId ?msgId _ _ _ => constr:(HRssFull msgId)
+  | RssFullWithId ?msgId _ _ _ => constr:(HRssFullWithId msgId)
+  | RssFullOne ?msgId _ _ _ => constr:(HRssFullOne msgId)
   end.
 
 Ltac renote_OPrecRqRs :=
@@ -608,6 +614,7 @@ Ltac renote_bexp :=
            | hvec_ith _ ?i => instantiate (1:= HOstVal _ i eq_refl); reflexivity
            | getUpLockIdxBackI _ => instantiate (1:= HUpLockIdxBackI _); reflexivity
            | getDownLockIdxBackI _ => instantiate (1:= HDownLockIdxBackI _); reflexivity
+           | getFirstIdMsgI (getRss _) => instantiate (1:= HDownLockFirstIdMsgI _); reflexivity
            | idOf _ => instantiate (1:= HIdmId _); simpl; f_equal
            | valOf _ => instantiate (1:= HIdmMsg _); simpl; f_equal
            | objIdxOf _ => instantiate (1:= HObjIdxOf _); simpl; f_equal

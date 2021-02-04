@@ -1640,3 +1640,341 @@ Section RssHolderOk.
   Qed.
 
 End RssHolderOk.
+
+Section RssEquivRule.
+  Context `{dv:DecValue} `{oifc: OStateIfc}.
+
+  Lemma UpLockDownTo_refl:
+    forall orq1 orq2,
+      orq1@[upRq] = orq2@[upRq] ->
+      UpLockDownTo orq1 orq2.
+  Proof.
+    unfold UpLockDownTo; intros.
+    rewrite H.
+    destruct orq2@[upRq]; auto.
+  Qed.
+  Local Hint Extern 4 (UpLockDownTo _ _) => (apply UpLockDownTo_refl; auto).
+
+  Lemma NoRssChange_refl:
+    forall orq1 orq2,
+      orq1@[downRq] = orq2@[downRq] ->
+      NoRssChange orq1 orq2.
+  Proof.
+    unfold NoRssChange; intros.
+    rewrite H.
+    destruct (orq2@[downRq]); auto.
+  Qed.
+  Local Hint Extern 4 (NoRssChange _ _) => (apply NoRssChange_refl; auto).
+
+  Definition RssORqEquivPrec (prec: OPrec) :=
+    forall ost orq1 mins,
+      prec ost orq1 mins ->
+      forall orq2, RssORqEquiv orq1 orq2 -> prec ost orq2 mins.
+
+  Lemma immRule_RssEquivRule:
+    forall ridx prec trs,
+      RssORqEquivPrec prec ->
+      RssEquivRule (immRule ridx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H0; red; intros.
+        destruct mins; [exfalso; auto|discriminate].
+      + intros; repeat ssplit; try eassumption.
+        * repeat red in H1; repeat red.
+          red in H4; dest; congruence.
+        * apply H4; assumption.
+        * eapply H; eauto.
+    - red; simpl; unfold TrsMTrs; simpl; intros.
+      inv H1; repeat split; auto.
+      intros; eauto.
+  Qed.
+
+  Lemma immUpRule_RssEquivRule:
+    forall ridx msgId oidx prec trs,
+      RssORqEquivPrec prec ->
+      RssEquivRule (immUpRule ridx msgId oidx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H0; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H0; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        * apply H5; assumption.
+        * eapply H; eauto.
+    - red; simpl; unfold TrsMTrs; simpl; intros.
+      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
+      all: inv H1; eauto; fail.
+  Qed.
+
+  Lemma immDownRule_RssEquivRule:
+    forall ridx msgId cidx prec trs,
+      RssORqEquivPrec prec ->
+      RssEquivRule (immDownRule ridx msgId cidx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H0; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H0; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        * repeat red in H3; repeat red.
+          red in H6; dest; congruence.
+        * apply H6; assumption.
+        * eapply H; eauto.
+    - red; simpl; unfold TrsMTrs; simpl; intros.
+      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
+      all: inv H1; eauto; fail.
+  Qed.
+
+  Lemma rqUpUpRule_RssEquivRule:
+    forall ridx msgId cidx oidx prec trs,
+      RssEquivRule (rqUpUpRule ridx msgId cidx oidx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        red in H4; dest; congruence.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
+      + inv H0; repeat split.
+        * repeat red in H3; red.
+          unfold addRq; mred; simpl; eauto.
+        * red; unfold addRq; mred.
+          apply NoRssChange_refl; auto.
+        * intros; eexists; split; [reflexivity|].
+          red in H0; dest.
+          red; repeat split.
+          all: unfold addRq; mred.
+      + inv H0; eauto.
+  Qed.
+
+  Lemma rqUpUpRuleS_RssEquivRule:
+    forall ridx oidx prec trs,
+      RssEquivRule (rqUpUpRuleS ridx oidx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins; [exfalso; auto|discriminate].
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        red in H3; dest; congruence.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      inv H0; repeat split.
+      + repeat red in H2; red.
+        unfold addRqS; mred; simpl; eauto.
+      + red; unfold addRqS; mred.
+        apply NoRssChange_refl; auto.
+      + intros; eexists; split; [reflexivity|].
+        red in H0; dest.
+        red; repeat split.
+        all: unfold addRqS; mred.
+  Qed.
+
+  Lemma rqUpDownRule_RssEquivRule:
+    forall ridx msgId cidx oidx prec trs,
+      RssEquivRule (rqUpDownRule ridx msgId cidx oidx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        apply H4; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
+      + inv H0; repeat split.
+        * red; unfold addRq; mred.
+          apply UpLockDownTo_refl; reflexivity.
+        * repeat red in H3.
+          red; unfold addRq; mred; simpl.
+          apply Forall_forall; intros.
+          apply in_map_iff in H0; dest; subst; reflexivity.
+        * intros; eexists; split; [reflexivity|].
+          red in H0; dest.
+          red; repeat split.
+          all: unfold addRq; mred.
+          eauto.
+      + inv H0; eauto.
+  Qed.
+
+  Lemma rqUpDownRuleS_RssEquivRule:
+    forall ridx prec trs,
+      RssEquivRule (rqUpDownRuleS ridx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins; [exfalso; auto|discriminate].
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        apply H3; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      inv H0; repeat split.
+      + red; unfold addRqS; mred.
+        apply UpLockDownTo_refl; reflexivity.
+      + repeat red in H2.
+        red; unfold addRqS; mred; simpl.
+        apply Forall_forall; intros.
+        apply in_map_iff in H0; dest; subst; reflexivity.
+      + intros; eexists; split; [reflexivity|].
+        red in H0; dest.
+        red; repeat split.
+        all: unfold addRqS; mred.
+        eauto.
+  Qed.
+
+  Lemma rqDownDownRule_RssEquivRule:
+    forall ridx msgId oidx prec trs,
+      RssEquivRule (rqDownDownRule ridx msgId oidx prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split.
+      + left; red in H; red; intros.
+        destruct mins as [|[rmidx rmsg] ?]; [discriminate|].
+        destruct mins; [|discriminate].
+        inv H; dest_in; simpl; eauto.
+      + intros; repeat ssplit; try assumption.
+        repeat red in H2; repeat red.
+        apply H4; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      destruct (getFirstMsg mins) as [fmsg|]; simpl in *.
+      + inv H0; repeat split.
+        * red; unfold addRq; mred.
+          apply UpLockDownTo_refl; reflexivity.
+        * repeat red in H3.
+          red; unfold addRq; mred; simpl.
+          apply Forall_forall; intros.
+          apply in_map_iff in H0; dest; subst; reflexivity.
+        * intros; eexists; split; [reflexivity|].
+          red in H0; dest.
+          red; repeat split.
+          all: unfold addRq; mred.
+          eauto.
+      + inv H0; eauto.
+  Qed.
+
+  Ltac destruct_bind :=
+    match goal with
+    | |- context [bind ?o ?c] => destruct o
+    | H: context [bind ?o ?c] |- _ => destruct o
+    end.
+
+  Lemma rsDownDownRule_RssEquivRule:
+    forall ridx msgId rqId prec trs,
+      RssORqEquivPrec prec ->
+      RssEquivRule (rsDownDownRule ridx msgId rqId prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
+      intros; red in H7; dest.
+      repeat ssplit; try assumption.
+      + red in H0; red; congruence.
+      + red in H2; red; congruence.
+      + red in H3; red; congruence.
+      + apply H8; assumption.
+      + eapply H; eauto; repeat split; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      repeat ssplit.
+      + do 3 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold removeRq; mred.
+      + do 3 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold removeRq; mred.
+        apply NoRssChange_refl; reflexivity.
+      + intros; unfold getUpLockMsg, getUpLockIdxBack in *.
+        rewrite <-(proj1 H8).
+        do 3 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1.
+        eexists; split; [reflexivity|].
+        red in H8; dest.
+        red; repeat split.
+        all: try (unfold removeRq; mred; fail).
+  Qed.
+
+  Lemma rsDownDownRuleS_RssEquivRule:
+    forall ridx msgId prec trs,
+      RssORqEquivPrec prec ->
+      RssEquivRule (rsDownDownRuleS ridx msgId prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
+      intros; red in H6; dest.
+      repeat ssplit; try assumption.
+      + red in H0; red; congruence.
+      + red in H2; red; congruence.
+      + apply H7; assumption.
+      + eapply H; eauto; repeat split; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      repeat ssplit.
+      + destruct_bind; simpl in *; [|inv H1; eauto].
+        inv H1; red; unfold removeRq; mred.
+      + destruct_bind; simpl in *; [|inv H1; eauto].
+        inv H1; red; unfold removeRq; mred.
+        apply NoRssChange_refl; reflexivity.
+      + destruct_bind; simpl in *; [|inv H1; eauto].
+        inv H1.
+        eexists; split; [reflexivity|].
+        red in H1; dest.
+        red; repeat split.
+        all: try (unfold removeRq; mred; fail).
+  Qed.
+
+  Lemma rsDownRqDownRule_RssEquivRule:
+    forall ridx msgId oidx rqId prec trs,
+      RssORqEquivPrec prec ->
+      RssEquivRule (rsDownRqDownRule ridx msgId oidx rqId prec trs).
+  Proof.
+    intros.
+    red; split.
+    - red; simpl; unfold OPrecAnd; intros; dest; split; [right; assumption|].
+      intros; red in H7; dest.
+      repeat ssplit; try assumption.
+      + red in H0; red; congruence.
+      + red in H2; red; congruence.
+      + red in H3; red; congruence.
+      + apply H8; assumption.
+      + eapply H; eauto; repeat split; assumption.
+    - red; simpl; unfold OPrecAnd, TrsMTrs; simpl; intros; dest.
+      repeat ssplit.
+      + do 2 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold addRq, removeRq; mred.
+      + do 2 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1; red; unfold addRq, removeRq; mred.
+        repeat red in H6; rewrite H6.
+        simpl; apply Forall_forall; intros.
+        apply in_map_iff in H1; dest; subst; reflexivity.
+      + intros; unfold getUpLockMsg, getUpLockIdxBack in *.
+        rewrite <-(proj1 H8).
+        do 2 (destruct_bind; simpl in *; [|inv H1; eauto]).
+        inv H1.
+        eexists; split; [reflexivity|].
+        red in H8; dest.
+        red; repeat split.
+        all: try (unfold addRq, removeRq; mred; fail).
+        unfold addRq, removeRq; mred.
+        intros; inv H10; simpl; eauto.
+  Qed.
+
+End RssEquivRule.

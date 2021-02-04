@@ -464,13 +464,13 @@ Section Compile.
     Class CompExtExp :=
       { compile_eexp:
           forall (var: Kind -> Type) {het},
-            var (Struct KMsg) -> var (Struct MSHR) ->
+            var (Struct KMsg) -> var (Struct MSHR) -> var (Struct KMsg) ->
             HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
             heexp (hvar_of var) het ->
             Expr var (SyntaxKind (kind_of het));
         compile_eoprec:
           forall (var: Kind -> Type),
-            var (Struct KMsg) -> var (Struct MSHR) ->
+            var (Struct KMsg) -> var (Struct MSHR) -> var (Struct KMsg) ->
             HVector.hvec (Vector.map (fun hty => var (kind_of hty)) hostf_ty) ->
             heoprec (hvar_of var) ->
             Expr var (SyntaxKind Bool);
@@ -523,13 +523,16 @@ Section Compile.
            (* The expressions below are used only when dealing with responses. *)
            | HUpLockIdxBackI _ => ({$downIdx, _truncate_ (#mshr!MSHR@."m_qidx")})
            | HDownLockIdxBackI _ => (#mshr!MSHR@."m_qidx")
+           | HDownLockFirstIdMsgI _ =>
+             (let fs := bvFirstSet (#mshr!MSHR@."m_dl_rss_from") in
+              STRUCT { "cidx" ::= {$rsUpIdx, fs}; "msg" ::= #frs })
            end)%kami_expr.
 
         Definition compile_exp {ht} (he: hexp (hvar_of var) ht)
           : Expr var (SyntaxKind (kind_of ht)) :=
           match he with
           | HBExp hbe => compile_bexp hbe
-          | HEExp _ hee => compile_eexp var msgIn mshr ostVars hee
+          | HEExp _ hee => compile_eexp var msgIn mshr frs ostVars hee
           end.
 
         Fixpoint compile_rule_prop_prec (pp: HOPrecP (hvar_of var))
@@ -548,7 +551,7 @@ Section Compile.
            | HNatLe v1 v2 => compile_exp v1 <= compile_exp v2
            | HNatGt v1 v2 => compile_exp v1 > compile_exp v2
            | HNatGe v1 v2 => compile_exp v1 >= compile_exp v2
-           | HExtP _ ep => compile_eoprec _ msgIn mshr ostVars ep
+           | HExtP _ ep => compile_eoprec _ msgIn mshr frs ostVars ep
            | HNativeP _ _ => $$true
            end)%kami_expr.
 
@@ -575,7 +578,11 @@ Section Compile.
            | HDownLockMsg => (Assert (#mshr!MSHR@."m_rsb"); cont)
            | HDownLockIdxBack => (Assert (#mshr!MSHR@."m_rsb"); cont)
            | HMsgIdFrom msgId => (Assert (#msgIn!KMsg@."id" == $$%msgId%:hcfg_msg_id_sz); cont)
-           | HRssFull _ =>
+           | HRssFullWithId _ =>
+             (** The below assertion is already checked in [inputRsRel] *)
+             (* Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from");  *)
+             cont
+           | HRssFullOne _ =>
              (** The below assertion is already checked in [inputRsRel] *)
              (* Assert (#mshr!MSHR@."dl_rss_recv" == #mshr!MSHR@."dl_rss_from");  *)
              cont
@@ -844,7 +851,8 @@ Section Compile.
 
       Definition check_rule_rssfull_prec_rqrs (rrp: HOPrecR): bool :=
         match rrp with
-        | HRssFull _ => true
+        | HRssFullWithId _ => true
+        | HRssFullOne _ => true
         | _ => false
         end.
       Fixpoint check_rule_rssfull_prec (rp: HOPrecT hvarU): bool :=
@@ -943,7 +951,7 @@ Section Compile.
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
-           msgIn mshr rq ostVars (hrule_precond hr (hvar_of var));
+           msgIn mshr rq frs ostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs_ord msgIn mshrId mshr rq frs pir ostVars mvi victimVal (hrule_trs hr);
         (if isImm then (Call releaseMSHR(#mshrId); Retv) else Retv))%kami_action.
 
@@ -965,7 +973,7 @@ Section Compile.
         ostVars <- compile_info_to_ostVars pinfo;
         :compile_rule_msg_from (hrule_msg_from hr) mf;
         :compile_rule_prec
-           msgIn mshr rq ostVars (hrule_precond hr (hvar_of var));
+           msgIn mshr rq frs ostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs_ord msgIn mshrId mshr rq frs pir ostVars mvi victimVal (hrule_trs hr);
         Retv)%kami_action.
 
@@ -988,7 +996,7 @@ Section Compile.
         ostVars <- compile_info_to_ostVars pinfo;
         let nostVars := compile_value_read_to_ostVars _ ostVars pvalue in
         :compile_rule_prec
-           msg mshr rq nostVars (hrule_precond hr (hvar_of var));
+           msg mshr rq frs nostVars (hrule_precond hr (hvar_of var));
         :compile_rule_trs_invrq msg mshr rq frs nostVars (hrule_trs hr);
         (if isImm
          then (Call canImm(#paddr); Call releaseVictim(#paddr); Retv)
