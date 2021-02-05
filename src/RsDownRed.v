@@ -200,7 +200,7 @@ Section RsDownReduction.
     Qed.
 
     Hypothesis (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs)).
-    
+
     Lemma rsDown_lpush_rpush_unit_reducible:
       forall rinits rins rhst routs reouts
              linits lins lhst louts leouts,
@@ -216,7 +216,7 @@ Section RsDownReduction.
       eapply DisjList_comm, DisjList_SubList; [eassumption|].
       apply DisjList_comm; assumption.
     Qed.
-    
+
     Lemma rsDown_lpush_unit_reducible:
       forall pinits pins phst pouts peouts
              inits ins hst outs eouts loidx,
@@ -349,11 +349,10 @@ Section RsDownReduction.
         eapply steps_append; eassumption.
       - eapply steps_append; eassumption.
     Qed.
-    
+
   End OnRsDown.
 
 End RsDownReduction.
 
 Close Scope list.
 Close Scope fmap.
-

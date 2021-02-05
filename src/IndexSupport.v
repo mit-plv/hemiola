@@ -590,7 +590,7 @@ Ltac solve_inds_NoDup_pre :=
 
        | |- context [List.map _ (_ ++ _)] => rewrite map_app
        | |- context [List.concat (List.map _ _)] => rewrite concat_map
-                                                            
+
        | |- NoDup (_ ++ _) => apply NoDup_DisjList
        | |- NoDup (List.concat _) => apply concat_NoDup; intros
        | |- NoDup ((?pi ++ _) :: (?pi ++ _) :: _) => solve_inds_NoDup_prefix
@@ -619,4 +619,3 @@ Ltac solve_inds_NoDup itac :=
   end;
   itac;
   solve_IndsDisj.
-

@@ -106,7 +106,7 @@ Section Behavior.
     Definition Reachable {SystemT StateT} `{HasInit SystemT StateT}
                (ss: Steps SystemT StateT LabelT) (sys: SystemT) (st: StateT): Prop :=
       exists ll, ss sys (initsOf sys) ll st.
-    
+
     Fixpoint behaviorOf  (ll: list LabelT): Trace :=
       match ll with
       | nil => nil
@@ -162,7 +162,7 @@ Definition IntMsgsEmpty `{DecValue} `{OStateIfc}
     In midx sys.(sys_minds) ->
     findQ midx msgs = nil.
 
-(* [RLabel] represents "internal rule-driven labels" that reveal which message 
+(* [RLabel] represents "internal rule-driven labels" that reveal which message
  * is being handled now.
  *)
 Section RLabel.
@@ -173,7 +173,7 @@ Section RLabel.
   | RlblIns (mins: list (Id Msg)): RLabel
   | RlblInt (oidx ridx: IdxT) (mins: list (Id Msg)) (mouts: list (Id Msg)): RLabel
   | RlblOuts (mouts: list (Id Msg)): RLabel.
-  
+
   Definition rToLabel (l: RLabel): option Label :=
     match l with
     | RlblEmpty => None
@@ -188,4 +188,3 @@ Section RLabel.
 End RLabel.
 
 Definition History `{DecValue} := list RLabel.
-

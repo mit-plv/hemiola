@@ -24,8 +24,8 @@ Definition HdRel_irrel {A : Type} {le : A -> A -> Prop}
 Proof.
   induction p using HdRel_ind'.
   - refine (
-        match q as q' in HdRel _ _ xs return 
-              (match xs with 
+        match q as q' in HdRel _ _ xs return
+              (match xs with
                  | nil => fun (q : HdRel le x nil) => HdRel_nil le x = q
                  | _ :: _ => fun _ => True
                end q'
@@ -63,8 +63,8 @@ Theorem Sorted_irrel {A : Type} {le : A -> A -> Prop}
 Proof.
   induction p using Sorted_ind'; intros.
   - refine (
-        match q as q' in Sorted _ xs return 
-              (match xs with 
+        match q as q' in Sorted _ xs return
+              (match xs with
                  | nil => fun (q : Sorted le nil) => Sorted_nil le = q
                  | _ :: _ => fun _ => True
                end q'
@@ -77,13 +77,13 @@ Proof.
   - generalize dependent h.
     generalize dependent p.
     assert (forall p : Sorted le (tl (a :: l)),
-              (forall q' : Sorted le (tl (a :: l)), p = q') -> 
+              (forall q' : Sorted le (tl (a :: l)), p = q') ->
               forall h : HdRel le (hd a (a :: l)) (tl (a :: l)), Sorted_cons p h = q).
     2:assumption.
     refine (
         match q as q' in Sorted _ xs return
               (forall p : Sorted le (tl xs),
-                 (forall q' : Sorted le (tl xs), p = q') -> 
+                 (forall q' : Sorted le (tl xs), p = q') ->
                  forall h : HdRel le (hd a xs) (tl xs),
                    (match xs as xs'
                           return Sorted le (tl xs') -> HdRel le (hd a xs') (tl xs') ->
@@ -107,7 +107,7 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := U
   Module M := FMapList.Make(OT).
   Include M.
   Module Facts := FMapFacts.OrdProperties M.
-  
+
   Lemma eq_leibniz_list: forall (A:Type) (xs ys: list A),
                            eqlistA eq xs ys -> xs = ys.
   Proof. intros ? ? ? H; induction H; simpl; congruence. Qed.
@@ -168,7 +168,7 @@ Module FMapListEq (UOT : UsualOrderedType) <: FMapInterface.S with Module E := U
           (lt_irrel : forall (a b : UOT.t) (x y : UOT.lt a b), x = y) (m m' : t A)
   : Equal m m' -> m = m'.
   Proof.
-    intros H. 
+    intros H.
     apply Equal_this in H.
     induction m. induction m'. simpl in H. induction H.
     replace sorted1 with sorted0.
@@ -240,7 +240,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Ltac cmp k1 k2 :=
     let e := fresh "e" in
     destruct (E.eq_dec k1 k2) as [e|]; [unfold E.eq in e; subst|].
-  
+
   Definition unionL {A} (m m' : t A) := fold (@add A) m m'.
   Definition union {A} := @unionL A.
   Definition update {A : Type} (m1 m2: t A) := unionL m2 m1.
@@ -378,7 +378,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma transpose_neqkey_Equal_add {A : Type} :
     P.transpose_neqkey Equal (add (elt:=A)).
   Proof.
-    unfold P.transpose_neqkey. intros. 
+    unfold P.transpose_neqkey. intros.
     unfold Equal. intros y. do 4 rewrite P.F.add_o.
     cmp k y; cmp k' y; unfold E.eq in *; subst; congruence || reflexivity.
   Qed.
@@ -431,8 +431,8 @@ Module LeibnizFacts (M : MapLeibniz).
   Proof.
     intros m m'. pattern m.
     apply map_induction; simpl; intros.
-    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity. 
-    - rewrite union_add by assumption. 
+    - rewrite union_empty_L. rewrite P.F.empty_o. reflexivity.
+    - rewrite union_add by assumption.
       do 2 rewrite P.F.add_o.
       cmp k k0; auto.
   Qed.
@@ -459,12 +459,12 @@ Module LeibnizFacts (M : MapLeibniz).
 
   Lemma union_smothered {A : Type}:
     forall (m m' : t A), Sub m m' -> union m m' = m'.
-  Proof. 
+  Proof.
     intros m. unfold Sub. pattern m. apply map_induction; intros.
     - apply union_empty_L.
     - unfold union, unionL in *. ext y.
       rewrite P.fold_add; auto.
-      + rewrite H. 
+      + rewrite H.
         * rewrite P.F.add_o; destruct (E.eq_dec k y); unfold E.eq in *; auto.
           symmetry. apply P.F.find_mapsto_iff.
           apply find_2, H1.
@@ -545,7 +545,7 @@ Module LeibnizFacts (M : MapLeibniz).
     rewrite find_add_1, find_empty in H1.
     specialize (H1 eq_refl); inv H1.
   Qed.
-    
+
   Lemma Sub_union_1:
     forall {A} (m1 m2: t A), Sub m1 (union m1 m2).
   Proof.
@@ -580,7 +580,7 @@ Module LeibnizFacts (M : MapLeibniz).
       + do 2 (rewrite P.F.remove_eq_o; auto).
       + do 3 (rewrite P.F.remove_neq_o; auto).
   Qed.
-      
+
   Lemma remove_find_None:
     forall {A} (m: t A) k,
       find k m = None -> remove k m = m.
@@ -678,7 +678,7 @@ Module LeibnizFacts (M : MapLeibniz).
     apply remove_comm.
   Qed.
   Hint Immediate transpose_neqkey_subtractKVD.
-        
+
   Lemma subtractKV_find:
     forall {A} deceqA (m1 m2: t A) k,
       find k (subtractKV deceqA m1 m2) =
@@ -895,7 +895,7 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; ext y.
     subtractKVD_solve deceqA.
   Qed.
-    
+
   Lemma subtractKVD_cons:
     forall {A} deceqA (m1 m2: t A) a d,
       subtractKVD deceqA m1 m2 (a :: d) =
@@ -1020,7 +1020,7 @@ Module LeibnizFacts (M : MapLeibniz).
     - exfalso; specialize (H _ _ (eq_sym Heqov1)).
       rewrite H in Heqov2; inv Heqov2; elim n; auto.
   Qed.
-  
+
   Lemma subtractKV_not_In_find:
     forall {A} deceqA (m1 m2: t A) k v,
       ~ In k (subtractKV deceqA m1 m2) ->
@@ -1159,7 +1159,7 @@ Module LeibnizFacts (M : MapLeibniz).
     apply (P.F.add_neq_o m v sth).
     intuition.
   Qed.
-    
+
   Lemma restrict_in_find:
     forall {A} (m: t A) d e,
       List.In e d -> find e (restrict m d) = find e m.
@@ -1383,7 +1383,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Lemma union_idempotent {A : Type} : forall (m : t A), union m m = m.
-  Proof. 
+  Proof.
     intros. apply union_smothered. unfold Sub. auto.
   Qed.
 
@@ -1433,7 +1433,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Lemma union_In {A} : forall {m m' : t A} k, In k (union m m') -> In k m \/ In k m'.
-  Proof. 
+  Proof.
     intros m. pattern m.
     apply map_induction; simpl; intros.
     - rewrite union_empty_L in H. right. assumption.
@@ -1502,7 +1502,7 @@ Module LeibnizFacts (M : MapLeibniz).
     remember (find k m) as v; destruct v; [|reflexivity].
     elim H0; apply H; apply P.F.in_find_iff; rewrite <-Heqv; discriminate.
   Qed.
-    
+
   Lemma KeysSubset_empty:
     forall {A} d, KeysSubset (empty A) d.
   Proof.
@@ -1532,7 +1532,7 @@ Module LeibnizFacts (M : MapLeibniz).
     - specialize (H H1); inv H; auto.
       elim n; reflexivity.
   Qed.
-  
+
   Lemma KeysSubset_add:
     forall {A} (m: t A) k v d,
       KeysSubset m d -> List.In k d -> KeysSubset (add k v m) d.
@@ -1612,7 +1612,7 @@ Module LeibnizFacts (M : MapLeibniz).
     mintros; auto; intro.
     eapply P.F.empty_in_iff; eauto.
   Qed.
-  
+
   Lemma KeysDisj_nil A (x: t A):
     KeysDisj x nil.
   Proof.
@@ -1905,7 +1905,7 @@ Module LeibnizFacts (M : MapLeibniz).
     destruct (find y m), (find y m1), (find y m2); auto.
     destruct H; elim H; discriminate.
   Qed.
-    
+
   Lemma subtractKV_subtractKVD_1:
     forall {A} (deceqA : forall x y : A, sumbool (x = y) (x <> y))
            (m1 m2: t A) dom,
@@ -1994,7 +1994,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma Disj_add_1 {A}:
     forall {m m' : t A} k v,
       Disj m m' -> ~ In k m' -> Disj (add k v m) m'.
-  Proof. 
+  Proof.
     intros. unfold Disj in *.
     intros. destruct (H k0).
     - cmp k k0.
@@ -2006,7 +2006,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Lemma Disj_add_2 {A}:
     forall {m m' : t A} k v,
       Disj (add k v m) m' -> Disj m m' /\ ~ In k m'.
-  Proof. 
+  Proof.
     intros. unfold Disj in *.
     split.
     - intros. destruct (H k0).
@@ -2017,7 +2017,7 @@ Module LeibnizFacts (M : MapLeibniz).
   Qed.
 
   Lemma Disj_comm {A} : forall {m m' : t A}, Disj m m' -> Disj m' m.
-  Proof. 
+  Proof.
     intros. unfold Disj in *. intros k.
     specialize (H k). intuition.
   Qed.
@@ -2042,7 +2042,7 @@ Module LeibnizFacts (M : MapLeibniz).
     intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
     - unfold Disj. intros. right. rewrite P.F.empty_in_iff.
       intuition.
-    - rewrite union_add in H1 by assumption. apply Disj_comm in H1. 
+    - rewrite union_add in H1 by assumption. apply Disj_comm in H1.
       apply Disj_add_2 in H1. destruct H1. apply Disj_comm in H1.
       specialize (H H1). apply Disj_comm. apply Disj_add_1.
       apply Disj_comm. assumption.
@@ -2054,7 +2054,7 @@ Module LeibnizFacts (M : MapLeibniz).
     , Disj m (union m1 m2) -> Disj m m2.
   Proof.
     intros m m1 m2. pattern m1. apply map_induction; simpl; intros.
-    - rewrite union_empty_L in H. assumption. 
+    - rewrite union_empty_L in H. assumption.
     - apply H. rewrite union_add in H1 by assumption.
       apply Disj_comm in H1.
       apply Disj_add_2 in H1. destruct H1. apply Disj_comm. assumption.
@@ -2280,7 +2280,7 @@ End LeibnizFacts.
 
 Module FMapListLeib (UOT : UsualOrderedTypeLTI) <: MapLeibniz.
   Include (FMapListEq UOT).
-  
+
   Theorem leibniz {A : Type} (m m' : t A) : Equal m m' -> m = m'.
   Proof. apply lt_irrel_leibniz, UOT.lt_irrel. Qed.
 End FMapListLeib.
@@ -2314,7 +2314,7 @@ Module Idx_as_OT <: UsualOrderedTypeLTI.
         * elim n; assumption.
         * assumption.
   Defined.
-    
+
   Definition eq_dec: forall x y : t, {eq x y} + {~ eq x y} :=
     fun _ _ => idx_dec _ _.
 
@@ -2322,7 +2322,7 @@ Module Idx_as_OT <: UsualOrderedTypeLTI.
   Proof.
     intros; apply proof_irrelevance.
   Qed.
-  
+
 End Idx_as_OT.
 
 Module M.
@@ -2523,4 +2523,3 @@ Ltac findeq_more := findeq_custom idtac.
 
 Ltac meq := let y := fresh "y" in M.ext y; findeq.
 Ltac mdisj := mred; dest_mdisj; solve_mdisj; try findeq.
-

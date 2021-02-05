@@ -89,7 +89,7 @@ Ltac xor3_inv1 H :=
   match type of H with
   | xor3 ?P _ _ => eapply xor3_inv_1 with (A:= P) in H
   end.
-  
+
 Ltac xor3_inv2 H :=
   match type of H with
   | xor3 _ ?P _ => eapply xor3_inv_2 with (B:= P) in H
@@ -290,4 +290,3 @@ Ltac pmark_clear :=
     match goal with
     | [H: PMarker2 _ _ |- _] => clear H
     end.
-

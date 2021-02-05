@@ -138,4 +138,3 @@ Proof.
   eapply H0; [| |eassumption]; auto.
   apply reachable_init.
 Qed.
-

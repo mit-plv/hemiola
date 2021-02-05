@@ -274,7 +274,7 @@ Proof.
     + econstructor.
     + econstructor; eauto.
   - econstructor; try reflexivity; try eassumption.
-    + eapply FirstMPI_Forall_enqMsgs; eauto. 
+    + eapply FirstMPI_Forall_enqMsgs; eauto.
     + f_equal.
       rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
       destruct H2; auto.
@@ -292,7 +292,7 @@ Proof.
     + econstructor.
     + econstructor; eauto.
   - econstructor; try reflexivity; try eassumption.
-    + eapply FirstMPI_Forall_enqMsgs; eauto. 
+    + eapply FirstMPI_Forall_enqMsgs; eauto.
     + f_equal.
       rewrite enqMsgs_enqMsgs_comm.
       { rewrite enqMsgs_deqMsgs_FirstMPI_comm; auto.
@@ -304,7 +304,7 @@ Proof.
         apply DisjList_app_4.
         { apply sys_minds_sys_merqs_DisjList. }
         { apply DisjList_comm, sys_merqs_sys_merss_DisjList. }
-      }      
+      }
 Qed.
 
 Lemma ins_commutes:
@@ -466,7 +466,7 @@ Proof.
       * simpl.
         econstructor; eauto.
         { eapply STrsOuts; reflexivity. }
-        { reflexivity. }        
+        { reflexivity. }
     + exists ins, (hst :: atms), outs.
       repeat split; auto.
       * constructor; auto.
@@ -521,6 +521,5 @@ Proof.
         apply ssequential_add; auto.
         eapply STrsExtAtomic; eauto.
 Qed.
-  
-Close Scope list.
 
+Close Scope list.

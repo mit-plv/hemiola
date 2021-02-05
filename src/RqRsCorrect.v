@@ -53,7 +53,7 @@ Section Pushable.
       eapply rqUp_lpush_unit_reducible; eauto.
       intro Hx; subst; elim H3; apply SubList_nil.
     Qed.
-    
+
     Lemma rqUp_LPushableHst: LPushableHst sys phst nlbl.
     Proof.
       intros; red; intros.
@@ -73,7 +73,7 @@ Section Pushable.
       apply LPushableHst_WellInterleavedHst; auto.
       eauto using rqUp_LPushableHst.
     Qed.
-    
+
   End RqUp.
 
   Section RsUp.
@@ -132,7 +132,7 @@ Section Pushable.
       - intro Hx; subst; elim H3; apply SubList_nil.
       - eapply DisjList_SubList; eauto.
     Qed.
-    
+
     Lemma rsUp_RPushableHst:
       RPushableHst sys RsUpP phst nlbl.
     Proof.
@@ -256,7 +256,7 @@ Section Pushable.
       - left; red; eauto.
       - right; red; eauto.
     Qed.
-    
+
     Lemma rqDown_lpush_unit:
       forall hst,
         AtomicEx hst ->
@@ -275,7 +275,7 @@ Section Pushable.
       eapply rqDown_lpush_unit_reducible; eauto.
       apply rqDown_PInitializing.
     Qed.
-    
+
     Lemma rqDown_lpush_reducible:
       forall st1,
         Reachable (steps step_m) sys st1 ->
@@ -395,7 +395,7 @@ Section Pushable.
     Hypothesis (Hrd: RsDownMsgs dtr sys oidx rins)
                (Hpobj: In pobj sys.(sys_objs))
                (Hcp: parentIdxOf dtr oidx = Some (obj_idx pobj)).
-    
+
     Definition RsDownLPush (hst: History) :=
       exists loidx,
         lastOIdxOf hst = Some loidx /\
@@ -494,7 +494,7 @@ Section Pushable.
       eapply rsDown_lpush_unit_reducible; eauto.
       apply rsDown_PInitializing.
     Qed.
-    
+
     Lemma rsDown_lpush_reducible:
       forall st1,
         Reachable (steps step_m) sys st1 ->
@@ -606,7 +606,7 @@ Section Pushable.
         + eauto using rsDown_rpush_reducible.
         + eauto using rsDown_LRPushable.
     Qed.
-    
+
   End RsDown.
 
   Lemma rqDown_ExtContinuousL_parent_in_system:
@@ -658,7 +658,7 @@ Section Pushable.
     - apply SubList_singleton_In in H8.
       apply in_map; assumption.
   Qed.
-  
+
 End Pushable.
 
 Theorem rqrs_WellInterleaved:
@@ -718,7 +718,7 @@ Section NonConfluent.
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (Hoinvs: InvReachable sys step_m (liftObjInvs oinvs))
              (Hrrs: RqRsSys dtr sys oinvs).
-             
+
   Lemma rqrs_step_ins_or:
     forall st1,
       Reachable (steps step_m) sys st1 ->
@@ -866,7 +866,7 @@ Section NonConfluent.
                (cidx3:= cidx1) (cidx4:= cidx2); eauto.
         * red; auto.
         * red; auto.
-      
+
     - apply SubList_singleton_In in H7.
       inv H5; clear H13.
       eapply extAtomic_multi_IntMsgsEmpty_non_inits_InMPI in H12;
@@ -930,4 +930,3 @@ Qed.
 
 Close Scope list.
 Close Scope fmap.
-

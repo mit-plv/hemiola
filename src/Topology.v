@@ -117,7 +117,7 @@ Section Collect.
                  nth_error al n2 = Some a2 -> DisjList (f a1) (f a2)).
       { intros; apply H0 with (n1:= S n1) (n2:= S n2); auto. }
       clear H0.
-      
+
       induction al; simpl; intros; [apply DisjList_nil_2|].
       apply DisjList_comm, DisjList_app_4; apply DisjList_comm.
       + apply H with (n:= 0); reflexivity.
@@ -125,7 +125,7 @@ Section Collect.
         * intros; apply H with (n:= S n); assumption.
         * intros; apply H1 with (n1:= S n1) (n2:= S n2); auto.
   Qed.
-  
+
 End Collect.
 
 (** The Coq standard library already has an equivalent definition [Exists]
@@ -158,7 +158,7 @@ Section Exists.
     induction al; simpl; intros; auto.
     destruct H; subst; auto.
   Qed.
-  
+
 End Exists.
 
 Section DTree.
@@ -261,7 +261,7 @@ Section DTree.
     if idx_dec (rootOf dtr) idx
     then Some dtr
     else None.
-  
+
   Fixpoint parentChnsOf (idx: IdxT) (dtr: DTree):
     option (dmc * IdxT (* parent index *)) :=
     match dtr with
@@ -271,10 +271,10 @@ Section DTree.
       | None => find_some (parentChnsOf idx) cs
       end
     end.
-  
+
   Definition upEdgesFrom (dtr: DTree) (idx: IdxT): list IdxT :=
     (parentChnsOf idx dtr) >>=[nil] (fun udp => dmc_ups (fst udp)).
-  
+
   Definition downEdgesTo (dtr: DTree) (idx: IdxT): list IdxT :=
     (parentChnsOf idx dtr) >>=[nil] (fun udp => dmc_downs (fst udp)).
 
@@ -291,7 +291,7 @@ Section DTree.
 
   Definition WfDTree (dtr: DTree): Prop :=
     UniqueInds dtr /\ UniqueChns dtr.
-  
+
 End DTree.
 
 Section Facts.
@@ -1557,7 +1557,7 @@ Section Facts.
       }
       destruct (parentChnsOf cidx dtr) as [rd|] eqn:Hpchn; [|exfalso; auto].
       unfold parentIdxOf; rewrite Hpchn; simpl; eauto.
-    Qed.  
+    Qed.
 
     Lemma parentChnsOf_NoDup:
       forall idx croot pidx,
@@ -1656,4 +1656,3 @@ Section Facts.
 End Facts.
 
 Close Scope list.
-

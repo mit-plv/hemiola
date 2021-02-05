@@ -20,7 +20,7 @@ Section RqDownReduction.
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (oinvs: IdxT -> ObjInv)
              (Hrrs: RqRsSys dtr sys oinvs).
-  
+
   Section OnRqDown.
     Variables (cidx: IdxT) (pobj: Object)
               (rqDowns: list (Id Msg)).
@@ -39,7 +39,7 @@ Section RqDownReduction.
     Proof.
       intros.
       destruct Hrqd as [cobj [[rqDown rqdm] ?]]; dest; subst; simpl in *.
-      eapply atomic_rqDown_covers with (rqDown0:= (rqDown, rqdm)); eauto. 
+      eapply atomic_rqDown_covers with (rqDown0:= (rqDown, rqdm)); eauto.
       - red; auto.
       - apply SubList_singleton_In; auto.
     Qed.
@@ -86,7 +86,7 @@ Section RqDownReduction.
           rewrite oindsOf_app.
           eapply steps_split in H3; [|reflexivity].
           destruct H3 as [sti [? ?]].
-            
+
           assert (SubList (oindsOf nhst) (subtreeIndsOf dtr (obj_idx cobj))).
           { eapply atomic_NonRqUp_rqDown_separation_inside
               with (cobj0:= cobj) (pobj0:= pobj)
@@ -280,7 +280,7 @@ Section RqDownReduction.
       eapply DisjList_comm, DisjList_SubList; [eassumption|].
       apply DisjList_comm; assumption.
     Qed.
-    
+
     Lemma rqDown_lpush_unit_reducible:
       forall pinits pins phst pouts peouts
              inits ins hst outs eouts loidx,
@@ -510,11 +510,10 @@ Section RqDownReduction.
             }
           }
     Qed.
-    
+
   End OnRqDown.
 
 End RqDownReduction.
 
 Close Scope list.
 Close Scope fmap.
-

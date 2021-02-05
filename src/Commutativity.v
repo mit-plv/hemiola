@@ -204,8 +204,8 @@ Proof.
     assert (oinvs (obj_idx obj0) os0 porq0) as Hoinvs2.
     { specialize (Hoinvs _ Hr2 (obj_idx obj0)).
       red in Hoinvs; simpl in Hoinvs; mred.
-    } 
-      
+    }
+
     specialize (H3 _ _ _ _ _ _ _ Hoinvs1 H16 H17 Hoinvs2 H25); dest.
 
     remember (rule_trs rule0 os0 porq0 ins2) as trs2.
@@ -214,7 +214,7 @@ Proof.
     destruct rtrs2 as [[rnost2 rnorq2] routs2]; dest; subst.
     remember (rule_trs rule rnost2 rnorq2 ins1) as rtrs1.
     destruct rtrs1 as [[rnost1 rnorq1] routs1]; dest; subst.
-    
+
     econstructor.
     + econstructor.
       * econstructor.
@@ -353,7 +353,7 @@ Proof.
   replace (hst2 ++ RlblInt oidx ridx rins routs :: hst)
     with ((hst2 ++ [RlblInt oidx ridx rins routs]) ++ hst)
     by (rewrite <-app_assoc; reflexivity).
- 
+
   eapply reducible_trans.
   - apply reducible_app_2.
     eapply nonconflicting_mdisj_commutative_atomic_0;
@@ -406,4 +406,3 @@ Proof.
   specialize (H0 _ _ H1).
   eapply nonconflicting_mdisjoint_commutative_atomic; eauto.
 Qed.
-

@@ -126,7 +126,7 @@ Proof.
     rewrite H2; simpl; congruence.
   - assumption.
 Qed.
-  
+
 Lemma behaviorOf_ocons_inv:
   forall {LabelT} `{HasLabel LabelT} (ll: list LabelT) olbl rll,
     behaviorOf ll = behaviorOf (olbl ::> rll) ->
@@ -150,7 +150,7 @@ Proof.
   unfold liftI; destruct a; simpl.
   rewrite IHil; reflexivity.
 Qed.
-  
+
 Lemma rToLabel_inv:
   forall `{dv: DecValue} (rlbl1 rlbl2: RLabel),
     rToLabel rlbl1 <> None ->
@@ -303,7 +303,7 @@ Section Replicate.
     apply NoDup_DisjList; [apply sys1|apply sys2|].
     assumption.
   Qed.
-  
+
   Fixpoint nats (n: nat): list nat :=
     match n with
     | O => [O]
@@ -928,7 +928,7 @@ Section Facts.
         - unfold liftMsgs, imap, liftI.
           rewrite IHll; reflexivity.
       Qed.
-        
+
       Lemma Behavior_lifted:
         forall tr,
           Behavior (steps step_m) sys tr ->
@@ -1112,7 +1112,7 @@ Section Facts.
         - destruct st1 as [oss1 orqs1 msgs1]; inv H3.
           apply ValidMsgsExtIn_unlifted in H2.
           destruct H2 as [reins [? ?]]; subst.
-                     
+
           do 2 eexists; repeat split.
           + econstructor 2.
             * instantiate (1:= reins).
@@ -1128,7 +1128,7 @@ Section Facts.
           apply ValidMsgsExtOut_unlifted in H3.
           destruct H3 as [reouts [? ?]]; subst.
           apply liftFMap_FirstMPI_Forall_inv in H2.
-                     
+
           do 2 eexists; repeat split.
           + econstructor 3.
             * instantiate (1:= reouts).
@@ -1264,7 +1264,7 @@ Section Facts.
     Qed.
 
   End FilterMsgs.
-  
+
   Section Merge.
 
     Definition mergeState (st1 st2: State): State :=
@@ -1282,7 +1282,7 @@ Section Facts.
 
     Section HistoryMerged.
       Variables (erqd1 ersd1 erqd2 ersd2: list IdxT).
-      
+
       Inductive HistoryMerged
         : list RLabel -> list RLabel -> list RLabel -> Prop :=
       | HMNil: HistoryMerged nil nil nil
@@ -1511,7 +1511,7 @@ Section Facts.
 
       Section PerMsgs.
         Variables (msgs1 msgs2: MessagePool Msg).
-        
+
         Hypotheses (Hks1: M.KeysSubset msgs1 chns1)
                    (Hks2: M.KeysSubset msgs2 chns2).
 
@@ -1656,7 +1656,7 @@ Section Facts.
                 [apply DisjList_comm, HmidxOk|assumption..]).
           reflexivity.
         Qed.
-        
+
       End PerMsgs.
 
       Lemma disj_mp_enqMsgs_1:
@@ -1946,7 +1946,7 @@ Section Facts.
             apply M.Disj_find_None with (k:= obj_idx obj) in H1.
             destruct H1; [auto|congruence].
           }
-          
+
           f_equal.
           rewrite disj_mp_enqMsgs_2; try assumption.
           * f_equal.
@@ -1963,7 +1963,7 @@ Section Facts.
             { apply SubList_app_2, SubList_app_2, SubList_refl. }
           * apply deqMsgs_msgs_valid; assumption.
     Qed.
-    
+
     Lemma WellDistrMsgs_composed:
       forall eins d1 d2,
         SubList (idsOf eins) (d1 ++ d2) ->
@@ -1974,7 +1974,7 @@ Section Facts.
       unfold WellDistrMsgs in *; intros.
       induction eins as [|[midx msg] eins]; [constructor|].
       simpl in *; apply SubList_cons_inv in H0; dest.
-      
+
       destruct (in_dec _ _ _).
       - destruct (in_dec _ _ _); simpl in *.
         + inv H1; inv H2.
@@ -2525,7 +2525,7 @@ Section Facts.
       - apply mergeSystem_WfSys; auto.
         apply liftSystem_WfSys; assumption.
     Qed.
-    
+
   End Wf.
 
   Section Split.
@@ -2558,7 +2558,7 @@ Section Facts.
       - erewrite disj_objs_find_1 in H14; eauto; [|apply in_map; assumption].
         erewrite disj_objs_find_1 in H15; eauto; [|apply in_map; assumption].
         specialize (Hwf1 _ H2 _ H12 _ _ _ H18); rewrite H19 in Hwf1.
-            
+
         eexists; split.
         + econstructor; try reflexivity; try eassumption.
           * apply Forall_forall; intros [midx msg] ?.
@@ -2589,7 +2589,7 @@ Section Facts.
       - erewrite disj_objs_find_2 in H14; eauto; [|apply in_map; assumption].
         erewrite disj_objs_find_2 in H15; eauto; [|apply in_map; assumption].
         specialize (Hwf2 _ H2 _ H12 _ _ _ H18); rewrite H19 in Hwf2.
-            
+
         eexists; split.
         + econstructor; try reflexivity; try eassumption.
           * apply Forall_forall; intros [midx msg] ?.
@@ -2618,7 +2618,7 @@ Section Facts.
             apply M.Disj_find_None with (k:= obj_idx obj) in H7.
             destruct H7; [auto|congruence].
           }
-          
+
           f_equal.
           erewrite disj_mp_enqMsgs_2; eauto.
           * f_equal.
@@ -2790,7 +2790,7 @@ Section Facts.
       eapply disj_mp_FirstMP_1; eauto.
       simpl; apply in_or_app; right; apply in_or_app; right.
       assumption.
-    Qed.          
+    Qed.
 
     Lemma filterMsgs_Forall_2:
       forall (msgs1 msgs2: MessagePool Msg),
@@ -2809,7 +2809,7 @@ Section Facts.
       eapply disj_mp_FirstMP_2; eauto.
       simpl; apply in_or_app; right; apply in_or_app; right.
       assumption.
-    Qed.          
+    Qed.
 
     Lemma step_ext_outs_split:
       forall st11 st21 mouts st2,
@@ -2946,7 +2946,7 @@ Section Facts.
           * eapply ocons_steps; eassumption.
           * reflexivity.
           * econstructor; eauto.
-          
+
         + apply step_internal_split in H1;
             [|eapply steps_ValidState; [|eassumption]; assumption
              |eapply steps_ValidState; [|eassumption]; assumption].
@@ -2977,7 +2977,7 @@ Section Facts.
           * eapply ocons_steps; eassumption.
           * reflexivity.
           * econstructor; eauto.
-    Qed.          
+    Qed.
 
   End Split.
 
@@ -3199,6 +3199,5 @@ Section Facts.
       + clear -Heouts; induction n; simpl; intros; congruence.
       + assumption.
   Qed.
-  
-End Facts.
 
+End Facts.

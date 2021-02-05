@@ -472,4 +472,3 @@ Ltac rule_rqdd := do 2 right; left; split; [|right; right].
 Ltac rule_rsdd := do 3 right; left; split; [left|].
 Ltac rule_rsu := do 3 right; left; split; [right|].
 Ltac rule_rsrq := do 4 right.
-

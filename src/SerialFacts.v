@@ -107,7 +107,7 @@ Section MsgParam.
       + apply ValidDeqs_enqMsgs.
         destruct H10.
         apply FirstMPI_Forall_NoDup_ValidDeqs; auto.
-        
+
     - inv H5.
       specialize (IHAtomic _ _ _ _ H6); dest.
       inv H8; simpl in *; subst.
@@ -147,7 +147,7 @@ Section MsgParam.
     - inv_steps; inv_step; assumption.
     - inv_steps; eauto.
   Qed.
-  
+
   Lemma atomic_messages_ins_outs:
     forall inits ins hst outs eouts,
       Atomic inits ins hst outs eouts ->
@@ -288,7 +288,7 @@ Section MsgParam.
     unfold AtomicEx; intros; dest.
     eapply atomic_internal_history; eauto.
   Qed.
-  
+
   Lemma sequential_nil:
     forall `{oifc: OStateIfc} (sys: System), Sequential sys nil nil.
   Proof.
@@ -478,7 +478,7 @@ Section MsgParam.
     - reflexivity.
     - lia.
   Qed.
-  
+
   Lemma ssequential_app:
     forall `{oifc: OStateIfc} (sys: System) ll1 n1 ll2 n2,
       SSequential sys ll1 n1 ->
@@ -936,7 +936,7 @@ Proof.
     [apply SubList_refl|].
   apply SubList_app_1; auto.
 Qed.
-  
+
 Lemma atomic_eouts_in:
   forall `{dv: DecValue} inits ins hst outs eouts,
     Atomic inits ins hst outs eouts ->
@@ -1034,4 +1034,3 @@ Proof.
   pose proof (atomic_app_SSubList H H0 H1 H2).
   dest; eauto.
 Qed.
-

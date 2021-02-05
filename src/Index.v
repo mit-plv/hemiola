@@ -178,4 +178,3 @@ Definition NoPrefix (il: list IdxT) :=
     nth_error il n1 = Some i1 ->
     nth_error il n2 = Some i2 ->
     i1 ~*~ i2.
-

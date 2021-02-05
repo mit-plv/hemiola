@@ -39,7 +39,7 @@ Section MessagePool.
 
   Definition enqMPI (idm: Id MsgT) (mp: MessagePool): MessagePool :=
     enqMP (idOf idm) (valOf idm) mp.
-  
+
   Definition EmptyMP (mp: MessagePool) := mp = M.empty _.
   Definition InMP (midx: IdxT) (msg: MsgT) (mp: MessagePool) :=
     In msg (findQ midx mp).
@@ -49,7 +49,7 @@ Section MessagePool.
 
   Definition ForallQ (P: IdxT -> Queue -> Prop) (mp: MessagePool) :=
     forall midx, P midx (findQ midx mp).
-  
+
   Definition ForallMP (P: IdxT -> MsgT -> Prop) (mp: MessagePool) :=
     forall midx, Forall (P midx) (findQ midx mp).
 
@@ -95,7 +95,7 @@ Section MessagePool.
       List.count_occ msgT_dec (findQ (idOf idm) mp) (valOf idm).
 
   End OnDec.
-  
+
 End MessagePool.
 
 Section Facts.
@@ -581,7 +581,7 @@ Section Facts.
     - inv H7; rewrite H9 in H5; discriminate.
     - inv H7; reflexivity.
   Qed.
-  
+
   Lemma FirstMPI_Forall_enqMsgs_order:
     forall outs1 ins2 ins3 (mp: MessagePool MsgT),
       NoDup (idsOf outs1) ->
@@ -700,7 +700,7 @@ Section Facts.
     unfold InMP, firstMP; intros.
     rewrite H in H0; elim H0.
   Qed.
-  
+
   Lemma InMP_enqMP_or:
     forall midx (msg: MsgT) nidx nmsg mp,
       InMP midx msg (enqMP nidx nmsg mp) ->
@@ -712,7 +712,7 @@ Section Facts.
     - mred; unfold findQ in H; simpl in H.
       destruct (mp@[nidx]); simpl in *.
       + apply in_app_or in H; destruct H; auto.
-        
+
         dest_in; auto.
       + destruct H; auto.
     - mred.
@@ -876,7 +876,7 @@ Section Facts.
     mred.
     destruct (mp@[midx1]); destruct (mp@[midx2]); meq.
   Qed.
-      
+
   Lemma enqMP_enqMsgs_comm:
     forall midx msg msgs (mp: MessagePool MsgT),
       ~ In midx (idsOf msgs) ->
@@ -932,7 +932,7 @@ Section Facts.
     - remember (mp@[midx2]) as q2; destruct q2; simpl; mred.
       destruct l; simpl; mred.
   Qed.
-      
+
   Lemma deqMP_deqMsgs_comm:
     forall midx minds (mp: MessagePool MsgT),
       ~ In midx minds ->
@@ -955,7 +955,7 @@ Section Facts.
     f_equal.
     apply deqMP_deqMsgs_comm; auto.
   Qed.
-  
+
   Lemma enqMP_deqMP_FirstMPI_comm:
     forall midx1 msg1 msg2 (mp: MessagePool MsgT),
       FirstMPI mp msg2 ->
@@ -1040,7 +1040,7 @@ Section Facts.
   Qed.
 
   Lemma enqMP_None:
-    forall (mp: MessagePool MsgT) emidx msg midx, 
+    forall (mp: MessagePool MsgT) emidx msg midx,
       (enqMP emidx msg mp)@[midx] = None <->
       (mp@[midx] = None /\ emidx <> midx).
   Proof.
@@ -1157,7 +1157,7 @@ Section Facts.
       simpl in *; [|elim H; reflexivity].
     destruct l; [elim H; reflexivity|].
     mred; simpl; meq.
-  Qed.    
+  Qed.
 
   Lemma ValidDeqs_enqMP:
     forall minds (mp: MessagePool MsgT),
@@ -1359,8 +1359,7 @@ Section Facts.
     Qed.
 
   End OnDec.
-  
+
 End Facts.
 
 Global Opaque ForallMP.
-

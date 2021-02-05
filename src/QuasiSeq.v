@@ -228,7 +228,7 @@ Proof.
   destruct H2 as [inits1 [eouts1 [inits2 [ins2 [outs2 [eouts2 ?]]]]]]; dest.
   pose proof (atomic_beginning_label H2).
   destruct H6 as [hhst [oidx [ridx [routs ?]]]]; subst.
-  
+
   exists (hsts3 ++ (lift_each hhst)
                 ++ [RlblInt oidx ridx inits2 routs]
                 :: hsts2 ++ hst1 :: hsts1).
@@ -312,7 +312,7 @@ Section WellInterleaved.
           steps step_m sys st1
                 (List.concat rhst2 ++ l2 :: hst1 ++ List.concat rhst1) st2 /\
           Distribution hsts rhst1 rhst2.
-  
+
   Definition WellInterleaved :=
     forall hst1 l2,
       ExtContinuousL sys hst1 l2 ->
@@ -361,10 +361,10 @@ Section WellInterleaved.
     pose proof (ssequential_distr_inv H8 H10).
     destruct H13 as [rn1 [rn2 ?]]; dest; subst.
     pose proof (extContinuous_hst_stransactional_length H3 H16); subst.
-    
+
     eapply extContinuous_concat in H3.
     destruct H3 as [inits [neouts ?]].
-    
+
     exists (hsts3 ++ (rhst2 ++ (l2 :: trs) :: rhst1) ++ trss); eexists.
     split; [|split].
     - repeat rewrite concat_app.
@@ -460,7 +460,7 @@ Section WellInterleaved.
         eapply extInterleaved_atomic_extInterleavedL in H11; eauto.
         destruct H11 as [datms [? [? [? [m ?]]]]]; dest.
         rewrite H11 in *; clear H11.
-        
+
         eapply well_interleaved_reducible with (st1:= sti1) in H; eauto.
         destruct H as [ratms [rm ?]]; dest.
         exists (outs ++ List.concat ratms ++ ins).
@@ -586,7 +586,7 @@ Section Pushable.
         Forall (fun hst => rpush hst ->
                            ReducibleP sys P (l2 :: hst) (hst ++ [l2])) hsts /\
         LRPushable lpush rpush hsts.
-  
+
   Lemma PushableHst_WellInterleavedHst:
     forall (Hp: PushableHst),
       WellInterleavedHst sys hst1 l2.
@@ -612,11 +612,11 @@ Section Pushable.
       pose proof (left_pushable_left H H3).
       inv H12.
       apply H6 in H14; [|assumption].
-      
+
       simpl; split; auto.
       + econstructor; eauto.
       + apply distribution_left.
-      
+
     - clear H1 H2 H4 H5 H6 H7 H8 hsts.
       rename l0 into hsts2; rename l1 into hsts1.
 
@@ -667,7 +667,7 @@ Section Pushable.
         { assumption. }
       }
       apply H6 in H12; eauto; clear H14.
-      
+
       pose proof (steps_append H11 H12); clear H11 H12 sti.
       rewrite <-app_assoc in H14.
       eapply steps_split in H14; [|reflexivity].
@@ -687,7 +687,7 @@ Section Pushable.
       + simpl; rewrite <-app_assoc; assumption.
       + apply distribution_add_right_head; auto.
   Qed.
-  
+
 End Pushable.
 
 Section LPushable.
@@ -780,4 +780,3 @@ Section RPushable.
   Qed.
 
 End RPushable.
-

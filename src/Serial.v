@@ -35,7 +35,7 @@ Section Sequential.
       Atomic inits ins hst outs eouts.
 
   (* A history is [ExtAtomic] iff it is [Atomic] and starts from some
-   * external requests (possibly [nil]) 
+   * external requests (possibly [nil])
    *)
   Inductive ExtAtomic: list (Id Msg) -> History -> list (Id Msg) -> Prop :=
   | ExtAtomicIntro:
@@ -132,4 +132,3 @@ Definition SerializableSys `{DecValue} `{OStateIfc} (sys: System) :=
   forall st,
     Reachable (steps step_m) sys st ->
     Serializable sys st.
-

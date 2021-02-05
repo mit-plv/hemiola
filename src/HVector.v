@@ -30,7 +30,7 @@ Section HVector.
              {A} {n} {ifc: Vector.t Type (S n)}
              (vec: hvec (A :: ifc)): hvec ifc :=
     snd vec.
-  
+
   Definition Vector_caseS'
              {A'} (Q : nat -> Type)
              (P : forall {n} (v : Vector.t A' (S n)), Q n -> Type)
@@ -121,4 +121,3 @@ Notation "HVEC #[ I ]" := (hvec_ith HVEC I) (at level 0): hvec_scope.
 Notation "HVEC +#[ I <- V ]" := (hvec_upd HVEC I V) (at level 0): hvec_scope.
 
 Delimit Scope hvec_scope with hvec.
-

@@ -77,7 +77,7 @@ Section InvSim.
             (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
-  
+
   Variables (impl: SystemI) (spec: SystemS).
 
   Definition InvSim :=
@@ -123,7 +123,7 @@ Section InvSim.
        |eapply inv_steps with (LabelI:= LabelI); eassumption].
     specialize (H5 H8).
     destruct H5 as [slbl [sst3 ?]]; dest.
-    
+
     eexists; eexists (_ :: _); repeat split; eauto.
     - econstructor; eauto.
     - simpl; congruence.
@@ -138,7 +138,7 @@ Section InvSim.
     destruct H4 as [sst2 [shst [? [? ?]]]].
     econstructor; eauto.
   Qed.
-  
+
 End InvSim.
 
 Section InvRSim.
@@ -151,13 +151,13 @@ Section InvRSim.
             (sim: StateI -> StateS -> Prop).
 
   Local Infix "≈" := sim (at level 30).
-  
+
   Variables (impl: SystemI) (spec: SystemS).
 
   Hypotheses (Hinv: InvReachable impl stepI ginv)
              (Hsimi: sim (initsOf impl) (initsOf spec))
              (Hsim: InvSim stepI stepS ginv sim impl spec).
-             
+
   Lemma invR_simulation_steps:
     forall ihst ist1 ist2,
       ist1 = initsOf impl ->
@@ -184,7 +184,7 @@ Section InvRSim.
     eapply Hsim in H5; [|red; eauto|eassumption|assumption].
     specialize (H5 H9).
     destruct H5 as [slbl [sst3 ?]]; dest.
-    
+
     eexists; eexists (_ :: _); repeat split; eauto.
     - econstructor; eauto.
     - simpl; congruence.
@@ -199,7 +199,7 @@ Section InvRSim.
     destruct H4 as [sst2 [shst [? [? ?]]]].
     econstructor; eauto.
   Qed.
-  
+
 End InvRSim.
 
 Definition liftSim `{dv: DecValue} {iifc sifc: OStateIfc}
@@ -208,4 +208,3 @@ Definition liftSim `{dv: DecValue} {iifc sifc: OStateIfc}
   fun ist sst => ossSim (st_oss ist) (st_oss sst).
 
 Close Scope list.
-

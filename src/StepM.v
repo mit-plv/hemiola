@@ -29,7 +29,7 @@ Inductive step_m `{DecValue} `{OStateIfc} (sys: System):
     In obj (sys_objs sys) ->
     In rule (obj_rules obj) ->
     oidx = obj_idx obj ->
-    
+
     oss@[oidx] = Some os ->
     orqs@[oidx] = Some porq ->
 
@@ -49,4 +49,3 @@ Inductive step_m `{DecValue} `{OStateIfc} (sys: System):
           |} ->
 
     step_m sys pst (RlblInt oidx (rule_idx rule) ins outs) nst.
-
