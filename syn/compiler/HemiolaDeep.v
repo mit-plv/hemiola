@@ -1,8 +1,9 @@
 Require Import List FunctionalExtensionality.
 
-Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
-Require Import Hemiola.Topology Hemiola.Syntax.
-Require Import Hemiola.RqRsLang Hemiola.Ex.Template Hemiola.Ex.RuleTransform.
+Require Import Hemiola.Lib.Common Hemiola.Lib.Index Hemiola.Lib.HVector Hemiola.Lib.Topology.
+Require Import Hemiola.System.Syntax.
+Require Import Hemiola.Dsl.RqRsLang.
+Require Import Hemiola.Ex.Template Hemiola.Ex.RuleTransform.
 
 Set Implicit Arguments.
 

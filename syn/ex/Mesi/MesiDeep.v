@@ -1,8 +1,8 @@
 Require Import List FunctionalExtensionality.
 
 Require Import Compiler.HemiolaDeep.
-Require Import Hemiola.Common Hemiola.Index Hemiola.HVector.
-Require Import Hemiola.Syntax Hemiola.RqRsLang.
+Require Import Hemiola.Lib.Common Hemiola.Lib.Index Hemiola.Lib.HVector.
+Require Import Hemiola.System.Syntax Hemiola.Dsl.RqRsLang.
 Require Import Hemiola.Ex.TopoTemplate Hemiola.Ex.RuleTemplate Hemiola.Ex.RuleTransform.
 Require Import Hemiola.Ex.Mesi.Mesi Hemiola.Ex.Mesi.MesiImp.
 

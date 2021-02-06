@@ -1,6 +1,6 @@
 Require Import Numbers.DecimalString.
 
-Require Import Hemiola.Common Hemiola.Index Hemiola.Syntax.
+Require Import Hemiola.Lib.Common Hemiola.Lib.Index Hemiola.System.Syntax.
 Require Import Hemiola.Ex.TopoTemplate.
 
 Require Import Compiler.HemiolaDeep. (* source *)
@@ -924,7 +924,7 @@ Section Compile.
       Local Notation canImm := (canImm oidx).
       Local Notation setULImm := (setULImm oidx).
 
-      Variables (rule: {sr: Hemiola.Syntax.Rule & HRule sr}).
+      Variables (rule: {sr: Hemiola.System.Syntax.Rule & HRule sr}).
       Let hr := projT2 rule.
 
       Local Notation "v <- f ; cont" :=
@@ -1061,24 +1061,24 @@ Section Compile.
          ++ "_" ++ idx_to_string ridx)%string.
 
     Definition compile_execPP (isImm: bool)
-               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+               (rule: {sr: Hemiola.System.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let r := projT1 rule in
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execPP oidx deqLR2EXN rule isImm |}.
 
     Definition compile_execRsRel
-               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+               (rule: {sr: Hemiola.System.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let r := projT1 rule in
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execRsRel oidx deqLR2EXN rule |}.
 
     Definition compile_execInvRq (isImm: bool)
-               (rule: {sr: Hemiola.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
+               (rule: {sr: Hemiola.System.Syntax.Rule & HRule sr}): Attribute (Action Void) :=
       let r := projT1 rule in
       {| attrName := execRuleNameI (rule_idx r);
          attrType := fun _ => execInvRq oidx rule isImm |}.
 
-    Definition compile_rule_exec (rule: {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rule_exec (rule: {sr: Hemiola.System.Syntax.Rule & HRule sr}):
       option (Attribute (Action Void)) :=
       let hr := projT2 rule in
       let isRs := check_rule_rs_prec (hrule_precond hr _) in
@@ -1095,7 +1095,7 @@ Section Compile.
                      then None (* Invalidation-response rules are already defined in [inputInvRs]. *)
                      else Some (compile_execPP isImm rule).
 
-    Definition compile_rules_exec (rules: list {sr: Hemiola.Syntax.Rule & HRule sr}):
+    Definition compile_rules_exec (rules: list {sr: Hemiola.System.Syntax.Rule & HRule sr}):
       list (Attribute (Action Void)) :=
       ListSupport.oll (map compile_rule_exec rules).
 
@@ -1422,7 +1422,7 @@ Section Compile.
   Let deqLR2EXN (ppName: string) := (ppLR2EXN ppName) -- deqN.
 
   Definition build_pipeline_l1
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
     let pp := compile_rules_pipeline_l1
@@ -1435,7 +1435,7 @@ Section Compile.
     Mod cregs (pp ++ execRules) nil.
 
   Definition build_pipeline_li
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     let cregs := compile_OState_init oidx in
     let pp := compile_rules_pipeline_li
@@ -1456,7 +1456,7 @@ Section Compile.
   Let l2eFifo (oidx: IdxT) := ppfifo (ppLR2EXN (idx_to_string oidx)) (Struct LRElt).
 
   Definition build_controller_l1
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     ((build_child_inputs_l1 oidx)
        ++ (build_parent_inputs oidx)
@@ -1469,7 +1469,7 @@ Section Compile.
        ++ build_ext_fifos oidx)%kami.
 
   Definition build_controller_li_2_no_ints
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     ((build_child_inputs_li_2 oidx)
        ++ (build_parent_inputs oidx)
@@ -1480,7 +1480,7 @@ Section Compile.
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_4_no_ints
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     ((build_child_inputs_li_4 oidx)
        ++ (build_parent_inputs oidx)
@@ -1491,12 +1491,12 @@ Section Compile.
        ++ build_outputs_li oidx)%kami.
 
   Definition build_controller_li_2
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     (build_controller_li_2_no_ints obj ++ build_int_fifos oidx)%kami.
 
   Definition build_controller_li_4
-             (obj: {sobj: Hemiola.Syntax.Object & HObject sobj}): Modules :=
+             (obj: {sobj: Hemiola.System.Syntax.Object & HObject sobj}): Modules :=
     let oidx := obj_idx (projT1 obj) in
     (build_controller_li_4_no_ints obj ++ build_int_fifos oidx)%kami.
 

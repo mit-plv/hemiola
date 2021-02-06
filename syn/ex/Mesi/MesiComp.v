@@ -2,7 +2,7 @@ Require Import String List.
 Import ListNotations.
 
 Require Import Kami.Kami.
-Require Import Hemiola.Index.
+Require Import Hemiola.Lib.Index.
 Require Import Compiler.HemiolaDeep Compiler.CompileK.
 Require Import MesiDeep.
 
