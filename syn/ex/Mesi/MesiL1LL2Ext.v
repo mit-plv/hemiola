@@ -1,7 +1,7 @@
 Require Import String List.
 Import ListNotations.
 
-Require Import Hemiola.Index Hemiola.Ex.TopoTemplate.
+Require Import Hemiola.Lib.Index Hemiola.Ex.TopoTemplate.
 Require Import Kami.Kami.
 Require Import Kami.Ext.Extraction.
 

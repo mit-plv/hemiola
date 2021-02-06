@@ -1,6 +1,6 @@
 Require Import Numbers.DecimalString.
 
-Require Import Hemiola.Common Hemiola.Index Hemiola.Ex.TopoTemplate.
+Require Import Hemiola.Lib.Common Hemiola.Lib.Index Hemiola.Ex.TopoTemplate.
 Require Import Compiler.HemiolaDeep. (* source *)
 Require Import Kami.Kami. (* target *)
 
