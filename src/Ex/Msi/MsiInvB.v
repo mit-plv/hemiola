@@ -15,7 +15,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Msi.ImplOStateIfc.
+#[global] Existing Instance Msi.ImplOStateIfc.
 
 Lemma msi_InObjInds:
   forall tr (Htr: tr <> Node nil),

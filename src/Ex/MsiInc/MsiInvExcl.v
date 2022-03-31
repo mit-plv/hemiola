@@ -18,7 +18,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Msi.ImplOStateIfc.
+#[global] Existing Instance Msi.ImplOStateIfc.
 
 Definition NoCohMsgs (oidx: IdxT) (msgs: MessagePool Msg) :=
   MsgsNotExist [(downTo oidx, (MRs, msiRsS));

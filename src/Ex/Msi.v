@@ -52,7 +52,7 @@ Section Invalidate.
   Proof. unfold invalidate; cbv; intros; find_if_inside; lia. Qed.
 End Invalidate.
 
-Hint Resolve invalidate_sound.
+#[global] Hint Resolve invalidate_sound.
 
 Ltac solve_msi :=
   unfold msiM, msiS, msiI, msiNP in *; solve [auto|lia].

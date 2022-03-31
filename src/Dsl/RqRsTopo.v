@@ -473,24 +473,24 @@ End RqRsTopo.
 
 Arguments FootprintUpDownOk: simpl never.
 
-Hint Unfold RqAccepting RsAccepting RqReleasing RsReleasing
-     UpLockFreeORq DownLockFreeORq
-     UpLockFree DownLockFree UpLockFreeSuff DownLockFreeSuff
-     StateSilent FootprintUpSilent FootprintDownSilent FootprintSilent
-     MsgOutsOrthORq FootprintingUp FootprintingDown FootprintingUpToDown
-     FootprintedUp FootprintedDown FootprintReleasingUpPost
-     FootprintReleasingUp FootprintReleasingDownPost
-     FootprintReleasingDown FootprintUpOk RqRsDownMatch
-     FootprintUpDownOk FootprintDownDownOk
-     ImmDownOk ImmDownRule ImmUpOk ImmUpRule
-     RqUpUpOk RqUpUp RqUpDownOk RqUpDown RqDownDownOk
-     RqDownDown RqFwdRuleCommon RqFwdRule
-     RsBackRuleCommon RsDownDown RsUp RsBackRule
-     RsDownRqDownOk RsDownRqDownRule : RuleConds.
+#[global] Hint Unfold RqAccepting RsAccepting RqReleasing RsReleasing
+ UpLockFreeORq DownLockFreeORq
+ UpLockFree DownLockFree UpLockFreeSuff DownLockFreeSuff
+ StateSilent FootprintUpSilent FootprintDownSilent FootprintSilent
+ MsgOutsOrthORq FootprintingUp FootprintingDown FootprintingUpToDown
+ FootprintedUp FootprintedDown FootprintReleasingUpPost
+ FootprintReleasingUp FootprintReleasingDownPost
+ FootprintReleasingDown FootprintUpOk RqRsDownMatch
+ FootprintUpDownOk FootprintDownDownOk
+ ImmDownOk ImmDownRule ImmUpOk ImmUpRule
+ RqUpUpOk RqUpUp RqUpDownOk RqUpDown RqDownDownOk
+ RqDownDown RqFwdRuleCommon RqFwdRule
+ RsBackRuleCommon RsDownDown RsUp RsBackRule
+ RsDownRqDownOk RsDownRqDownRule : RuleConds.
 
-Hint Unfold RqToUpRule RsToUpRule : RuleConds.
+#[global] Hint Unfold RqToUpRule RsToUpRule : RuleConds.
 
-Hint Unfold getRq addRq addRqS removeRq : RuleConds.
+#[global] Hint Unfold getRq addRq addRqS removeRq : RuleConds.
 
 Global Opaque upRq downRq.
 

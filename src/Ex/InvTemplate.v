@@ -62,7 +62,7 @@ Section InObjInds.
     apply Hinds.
     apply in_map; assumption.
   Qed.
-  
+
   Lemma tree2Topo_InObjInds_inv_ok:
     InvReachable sys step_m InObjInds.
   Proof.
@@ -80,7 +80,7 @@ Section InObjInds.
     red; simpl; intros.
     mred; eauto.
   Qed.
-  
+
   Lemma tree2Topo_OstInds_inv_ok:
     InvReachable sys step_m OstInds.
   Proof.
@@ -198,7 +198,7 @@ Section MsgConflicts.
 
   Context `{OStateIfc}.
   Variable (sys: System).
-  
+
   Hypotheses (Hiorqs: GoodORqsInit (initsOf sys))
              (oinvs: IdxT -> ObjInv)
              (Hrrs: RqRsSys topo sys oinvs)
@@ -211,7 +211,7 @@ Section MsgConflicts.
        idOf idm = rqUpFrom (rootOf topo) \/
        idOf idm = rsUpFrom (rootOf topo)) ->
       ~ InMPI (st_msgs st) idm.
-  
+
   Definition MsgConflictsInv (st: State) :=
     forall oidx orq,
       In oidx (c_li_indices cifc ++ c_l1_indices cifc) ->
@@ -373,7 +373,7 @@ Section MsgConflicts.
                (rsum1:= valOf rsUp) (rsum2:= valOf rrsUp); eauto; try apply Hrrs.
         * destruct rsUp as [rsUp rsum]; simpl in *; subst; assumption.
         * destruct rrsUp as [rrsUp rsum]; simpl in *; subst. assumption.
-          
+
     - intros; split.
       + red; intros; repeat ssplit.
         * intros.
@@ -394,7 +394,7 @@ Section MsgConflicts.
           destruct (orq@[downRq]) as [rqid|] eqn:Hrqid; simpl in *; [|auto].
           eapply downLockFree_child_lock_to_false
             with (pobj0:= pobj) (porq0:= porq); eauto; try apply Hrrs.
-          
+
         * red; repeat ssplit; intros; disc_rule_conds.
           { intro Hx.
             eapply downLockFree_rqDown_in_false
@@ -446,7 +446,7 @@ Ltac disc_MsgConflictsInv oidx :=
 
 Section Facts.
   Context `{dv: DecValue}.
-  
+
   Lemma MsgsNotExist_MsgsP:
     forall msgs spl,
       MsgsNotExist (map fst spl) msgs ->
@@ -716,7 +716,7 @@ Section Facts.
     eapply IHrmsgs; eauto.
     apply FirstMPI_Forall_deqMP; auto.
   Qed.
-  
+
 End Facts.
 
 Ltac disc_MsgExistsSig :=
@@ -728,7 +728,7 @@ Ltac disc_MsgExistsSig :=
       destruct H as [[midx msg] ?]; dest
     | [H: sigOf _ = (_, (_, _)) |- _] => inv H
     end.
-  
+
 Ltac solve_MsgsP_false H :=
   red in H; unfold map in H;
   repeat (first [rewrite caseDec_head_eq in H
@@ -775,5 +775,4 @@ Ltac solve_MsgsP :=
            |apply MsgsP_deqMP
            |apply MsgsP_deqMsgs]).
 
-Hint Unfold MsgsNotExist: RuleConds.
-
+#[global] Hint Unfold MsgsNotExist: RuleConds.

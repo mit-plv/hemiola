@@ -15,7 +15,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Msi.ImplOStateIfc.
+#[global] Existing Instance Msi.ImplOStateIfc.
 
 Section ObjInv.
   Variable topo: DTree.

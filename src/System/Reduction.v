@@ -37,7 +37,7 @@ Ltac reachable_by_steps :=
     eapply reachable_steps; eauto
   end.
 
-Hint Extern 1 (Reachable _ _ _) => reachable_by_steps.
+#[global] Hint Extern 1 (Reachable _ _ _) => reachable_by_steps.
 
 Lemma reducible_refl:
   forall `{dv: DecValue} `{oifc: OStateIfc} (sys: System) hst,

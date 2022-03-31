@@ -12,7 +12,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Mesi.ImplOStateIfc.
+#[global] Existing Instance Mesi.ImplOStateIfc.
 
 Section System.
   Variable (tr: tree).
@@ -233,9 +233,9 @@ Section System.
 
 End System.
 
-Hint Unfold liDownSRsUpDownOne liDownSRsUpDownRel
-     liDownSRsUpUpOne liDownSRsUpUpRel
-     liDownIRsUpDownSOne liDownIRsUpDownMEOne
-     liDownIRsUpDownSRel liDownIRsUpDownMERel
-     liDownIRsUpUpSOne liDownIRsUpUpMEOne liDownIRsUpUpMESOne
-     liDownIRsUpUpSRel liDownIRsUpUpMERel liDownIRsUpUpMESRel: MesiRules.
+#[global] Hint Unfold liDownSRsUpDownOne liDownSRsUpDownRel
+ liDownSRsUpUpOne liDownSRsUpUpRel
+ liDownIRsUpDownSOne liDownIRsUpDownMEOne
+ liDownIRsUpDownSRel liDownIRsUpDownMERel
+ liDownIRsUpUpSOne liDownIRsUpUpMEOne liDownIRsUpUpMESOne
+ liDownIRsUpUpSRel liDownIRsUpUpMERel liDownIRsUpUpMESRel: MesiRules.

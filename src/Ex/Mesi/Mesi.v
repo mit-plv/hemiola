@@ -80,7 +80,7 @@ Section Invalidate.
   Proof. unfold invalidate; cbv; intros; find_if_inside; lia. Qed.
 End Invalidate.
 
-Hint Resolve invalidate_sound.
+#[global] Hint Resolve invalidate_sound.
 
 Ltac solve_mesi :=
   unfold mesiM, mesiE, mesiS, mesiI, mesiNP in *; solve [auto|lia].
@@ -1192,17 +1192,17 @@ Section System.
 
 End System.
 
-Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
-     l1DownSImm l1GetMImmE l1GetMImmM l1GetMRqUpUp l1GetMRsDownDown
-     l1DownIImmS l1DownIImmME l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MesiRules.
+#[global] Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDownS l1GetSRsDownDownE
+ l1DownSImm l1GetMImmE l1GetMImmM l1GetMRqUpUp l1GetMRsDownDown
+ l1DownIImmS l1DownIImmME l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MesiRules.
 
-Hint Unfold liGetSImmS liGetSImmME
-     liGetSRqUpUp liGetSRsDownDownS liGetSRsDownDownE
-     liGetSRqUpDownME liDownSRsUpDownME
-     liDownSImm liDownSRqDownDownME liDownSRsUpUp
-     liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
-     liGetMRqUpDownME liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownME
-     liDownIImmS liDownIImmME liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRqDownDownDirMES
-     liDownIRsUpUpS liDownIRsUpUpME liDownIRsUpUpMES liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
-     liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
-     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBME liDropImm: MesiRules.
+#[global] Hint Unfold liGetSImmS liGetSImmME
+ liGetSRqUpUp liGetSRsDownDownS liGetSRsDownDownE
+ liGetSRqUpDownME liDownSRsUpDownME
+ liDownSImm liDownSRqDownDownME liDownSRsUpUp
+ liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
+ liGetMRqUpDownME liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownME
+ liDownIImmS liDownIImmME liDownIRqDownDownDirS liDownIRqDownDownDirME liDownIRqDownDownDirMES
+ liDownIRsUpUpS liDownIRsUpUpME liDownIRsUpUpMES liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
+ liInvImmI liInvImmS00 liInvImmS01 liInvImmS1 liInvImmE
+ liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBS liInvImmWBME liDropImm: MesiRules.

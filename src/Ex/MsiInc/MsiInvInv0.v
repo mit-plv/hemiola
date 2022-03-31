@@ -17,7 +17,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Msi.ImplOStateIfc.
+#[global] Existing Instance Msi.ImplOStateIfc.
 
 Definition InvL1DirI (cifc: CIfc) (st: State): Prop :=
   Forall (fun oidx =>
