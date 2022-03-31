@@ -8,7 +8,7 @@ all: Makefile.coq
 Makefile.coq: Makefile $(VS)
 	$(COQBIN)coq_makefile -f _CoqProject $(VS) -o Makefile.coq
 
-LIB_REPR_VO=RqRsLang.vo RqRsCorrect.vo
+LIB_REPR_VO=Dsl/RqRsLang.vo Dsl/RqRsCorrect.vo
 EX_SPEC_REPR_VO=Ex/SpecSv.vo
 EX_MSI_REPR_VO=Ex/Msi/MsiSim.vo
 EX_MESI_REPR_VO=Ex/Mesi/MesiSim.vo

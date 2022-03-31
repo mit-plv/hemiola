@@ -17,7 +17,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Mesi.ImplOStateIfc.
+#[global] Existing Instance Mesi.ImplOStateIfc.
 
 Definition ObjInvNotOwned (oidx: IdxT) (ost: OState) (msgs: MessagePool Msg) :=
   ObjInvRq oidx msgs -> ost#[owned] = false.

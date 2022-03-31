@@ -17,7 +17,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Mesi.ImplOStateIfc.
+#[global] Existing Instance Mesi.ImplOStateIfc.
 
 Lemma getDir_I_ObjDirMETo_false:
   forall oidx (ost: OState) (orq: ORq Msg),

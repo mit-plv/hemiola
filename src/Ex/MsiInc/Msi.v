@@ -841,19 +841,19 @@ Section System.
 
 End System.
 
-Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDown
-     l1DownSImm l1GetMImm l1GetMRqUpUp l1GetMRsDownDown
-     l1DownIImmS l1DownIImmM l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MsiRules.
+#[global] Hint Unfold l1GetSImm l1GetSRqUpUp l1GetSRsDownDown
+ l1DownSImm l1GetMImm l1GetMRqUpUp l1GetMRsDownDown
+ l1DownIImmS l1DownIImmM l1InvRqUpUp l1InvRqUpUpWB l1InvRsDownDown: MsiRules.
 
-Hint Unfold liGetSImmS liGetSImmM
-     liGetSRqUpUp liGetSRsDownDown
-     liGetSRqUpDownM liDownSRsUpDownM
-     liDownSImm liDownSRqDownDownM liDownSRsUpUp
-     liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
-     liGetMRqUpDownM liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownM
-     liDownIImmS liDownIImmM liDownIRqDownDownDirS liDownIRqDownDownDirM liDownIRqDownDownDirMS
-     liDownIRsUpUpS liDownIRsUpUpM liDownIRsUpUpMS
-     liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
-     liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
-     liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBM
-     liBInvRqS liBInvRqM liBInvRsS0 liBInvRsS1 liBInvRsM: MsiRules.
+#[global] Hint Unfold liGetSImmS liGetSImmM
+ liGetSRqUpUp liGetSRsDownDown
+ liGetSRqUpDownM liDownSRsUpDownM
+ liDownSImm liDownSRqDownDownM liDownSRsUpUp
+ liGetMImm liGetMRqUpUp liGetMRsDownDownDirI liGetMRsDownRqDownDirS
+ liGetMRqUpDownM liGetMRqUpDownS liDownIRsUpDownS liDownIRsUpDownM
+ liDownIImmS liDownIImmM liDownIRqDownDownDirS liDownIRqDownDownDirM liDownIRqDownDownDirMS
+ liDownIRsUpUpS liDownIRsUpUpM liDownIRsUpUpMS
+ liInvRqUpUp liInvRqUpUpWB liInvRsDownDown
+ liInvImmI liInvImmS00 liInvImmS01 liInvImmS1
+ liInvImmWBI liInvImmWBS0 liInvImmWBS1 liInvImmWBM
+ liBInvRqS liBInvRqM liBInvRsS0 liBInvRsS1 liBInvRsM: MsiRules.

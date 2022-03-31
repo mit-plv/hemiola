@@ -17,7 +17,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Mesi.ImplOStateIfc.
+#[global] Existing Instance Mesi.ImplOStateIfc.
 
 Section CoherenceUnit.
   Variables (oidx: IdxT)
@@ -319,4 +319,4 @@ Ltac derive_parent_downlock_by_RqDown oidx :=
                                 (FirstMP_InMP Hf))
       end.
 
-Hint Unfold NoRsI ImplOStateMESI: RuleConds.
+#[global] Hint Unfold NoRsI ImplOStateMESI: RuleConds.

@@ -567,4 +567,4 @@ Section System.
 
 End System.
 
-Hint Resolve msi_GoodORqsInit msi_WfDTree msi_RqRsDTree msi_RqRsSys.
+#[global] Hint Resolve msi_GoodORqsInit msi_WfDTree msi_RqRsDTree msi_RqRsSys.

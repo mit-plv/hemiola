@@ -344,7 +344,7 @@ Notation "'rule.rsuso' '[' RIDX ']' ':accepts' MSGID ':requires' PREC ':transiti
 Notation "'rule.rsrq' '[' RIDX ']' ':accepts' MSGID ':holding' RQID ':me' ME ':requires' PREC ':transition' TRS" :=
   (rsDownRqDownRule RIDX MSGID ME RQID PREC TRS%trs) (at level 5).
 
-Hint Unfold rqMsg rsMsg: RuleConds.
+#[global] Hint Unfold rqMsg rsMsg: RuleConds.
 
 Section Facts.
   Variable (dtr: DTree).

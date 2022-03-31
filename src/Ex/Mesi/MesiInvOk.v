@@ -20,7 +20,7 @@ Local Open Scope list.
 Local Open Scope hvec.
 Local Open Scope fmap.
 
-Existing Instance Mesi.ImplOStateIfc.
+#[global] Existing Instance Mesi.ImplOStateIfc.
 
 Definition InvForSim (tr: tree) (st: State): Prop :=
   InvExcl (fst (tree2Topo tr 0)) (snd (tree2Topo tr 0)) st /\
@@ -110,5 +110,5 @@ Ltac disc_InvNWB cidx Hinv :=
     disc_rule_conds_ex
   end.
 
-Hint Unfold InvForSim: RuleConds.
+#[global] Hint Unfold InvForSim: RuleConds.
 

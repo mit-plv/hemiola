@@ -146,12 +146,12 @@ Section DecValue.
 
 End DecValue.
 
-Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMsgI
-     UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
-     UpLockIdxBack getUpLockIdxBack getUpLockIdxBackI UpLockBackNone
-     DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
-     DownLockIdxBack DownLockBackNone getDownLockIndsFrom getDownLockIdxBack getDownLockIdxBackI
-     getFirstIdxFromI MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq : RuleConds.
+#[global] Hint Unfold TrsMTrs FirstMsg getFirstMsg getFirstMsgI getFirstIdMsg getFirstIdMsgI
+ UpLockMsgId getUpLockMsgId UpLockMsg getUpLockMsg
+ UpLockIdxBack getUpLockIdxBack getUpLockIdxBackI UpLockBackNone
+ DownLockMsgId getDownLockMsgId DownLockMsg getDownLockMsg
+ DownLockIdxBack DownLockBackNone getDownLockIndsFrom getDownLockIdxBack getDownLockIdxBackI
+ getFirstIdxFromI MsgsFrom MsgIdsFrom MsgIdFromEach MsgsFromORq : RuleConds.
 
 Definition initORqs `{DecValue} (oinds: list IdxT): ORqs Msg :=
   fold_right (fun i m => m +[i <- []]) [] oinds.
