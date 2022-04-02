@@ -434,125 +434,114 @@ Section System.
       (** NOTE: [cidx] will be instantiated to [l1ExtOf oidx]. *)
 
       Definition l1GetSImm: Rule :=
-        rule.immd[0~>0]
-        :accepts Spec.getRq
-        :from cidx
-        :requires (fun ost orq mins => mesiS <= ost#[status])
-        :transition
-           (!|ost, _| --> (ost, <| Spec.getRs; ost#[val] |>)).
+        rule 0~>0 from template immd {
+          receive Spec.getRq from cidx;
+          assert (fun ost orq mins => mesiS <= ost#[status]);
+          !|ost, _| --> (ost, <| Spec.getRs; ost#[val] |>)
+        }.
 
       Definition l1GetSRqUpUp: Rule :=
-        rule.rquu[0~>1]
-        :accepts Spec.getRq
-        :from cidx
-        :me oidx
-        :requires (fun ost mins => ost#[status] <= mesiI)
-        :transition
-           (!|ost, msg| --> <| mesiRqS; O |>).
+        rule 0~>1 from template rquu {
+          receive Spec.getRq from cidx to oidx;
+          assert (fun ost mins => ost#[status] <= mesiI);
+          (!|ost, msg| --> <| mesiRqS; O |>)
+        }.
 
       Definition l1GetSRsDownDownS: Rule :=
-        rule.rsdd[0~>2~>0]
-        :accepts mesiRsS
-        :holding Spec.getRq
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, min, rq, rsbTo|
+        rule 0~>2~>0 from template rsdd {
+          receive mesiRsS;
+          hold Spec.getRq;
+          assert (fun _ _ _ => True);
+          (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
                      +#[status <- mesiS],
-                 <| Spec.getRs; msg_value min |>)).
+                  <| Spec.getRs; msg_value min |>))
+        }.
 
       Definition l1GetSRsDownDownE: Rule :=
-        rule.rsdd[0~>2~>1]
-        :accepts mesiRsE
-        :holding Spec.getRq
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, min, rq, rsbTo|
+        rule 0~>2~>1 from template rsdd {
+          receive mesiRsE;
+          hold Spec.getRq;
+          assert (fun _ _ _ => True);
+          (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
                      +#[status <- mesiE],
-                 <| Spec.getRs; msg_value min |>)).
+                  <| Spec.getRs; msg_value min |>))
+        }.
 
       Definition l1DownSImm: Rule :=
-        rule.immu[0~>3]
-        :accepts mesiDownRqS
-        :me oidx
-        :requires (fun ost orq mins => mesiS <= ost#[status])
-        :transition
-           (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- mesiS],
-                             <| mesiDownRsS; ost#[val] |>)).
+        rule 0~>3 from template immu {
+          receive mesiDownRqS to oidx;
+          assert (fun ost orq mins => mesiS <= ost#[status]);
+          (!|ost, min| --> (ost +#[owned <- false]
+                                +#[status <- mesiS],
+                             <| mesiDownRsS; ost#[val] |>))
+        }.
 
       Definition l1GetMImmE: Rule :=
-        rule.immd[1~>0~>0]
-        :accepts Spec.setRq
-        :from cidx
-        :requires (fun ost orq mins => ost#[status] = mesiE)
-        :transition
-           (!|ost, msg|
+        rule 1~>0~>0 from template immd {
+          receive Spec.setRq from cidx;
+          assert (fun ost orq mins => ost#[status] = mesiE);
+          (!|ost, msg|
             --> (ost +#[owned <- true]
                      +#[status <- mesiM]
                      +#[val <- msg_value msg],
-                 <| Spec.setRs; O |>)).
+                  <| Spec.setRs; O |>))
+        }.
 
       Definition l1GetMImmM: Rule :=
-        rule.immd[1~>0~>1]
-        :accepts Spec.setRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[owned] = true /\ ost#[status] = mesiM)
-        :transition
-           (!|ost, msg|
-            --> (ost +#[val <- msg_value msg],
-                 <| Spec.setRs; O |>)).
+        rule 1~>0~>1 from template immd {
+          receive Spec.setRq from cidx;
+          assert
+            (fun ost orq mins =>
+               ost#[owned] = true /\ ost#[status] = mesiM);
+          (!|ost, msg| --> (ost +#[val <- msg_value msg],
+                             <| Spec.setRs; O |>))
+        }.
 
       Definition l1GetMRqUpUp: Rule :=
-        rule.rquu[1~>1]
-        :accepts Spec.setRq
-        :from cidx
-        :me oidx
-        :requires (fun ost mins => ost#[status] <= mesiS)
-        :transition
-           (!|ost, msg| --> <| mesiRqM; O |>).
+        rule 1~>1 from template rquu {
+          receive Spec.setRq from cidx to oidx;
+          assert (fun ost mins => ost#[status] <= mesiS);
+          (!|ost, msg| --> <| mesiRqM; O |>)
+        }.
 
       Definition l1GetMRsDownDown: Rule :=
-        rule.rsdd[1~>2]
-        :accepts mesiRsM
-        :holding Spec.setRq
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, min, rq, rsbTo|
+        rule 1~>2 from template rsdd {
+          receive mesiRsM;
+          hold Spec.setRq;
+          assert (fun _ _ _ => True);
+          (!|ost, min, rq, rsbTo|
             --> (ost +#[status <- mesiM]
                      +#[owned <- true]
                      +#[val <- msg_value rq],
-                 <| Spec.setRs; O |>)).
+                  <| Spec.setRs; O |>))
+        }.
 
       Definition l1DownIImmS: Rule :=
-        rule.immu[1~>3~>0]
-        :accepts mesiDownRqIS
-        :me oidx
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- invalidate ost#[status]],
-                             <| mesiDownRsIS; O |>)).
+        rule 1~>3~>0 from template immu {
+          receive mesiDownRqIS to oidx;
+          assert (fun _ _ _ => True);
+          (!|ost, min| --> (ost +#[owned <- false]
+                                +#[status <- invalidate ost#[status]],
+                             <| mesiDownRsIS; O |>))
+        }.
 
       Definition l1DownIImmME: Rule :=
-        rule.immu[1~>3~>1]
-        :accepts mesiDownRqIM
-        :me oidx
-        :requires (fun ost orq mins => mesiE <= ost#[status])
-        :transition
-           (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- invalidate ost#[status]],
-                             <| mesiDownRsIM; O |>)).
+        rule 1~>3~>1 from template immu {
+          receive mesiDownRqIM to oidx;
+          assert (fun ost orq mins => mesiE <= ost#[status]);
+          (!|ost, min| --> (ost +#[owned <- false]
+                                +#[status <- invalidate ost#[status]],
+                             <| mesiDownRsIM; O |>))
+        }.
 
       Definition l1InvRqUpUp: Rule :=
-        rule.rqsu[2~>0]
-        :me oidx
-        :requires (fun ost => ost#[owned] = false /\ mesiNP < ost#[status] < mesiM)
-        :transition
-           (ost --> <| mesiInvRq; O |>).
+        rule 2~>0 from template rqsu {
+          to oidx;
+          assert (fun ost => ost#[owned] = false /\ mesiNP < ost#[status] < mesiM);
+          (ost --> <| mesiInvRq; O |>)
+        }.
 
       (** NOTE: L1 writes back only when it is an owner, but here the
        * precondition allows to write back regardless of its ownership.
@@ -563,110 +552,102 @@ Section System.
        * directory status.
        *)
       Definition l1InvRqUpUpWB: Rule :=
-        rule.rqsu[2~>1]
-        :me oidx
-        :requires (fun ost => mesiNP < ost#[status])
-        :transition
-           (ost --> <| mesiInvWRq; ost#[val] |>).
+        rule 2~>1 from template rqsu {
+          to oidx;
+          assert (fun ost => mesiNP < ost#[status]);
+          (ost --> <| mesiInvWRq; ost#[val] |>)
+        }.
 
       Definition l1InvRsDownDown: Rule :=
-        rule.rsds[2~>2]
-        :accepts mesiInvRs
-        :requires (fun _ _ _ => True)
-        :transition (!|ost, _| --> (ost +#[owned <- false]
-                                        +#[status <- mesiNP])).
+        rule 2~>2 from template rsds {
+          receive mesiInvRs;
+          assert (fun _ _ _ => True);
+          (!|ost, _| --> (ost +#[owned <- false]
+                              +#[status <- mesiNP]))
+        }.
 
     End L1.
 
     Section Li.
 
       Definition liGetSImmS: Rule :=
-        rule.immd[0~>0~>0~~cidx]
-        :accepts mesiRqS
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[dir].(dir_st) <= mesiS /\ ost#[status] = mesiS)
-        :transition
-           (!|ost, _| --> (ost +#[dir <- addSharer cidx ost#[dir]],
-                           <| mesiRsS; ost#[val] |>)).
+        rule 0~>0~>0~~cidx from template immd {
+          receive mesiRqS from cidx;
+          assert (fun ost orq mins =>
+                    ost#[dir].(dir_st) <= mesiS /\ ost#[status] = mesiS);
+          (!|ost, _| --> (ost +#[dir <- addSharer cidx ost#[dir]],
+                           <| mesiRsS; ost#[val] |>))
+        }.
 
       (** NOTE: it is important to note that the "owned" bit is not changed. *)
       Definition liGetSImmME: Rule :=
-        rule.immd[0~>0~>1~~cidx]
-        :accepts mesiRqS
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              mesiE <= ost#[status] /\ ost#[dir].(dir_st) = mesiI)
-        :transition
-           (!|ost, _| --> (ost +#[status <- mesiI]
-                               +#[dir <- setDirE cidx],
-                           <| mesiRsE; ost#[val] |>)).
+        rule 0~>0~>1~~cidx from template immd {
+          receive mesiRqS from cidx;
+          assert (fun ost orq mins =>
+                    mesiE <= ost#[status] /\ ost#[dir].(dir_st) = mesiI);
+          (!|ost, _| --> (ost +#[status <- mesiI]
+                              +#[dir <- setDirE cidx],
+                           <| mesiRsE; ost#[val] |>))
+        }.
 
       Definition liGetSRqUpUp: Rule :=
-        rule.rquu[0~>1~~cidx]
-        :accepts mesiRqS
-        :from cidx
-        :me oidx
-        :requires
-           (fun ost mins =>
-              ost#[owned] = false /\
-              ost#[status] <= mesiI /\ ost#[dir].(dir_st) <= mesiS)
-        :transition (!|ost, msg| --> <| mesiRqS; O |>).
+        rule 0~>1~~cidx from template rquu {
+          receive mesiRqS from cidx to oidx;
+          assert (fun ost mins =>
+                    ost#[owned] = false /\
+                      ost#[status] <= mesiI /\ ost#[dir].(dir_st) <= mesiS);
+          (!|ost, msg| --> <| mesiRqS; O |>)
+        }.
 
       Definition liGetSRsDownDownS: Rule :=
-        rule.rsdd[0~>2~>0]
-        :accepts mesiRsS
-        :holding mesiRqS
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, min, rq, rsbTo|
+        rule 0~>2~>0 from template rsdd {
+          receive mesiRsS;
+          hold mesiRqS;
+          assert (fun _ _ _ => True);
+          (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
                      +#[owned <- false]
                      +#[status <- mesiS]
                      +#[dir <- addSharer (objIdxOf rsbTo) ost#[dir]],
-                 <| mesiRsS; msg_value min |>)).
+                 <| mesiRsS; msg_value min |>))
+        }.
 
       Definition liGetSRsDownDownE: Rule :=
-        rule.rsdd[0~>2~>1]
-        :accepts mesiRsE
-        :holding mesiRqS
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, min, rq, rsbTo|
+        rule 0~>2~>1 from template rsdd {
+          receive mesiRsE;
+          hold mesiRqS;
+          assert (fun _ _ _ => True);
+          (!|ost, min, rq, rsbTo|
             --> (ost +#[val <- msg_value min]
                      +#[owned <- false]
                      +#[status <- mesiI]
                      +#[dir <- setDirE (objIdxOf rsbTo)],
-                 <| mesiRsE; msg_value min |>)).
+                  <| mesiRsE; msg_value min |>))
+        }.
 
       Definition liGetSRqUpDownME: Rule :=
-        rule.rqud[0~>3~~cidx]
-        :accepts mesiRqS
-        :from cidx
-        :me oidx
-        :requires
-           (fun ost mins =>
-              cidx <> ost#[dir].(dir_excl) /\
-              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
-        :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)],
-                             <| mesiDownRqS; O |>)).
+        rule 0~>3~~cidx from template rqud {
+          receive mesiRqS from cidx to oidx;
+          assert
+            (fun ost mins =>
+               cidx <> ost#[dir].(dir_excl) /\
+                 In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+                 ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM);
+          (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqS; O |>))
+        }.
 
       Definition liDownSRsUpDownME: Rule :=
-        rule.rsudo[0~>4]
-        :accepts mesiDownRsS
-        :holding mesiRqS
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, idm, rq, rsbTo|
+        rule 0~>4 from template rsudo {
+          receive mesiDownRsS;
+          hold mesiRqS;
+          assert (fun _ _ _ => True);
+          (!|ost, idm, rq, rsbTo|
             --> (ost +#[owned <- true]
                      +#[val <- msg_value (valOf idm)]
                      +#[status <- mesiS]
                      +#[dir <- setDirS [objIdxOf rsbTo; objIdxOf (idOf idm)]],
-                 <| mesiRsS; msg_value (valOf idm) |>)).
+                  <| mesiRsS; msg_value (valOf idm) |>))
+        }.
 
       (** NOTE:
        * 1) data should be sent along with [mesiDownRsS], even when the status
@@ -676,406 +657,381 @@ Section System.
        * the status E or M.
        *)
       Definition liDownSImm: Rule :=
-        rule.immu[0~>5]
-        :accepts mesiDownRqS
-        :me oidx
-        :requires
-           (fun ost orq mins =>
-              mesiS <= ost#[status] /\ ost#[dir].(dir_st) <= mesiS)
-        :transition
-           (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- mesiS],
-                             <| mesiDownRsS; ost#[val] |>)).
+        rule 0~>5 from template immu {
+          receive mesiDownRqS to oidx;
+          assert
+            (fun ost orq mins =>
+               mesiS <= ost#[status] /\ ost#[dir].(dir_st) <= mesiS);
+          (!|ost, min| --> (ost +#[owned <- false]
+                                +#[status <- mesiS],
+                             <| mesiDownRsS; ost#[val] |>))
+        }.
 
       Definition liDownSRqDownDownME: Rule :=
-        rule.rqdd[0~>6]
-        :accepts mesiDownRqS
-        :me oidx
-        :requires
-           (fun ost mins =>
-              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
-        :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)],
-                             <| mesiDownRqS; O |>)).
+        rule 0~>6 from template rqdd {
+          receive mesiDownRqS to oidx;
+          assert
+            (fun ost mins =>
+               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+               ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM);
+          (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqS; O |>))
+        }.
 
       Definition liDownSRsUpUp: Rule :=
-        rule.rsuuo[0~>7]
-        :accepts mesiDownRsS
-        :holding mesiDownRqS
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, idm, rq, rsbTo|
+        rule 0~>7 from template rsuuo {
+          receive mesiDownRsS;
+          hold mesiDownRqS;
+          assert (fun _ _ _ => True);
+          (!|ost, idm, rq, rsbTo|
             --> (ost +#[val <- msg_value (valOf idm)]
                      +#[owned <- false]
                      +#[status <- mesiS]
                      +#[dir <- setDirS [objIdxOf (idOf idm)]],
-                 <| mesiDownRsS; msg_value (valOf idm) |>)).
+                 <| mesiDownRsS; msg_value (valOf idm) |>))
+        }.
 
       Definition liGetMImm: Rule :=
-        rule.immd[1~>0~~cidx]
-        :accepts mesiRqM
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              mesiE <= ost#[status] \/
-              (ost#[status] = mesiS /\ ost#[owned] = true /\
-               ost#[dir].(dir_st) = mesiS /\ LastSharer ost#[dir] cidx))
-        :transition
-           (!|ost, msg| --> (ost +#[owned <- false]
-                                 +#[status <- mesiI]
-                                 +#[dir <- setDirM cidx],
-                             <| mesiRsM; O |>)).
+        rule 1~>0~~cidx from template immd {
+          receive mesiRqM from cidx;
+          assert
+            (fun ost orq mins =>
+               mesiE <= ost#[status] \/
+               (ost#[status] = mesiS /\ ost#[owned] = true /\
+               ost#[dir].(dir_st) = mesiS /\ LastSharer ost#[dir] cidx));
+          (!|ost, msg| --> (ost +#[owned <- false]
+                                +#[status <- mesiI]
+                                +#[dir <- setDirM cidx],
+                             <| mesiRsM; O |>))
+        }.
 
       Definition liGetMRqUpUp: Rule :=
-        rule.rquu[1~>1~~cidx]
-        :accepts mesiRqM
-        :from cidx
-        :me oidx
-        :requires
-           (fun ost mins =>
-              ost#[owned] = false /\
-              ost#[status] <= mesiS /\ ost#[dir].(dir_st) <= mesiS)
-        :transition
-           (!|ost, msg| --> <| mesiRqM; O |>).
+        rule 1~>1~~cidx from template rquu {
+          receive mesiRqM from cidx to oidx;
+          assert
+            (fun ost mins =>
+               ost#[owned] = false /\
+               ost#[status] <= mesiS /\ ost#[dir].(dir_st) <= mesiS);
+          (!|ost, msg| --> <| mesiRqM; O |>)
+        }.
 
       (** This is the case where it's possible to directly respond a [mesiRsM]
        * message back since there are no internal sharers to invalidate.
        *)
       Definition liGetMRsDownDownDirI: Rule :=
-        rule.rsdd[1~>2]
-        :accepts mesiRsM
-        :holding mesiRqM
-        :requires
-           (fun ost orq mins =>
-              ost#[dir].(dir_st) = mesiI \/
-              (ost#[dir].(dir_st) = mesiS /\
-               LastSharer ost#[dir] (objIdxOf (getUpLockIdxBackI orq))))
-        :transition
-           (!|ost, min, rq, rsbTo|
+        rule 1~>2 from template rsdd {
+          receive mesiRsM;
+          hold mesiRqM;
+          assert (fun ost orq mins =>
+                    ost#[dir].(dir_st) = mesiI \/
+                    (ost#[dir].(dir_st) = mesiS /\
+                    LastSharer ost#[dir] (objIdxOf (getUpLockIdxBackI orq))));
+          (!|ost, min, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
-                 <| mesiRsM; O |>)).
+                 <| mesiRsM; O |>))
+        }.
 
       (** This is the case where internal invalidation is required
        * due to sharers.
        *)
       Definition liGetMRsDownRqDownDirS: Rule :=
-        rule.rsrq[1~>3]
-        :accepts mesiRsM
-        :holding mesiRqM
-        :me oidx
-        :requires
-           (fun ost orq mins =>
-              RsDownRqDownSoundPrec
-                topo oidx orq
-                (remove idx_dec (objIdxOf (getUpLockIdxBackI orq))
-                        ost#[dir].(dir_sharers)) /\
-              ost#[dir].(dir_sharers) <> nil /\
-              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-              OtherSharerExists ost#[dir] (objIdxOf (getUpLockIdxBackI orq)) /\
-              ost#[dir].(dir_st) = mesiS)
-        :transition
-           (!|ost, rq, rsbTo| --> (ost +#[owned <- true],
+        rule 1~>3 from template rsrq {
+          receive mesiRsM to oidx;
+          hold mesiRqM;
+          assert
+            (fun ost orq mins =>
+               RsDownRqDownSoundPrec
+                 topo oidx orq
+                 (remove idx_dec (objIdxOf (getUpLockIdxBackI orq))
+                         ost#[dir].(dir_sharers)) /\
+               ost#[dir].(dir_sharers) <> nil /\
+               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+               OtherSharerExists ost#[dir] (objIdxOf (getUpLockIdxBackI orq)) /\
+               ost#[dir].(dir_st) = mesiS);
+          (!|ost, rq, rsbTo| --> (ost +#[owned <- true],
                                    (remove idx_dec (objIdxOf rsbTo) ost#[dir].(dir_sharers),
-                                    <| mesiDownRqIS; O |>))).
+                                     <| mesiDownRqIS; O |>)))
+        }.
 
       Definition liGetMRqUpDownME: Rule :=
-        rule.rqud[1~>4~~cidx]
-        :accepts mesiRqM
-        :from cidx
-        :me oidx
-        :requires
-           (fun ost mins =>
-              cidx <> ost#[dir].(dir_excl) /\
-              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM)
-        :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqIM; O |>)).
+        rule 1~>4~~cidx from template rqud {
+          receive mesiRqM from cidx to oidx;
+          assert
+            (fun ost mins =>
+               cidx <> ost#[dir].(dir_excl) /\
+               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+               ost#[status] <= mesiI /\ mesiE <= ost#[dir].(dir_st) <= mesiM);
+          (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqIM; O |>))
+        }.
 
       Definition liGetMRqUpDownS: Rule :=
-        rule.rqud[1~>5~~cidx]
-        :accepts mesiRqM
-        :from cidx
-        :me oidx
-        :requires
-           (fun ost mins =>
-              ost#[dir].(dir_sharers) <> nil /\
-              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-              OtherSharerExists ost#[dir] cidx /\
-              ost#[owned] = true /\ ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS)
-        :transition
-           (!|ost, msg| --> (remove idx_dec cidx ost#[dir].(dir_sharers),
-                             <| mesiDownRqIS; O |>)).
+        rule 1~>5~~cidx from template rqud {
+          receive mesiRqM from cidx to oidx;
+          assert
+            (fun ost mins =>
+               ost#[dir].(dir_sharers) <> nil /\
+               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+               OtherSharerExists ost#[dir] cidx /\
+               ost#[owned] = true /\ ost#[status] <= mesiS /\ ost#[dir].(dir_st) = mesiS);
+          (!|ost, msg| --> (remove idx_dec cidx ost#[dir].(dir_sharers), <| mesiDownRqIS; O |>))
+        }.
 
       Definition liDownIRsUpDownS: Rule :=
-        rule.rsud[1~>6~>0]
-        :accepts mesiDownRsIS
-        :holding mesiRqM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiS)
-        :transition
-           (!|ost, mins, rq, rsbTo|
+        rule 1~>6~>0 from template rsud {
+          receive mesiDownRsIS;
+          hold mesiRqM;
+          assert (fun ost orq mins => ost#[dir].(dir_st) = mesiS);
+          (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
-                 <| mesiRsM; O |>)).
+                  <| mesiRsM; O |>))
+        }.
 
       Definition liDownIRsUpDownME: Rule :=
-        rule.rsud[1~>6~>1]
-        :accepts mesiDownRsIM
-        :holding mesiRqM
-        :requires (fun ost orq mins => mesiE <= ost#[dir].(dir_st))
-        :transition
-           (!|ost, mins, rq, rsbTo|
+        rule 1~>6~>1 from template rsud {
+          receive mesiDownRsIM;
+          hold mesiRqM;
+          assert (fun ost orq mins => mesiE <= ost#[dir].(dir_st));
+          (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirM (objIdxOf rsbTo)],
-                 <| mesiRsM; O |>)).
+                  <| mesiRsM; O |>))
+        }.
 
       Definition liDownIImmS: Rule :=
-        rule.immu[1~>7~>0]
-        :accepts mesiDownRqIS
-        :me oidx
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiI)
-        :transition
-           (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- invalidate ost#[status]],
-                             <| mesiDownRsIS; O |>)).
+        rule 1~>7~>0 from template immu {
+          receive mesiDownRqIS to oidx;
+          assert (fun ost orq mins => ost#[dir].(dir_st) = mesiI);
+          (!|ost, min| --> (ost +#[owned <- false]
+                                +#[status <- invalidate ost#[status]],
+                             <| mesiDownRsIS; O |>))
+        }.
 
       Definition liDownIImmME: Rule :=
-        rule.immu[1~>7~>1]
-        :accepts mesiDownRqIM
-        :me oidx
-        :requires (fun ost orq mins =>
-                     mesiE <= ost#[status] /\ ost#[dir].(dir_st) = mesiI)
-        :transition
-           (!|ost, min| --> (ost +#[owned <- false]
-                                 +#[status <- mesiI],
-                             <| mesiDownRsIM; O |>)).
+        rule 1~>7~>1 from template immu {
+          receive mesiDownRqIM to oidx;
+          assert (fun ost orq mins =>
+                     mesiE <= ost#[status] /\ ost#[dir].(dir_st) = mesiI);
+          (!|ost, min| --> (ost +#[owned <- false]
+                                +#[status <- mesiI],
+                             <| mesiDownRsIM; O |>))
+        }.
 
       Definition liDownIRqDownDownDirS: Rule :=
-        rule.rqdd[1~>9~>0]
-        :accepts mesiDownRqIS
-        :me oidx
-        :requires
-           (fun ost mins =>
-              ost#[dir].(dir_sharers) <> nil /\
-              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[dir].(dir_st) = mesiS)
-        :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqIS; O |>)).
+        rule 1~>9~>0 from template rqdd {
+          receive mesiDownRqIS to oidx;
+          assert
+            (fun ost mins =>
+               ost#[dir].(dir_sharers) <> nil /\
+               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+               ost#[dir].(dir_st) = mesiS);
+          (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqIS; O |>))
+        }.
 
       Definition liDownIRqDownDownDirME: Rule :=
-        rule.rqdd[1~>9~>1]
-        :accepts mesiDownRqIM
-        :me oidx
-        :requires
-           (fun ost mins =>
-              In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
-              mesiE <= ost#[dir].(dir_st) <= mesiM)
-        :transition
-           (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqIM; O |>)).
+        rule 1~>9~>1 from template rqdd {
+          receive mesiDownRqIM to oidx;
+          assert
+            (fun ost mins =>
+               In ost#[dir].(dir_excl) (subtreeChildrenIndsOf topo oidx) /\
+               mesiE <= ost#[dir].(dir_st) <= mesiM);
+          (!|ost, msg| --> ([ost#[dir].(dir_excl)], <| mesiDownRqIM; O |>))
+        }.
 
       Definition liDownIRqDownDownDirMES: Rule :=
-        rule.rqdd[1~>9~>2]
-        :accepts mesiDownRqIM
-        :me oidx
-        :requires
-           (fun ost mins =>
-              ost#[dir].(dir_sharers) <> nil /\
-              SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
-              ost#[dir].(dir_st) = mesiS)
-        :transition
-           (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqIS; O |>)).
+        rule 1~>9~>2 from template rqdd {
+          receive mesiDownRqIM to oidx;
+          assert
+            (fun ost mins =>
+               ost#[dir].(dir_sharers) <> nil /\
+               SubList ost#[dir].(dir_sharers) (subtreeChildrenIndsOf topo oidx) /\
+               ost#[dir].(dir_st) = mesiS);
+          (!|ost, msg| --> (ost#[dir].(dir_sharers), <| mesiDownRqIS; O |>))
+        }.
 
       Definition liDownIRsUpUpS: Rule :=
-        rule.rsuu[1~>10~>0]
-        :accepts mesiDownRsIS
-        :holding mesiDownRqIS
-        :requires (fun _ _ _ => True)
-        :transition
-           (!|ost, mins, rq, rsbTo|
+        rule 1~>10~>0 from template rsuu {
+          receive mesiDownRsIS;
+          hold mesiDownRqIS;
+          assert (fun _ _ _ => True);
+          (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
-                 <| mesiDownRsIS; O |>)).
+                  <| mesiDownRsIS; O |>))
+        }.
 
       Definition liDownIRsUpUpME: Rule :=
-        rule.rsuu[1~>10~>1]
-        :accepts mesiDownRsIM
-        :holding mesiDownRqIM
-        :requires (fun ost orq mins => mesiE <= ost#[dir].(dir_st))
-        :transition
-           (!|ost, mins, rq, rsbTo|
+        rule 1~>10~>1 from template rsuu {
+          receive mesiDownRsIM;
+          hold mesiDownRqIM;
+          assert (fun ost orq mins => mesiE <= ost#[dir].(dir_st));
+          (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
-                 <| mesiDownRsIM; O |>)).
+                  <| mesiDownRsIM; O |>))
+        }.
 
       Definition liDownIRsUpUpMES: Rule :=
-        rule.rsuu[1~>10~>2]
-        :accepts mesiDownRsIS
-        :holding mesiDownRqIM
-        :requires (fun ost orq mins => ost#[dir].(dir_st) = mesiS)
-        :transition
-           (!|ost, mins, rq, rsbTo|
+        rule 1~>10~>2 from template rsuu {
+          receive mesiDownRsIS;
+          hold mesiDownRqIM;
+          assert (fun ost orq mins => ost#[dir].(dir_st) = mesiS);
+          (!|ost, mins, rq, rsbTo|
             --> (ost +#[owned <- false]
                      +#[status <- invalidate ost#[status]]
                      +#[dir <- setDirI],
-                 <| mesiDownRsIM; O |>)).
+                  <| mesiDownRsIM; O |>))
+        }.
 
       (** NOTE: Here having [ost#[owned] = false] as a precondition is very
        * important since there's a chance that the object has a _dirty_ line
        * even if the status is S.
        *)
       Definition liInvRqUpUp: Rule :=
-        rule.rqsu[2~>0]
-        :me oidx
-        :requires
-           (fun ost => ost#[owned] = false /\
-                       mesiNP < ost#[status] < mesiM /\
-                       ost#[dir].(dir_st) = mesiI)
-        :transition (ost --> <| mesiInvRq; O |>).
+        rule 2~>0 from template rqsu {
+          to oidx;
+          assert
+            (fun ost => ost#[owned] = false /\
+                        mesiNP < ost#[status] < mesiM /\
+                        ost#[dir].(dir_st) = mesiI);
+          (ost --> <| mesiInvRq; O |>)
+        }.
 
       (** NOTE: ditto [l1InvRqUpUpWB]; a cache controller should not use this
        * rule when [owned = false]; it's meaningless.
        *)
       Definition liInvRqUpUpWB: Rule :=
-        rule.rqsu[2~>1]
-        :me oidx
-        :requires
-           (fun ost =>
-              ost#[dir].(dir_st) = mesiI /\
-              ((ost#[owned] = true /\ mesiI < ost#[status]) \/
-               (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE)))
-        :transition (ost --> <| mesiInvWRq; ost#[val] |>).
+        rule 2~>1 from template rqsu {
+          to oidx;
+          assert
+            (fun ost =>
+               ost#[dir].(dir_st) = mesiI /\
+               ((ost#[owned] = true /\ mesiI < ost#[status]) \/
+                (ost#[owned] = false /\ mesiNP < ost#[status] < mesiE)));
+          (ost --> <| mesiInvWRq; ost#[val] |>)
+        }.
 
       Definition liInvRsDownDown: Rule :=
-        rule.rsds[2~>2]
-        :accepts mesiInvRs
-        :requires (fun _ _ _ => True)
-        :transition (!|ost, _| --> (ost +#[owned <- false]
-                                        +#[status <- mesiNP])).
+        rule 2~>2 from template rsds {
+          receive mesiInvRs;
+          assert (fun _ _ _ => True);
+          (!|ost, _| --> (ost +#[owned <- false]
+                              +#[status <- mesiNP]))
+        }.
 
       Definition liDropImm: Rule :=
-        rule.imm[2~>3]
-        :requires
-           (fun ost orq mins =>
-              (ost#[status] = mesiI /\ ost#[dir].(dir_st) <> mesiE) \/
-              (ost#[status] = mesiS /\ ost#[owned] = false))
-        :transition (ost --> ost +#[status <- mesiNP]).
+        rule 2~>3 from template imm {
+          assert (fun ost orq mins =>
+                    (ost#[status] = mesiI /\ ost#[dir].(dir_st) <> mesiE) \/
+                    (ost#[status] = mesiS /\ ost#[owned] = false));
+          (ost --> ost +#[status <- mesiNP])
+        }.
 
       Definition liInvImmI: Rule :=
-        rule.immd[2~>5~~cidx]
-        :accepts mesiInvRq
-        :from cidx
-        :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiI)
-        :transition
-           (!|ost, _| --> (ost, <| mesiInvRs; O |>)).
+        rule 2~>5~~cidx from template immd {
+          receive mesiInvRq from cidx;
+          assert (fun ost orq mins => getDir cidx ost#[dir] = mesiI);
+          (!|ost, _| --> (ost, <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmS00: Rule :=
-        rule.immd[2~>6~>0~>0~~cidx]
-        :accepts mesiInvRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[owned] = false /\
-              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
-        :transition
-           (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>)).
+        rule 2~>6~>0~>0~~cidx from template immd {
+          receive mesiInvRq from cidx;
+          assert
+            (fun ost orq mins =>
+               ost#[owned] = false /\
+               getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx);
+          (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmS01: Rule :=
-        rule.immd[2~>6~>0~>1~~cidx]
-        :accepts mesiInvRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[owned] = true /\ ost#[status] = mesiS /\
-              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
-        :transition
-           (!|ost, _| --> (ost +#[status <- mesiM]
-                               +#[dir <- setDirI], <| mesiInvRs; O |>)).
+        rule 2~>6~>0~>1~~cidx from template immd {
+          receive mesiInvRq from cidx;
+          assert
+            (fun ost orq mins =>
+               ost#[owned] = true /\ ost#[status] = mesiS /\
+               getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx);
+          (!|ost, _| --> (ost +#[status <- mesiM]
+                              +#[dir <- setDirI], <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmS1: Rule :=
-        rule.immd[2~>6~>1~~cidx]
-        :accepts mesiInvRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir])
-        :transition
-           (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
-                           <| mesiInvRs; O |>)).
+        rule 2~>6~>1~~cidx from template immd {
+          receive mesiInvRq from cidx;
+          assert
+            (fun ost orq mins =>
+               getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir]);
+          (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
+                           <| mesiInvRs; O |>))
+        }.
 
       (** NOTE: using [mesiInvRq] to evict an E line implies the line is not
        * dirty, thus the parent can just use its data to upgrade to E.
        *)
       Definition liInvImmE: Rule :=
-        rule.immd[2~>7~~cidx]
-        :accepts mesiInvRq
-        :from cidx
-        :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiE)
-        :transition
-           (!|ost, msg| --> (ost +#[status <- mesiE]
-                                 +#[dir <- setDirI],
-                             <| mesiInvRs; O |>)).
+        rule 2~>7~~cidx from template immd {
+          receive mesiInvRq from cidx;
+          assert (fun ost orq mins => getDir cidx ost#[dir] = mesiE);
+          (!|ost, msg| --> (ost +#[status <- mesiE]
+                                +#[dir <- setDirI],
+                             <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmWBI: Rule :=
-        rule.immd[2~>8~~cidx]
-        :accepts mesiInvWRq
-        :from cidx
-        :requires (fun ost orq mins => getDir cidx ost#[dir] = mesiI)
-        :transition
-           (!|ost, _| --> (ost, <| mesiInvRs; O |>)).
+        rule 2~>8~~cidx from template immd {
+          receive mesiInvWRq from cidx;
+          assert (fun ost orq mins => getDir cidx ost#[dir] = mesiI);
+          (!|ost, _| --> (ost, <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmWBS0: Rule :=
-        rule.immd[2~>9~>0~~cidx]
-        :accepts mesiInvWRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[owned] = false /\
-              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
-        :transition
-           (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>)).
+        rule 2~>9~>0~~cidx from template immd {
+          receive mesiInvWRq from cidx;
+          assert
+            (fun ost orq mins =>
+               ost#[owned] = false /\
+               getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx);
+          (!|ost, _| --> (ost +#[dir <- setDirI], <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmWBS1: Rule :=
-        rule.immd[2~>9~>1~~cidx]
-        :accepts mesiInvWRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir])
-        :transition
-           (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
-                           <| mesiInvRs; O |>)).
+        rule 2~>9~>1~~cidx from template immd {
+          receive mesiInvWRq from cidx;
+          assert
+            (fun ost orq mins =>
+               getDir cidx ost#[dir] = mesiS /\ NotLastSharer ost#[dir]);
+          (!|ost, _| --> (ost +#[dir <- removeSharer cidx ost#[dir]],
+                           <| mesiInvRs; O |>))
+        }.
 
       Definition liInvImmWBS: Rule :=
-        rule.immd[2~>10~~cidx]
-        :accepts mesiInvWRq
-        :from cidx
-        :requires
-           (fun ost orq mins =>
-              ost#[owned] = true /\ ost#[status] = mesiS /\
-              getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx)
-        :transition
-           (!|ost, msg| --> (ost +#[status <- mesiM]
-                                 +#[dir <- setDirI], <| mesiInvRs; O |>)).
+        rule 2~>10~~cidx from template immd {
+          receive mesiInvWRq from cidx;
+          assert
+            (fun ost orq mins =>
+               ost#[owned] = true /\ ost#[status] = mesiS /\
+               getDir cidx ost#[dir] = mesiS /\ LastSharer ost#[dir] cidx);
+          (!|ost, msg| --> (ost +#[status <- mesiM]
+                                +#[dir <- setDirI], <| mesiInvRs; O |>))
+        }.
 
       (** NOTE: using [mesiInvWRq] to evict a line implies the line is dirty,
        * thus the parent should take the value and upgrade its status to M. *)
       Definition liInvImmWBME: Rule :=
-        rule.immd[2~>11~~cidx]
-        :accepts mesiInvWRq
-        :from cidx
-        :requires (fun ost orq mins => mesiE <= getDir cidx ost#[dir])
-        :transition
-           (!|ost, msg| --> (ost +#[dir <- setDirI]
-                                 +#[owned <- true]
-                                 +#[status <- mesiM]
-                                 +#[val <- msg_value msg],
-                             <| mesiInvRs; O |>)).
+        rule 2~>11~~cidx from template immd {
+          receive mesiInvWRq from cidx;
+          assert (fun ost orq mins => mesiE <= getDir cidx ost#[dir]);
+          (!|ost, msg| --> (ost +#[dir <- setDirI]
+                                +#[owned <- true]
+                                +#[status <- mesiM]
+                                +#[val <- msg_value msg],
+                             <| mesiInvRs; O |>))
+        }.
 
     End Li.
 
