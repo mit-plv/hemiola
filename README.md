@@ -6,7 +6,7 @@ Requirements
 
 ### Basic
 
-- Coq 8.12.0 (https://coq.inria.fr/download) to machine-check all the proofs
+- Coq 8.14.1 (https://coq.inria.fr/download) to machine-check all the proofs
 
 ### Optional
 
