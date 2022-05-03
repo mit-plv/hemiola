@@ -8,13 +8,13 @@ Require Import Kami.Ext.Extraction.
 Require Import Compiler.HemiolaDeep Compiler.Components Compiler.CompileK.
 Require Import MesiDeep MesiComp.
 
-Existing Instance MesiHOStateIfcFull.
-Instance MesiTopoConfig: TopoConfig :=
+#[global] Existing Instance MesiHOStateIfcFull.
+#[global] Instance MesiTopoConfig: TopoConfig :=
   {| hcfg_value_sz := 64;
      hcfg_line_values_lg := 2; (* 32B line *)
      hcfg_children_max_pred := 1 (* max(#children) = 2 *) |}.
-Existing Instance MesiCompExtType.
-Existing Instance MesiCompExtExp.
+#[global] Existing Instance MesiCompExtType.
+#[global] Existing Instance MesiCompExtExp.
 
 (***************
  *     Mem     *
