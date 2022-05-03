@@ -10,17 +10,17 @@ Set Implicit Arguments.
 
 (** * Configuration Instances *)
 
-Existing Instance SpecInds.NatDecValue.
-Existing Instance Mesi.ImplOStateIfc.
+#[global] Existing Instance SpecInds.NatDecValue.
+#[global] Existing Instance Mesi.ImplOStateIfc.
 
 Definition HMesi := HNat 3.
 
-Instance MesiReifyConfig: ReifyConfig :=
+#[global] Instance MesiReifyConfig: ReifyConfig :=
   {| hcfg_msg_id_sz := (3, 2);
      hcfg_addr_sz := 64;
   |}.
 
-Instance HNatDecValue: HDecValue :=
+#[global] Instance HNatDecValue: HDecValue :=
   {| ht_value_ok := eq_refl |}.
 
 Lemma MesiHOStateIfc_host_ty_ok:
@@ -58,7 +58,7 @@ Proof.
   apply Fin.case0; assumption.
 Defined.
 
-Instance MesiHOStateIfc: HOStateIfc :=
+#[global] Instance MesiHOStateIfc: HOStateIfc :=
   {| host_ty := [Some HValue; Some HBool; Some HMesi; None]%vector;
      host_ty_ok := MesiHOStateIfc_host_ty_ok;
   |}.
@@ -161,8 +161,8 @@ Section DirExt.
 
 End DirExt.
 
-Existing Instance DirExtType.
-Existing Instance DirExtExp.
+#[global] Existing Instance DirExtType.
+#[global] Existing Instance DirExtExp.
 
 Lemma MesiHOStateIfcFull_hostf_ty_compat:
   forall i hbt,
@@ -197,7 +197,7 @@ Proof.
   apply Fin.case0; assumption.
 Defined.
 
-Instance MesiHOStateIfcFull: HOStateIfcFull :=
+#[global] Instance MesiHOStateIfcFull: HOStateIfcFull :=
   {| hostf_ty := [HBType HValue; HBType HBool; HBType HMesi; HEType HDir];
      hostf_ty_ok := eq_refl;
      hostf_ty_compat := MesiHOStateIfcFull_hostf_ty_compat;
