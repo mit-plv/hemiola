@@ -31,7 +31,7 @@ msi_inc: Makefile.coq
 
 clean:
 	$(MAKE) -f Makefile.coq clean || true
-	rm -f Makefile.coq
+	rm -f Makefile.coq*
 	rm -f .*.aux *.v.d *.glob *.vo *.vos *.vok *~
 	rm -f */.*.aux */*.v.d */*.glob */*.vo */*.vos */*.vok */*~
 	rm -f .coqdeps.d .lia.cache
