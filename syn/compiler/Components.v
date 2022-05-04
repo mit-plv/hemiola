@@ -40,7 +40,7 @@ Notation "% i %: sz" := (idx_to_word sz i) (at level 5): kami_expr_scope.
 Fixpoint idx_to_string (idx: IdxT): string :=
   match idx with
   | nil => ""
-  | i :: idx' => idx_to_string idx' ++ nat_to_string i
+  | i :: idx' => idx_to_string idx' ++ "_" ++ nat_to_string i
   end.
 (* Eval compute in (idx_to_string (0~>1~>2)). *)
 
