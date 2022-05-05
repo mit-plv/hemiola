@@ -6,9 +6,6 @@ Set Implicit Arguments.
 Include ListNotations.
 Include VectorNotations.
 
-Axiom cheat: forall t, t.
-Ltac admit := apply cheat.
-
 Ltac ssplit :=
   match goal with
   | [ |- _ /\ _] => split

@@ -50,7 +50,7 @@ Section InvDirS.
 
   Lemma msi_InvDirS_step:
     Invariant.InvStep impl step_m InvDirS.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (msi_GoodORqsInit Htr)
@@ -167,7 +167,7 @@ Section InvDirS.
       all: try (red; simpl; intros; repeat (red; simpl; mred);
                 [simpl; intros; solve_msi|apply H0]).
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem msi_InvDirS_ok:
@@ -571,7 +571,7 @@ Section InvDirM.
 
   Lemma msi_InvDirM_step:
     Invariant.InvStep impl step_m (InvDirM topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (msi_GoodORqsInit Htr)
@@ -1015,7 +1015,6 @@ Section InvDirM.
           specialize (H0 (downTo oidx, rmsg) (FirstMP_InMP H20)).
           move H0 at bottom.
 
-          (* TODO: fix [solve_by_NoRsSI_false] *)
           red in H0; unfold map in H0.
           rewrite caseDec_head_neq in H0.
           2: {
@@ -1160,7 +1159,6 @@ Section InvDirM.
           specialize (H0 (downTo oidx, rmsg) (FirstMP_InMP H20)).
           move H0 at bottom.
 
-          (* TODO: fix [solve_by_NoRsSI_false] *)
           red in H0; unfold map in H0.
           rewrite caseDec_head_neq in H0.
           2: {
@@ -1175,7 +1173,7 @@ Section InvDirM.
         { disc_ObjDirM; solve_msi. }
       }
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem msi_InvDirM_ok:

@@ -257,7 +257,7 @@ Section InvNotOwned.
 
   Lemma mesi_InvNotOwned_step:
     Invariant.InvStep impl step_m InvNotOwned.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (mesi_GoodORqsInit Htr)
@@ -375,7 +375,7 @@ Section InvNotOwned.
         { assumption. }
       }
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_InvNotOwned_ok:
@@ -762,7 +762,7 @@ Section InvDirE.
 
   Lemma mesi_InvDirE_step:
     Invariant.InvStep impl step_m (InvDirE topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -1017,7 +1017,6 @@ Section InvDirE.
           subst topo; disc_rule_conds_ex.
           intros.
 
-          (** TODO: make an Ltac [disc_InvDirME] .. *)
           move Hdme at bottom.
           red in Hdme; simpl in Hdme.
           specialize (Hdme _ _ H4).
@@ -1283,7 +1282,6 @@ Section InvDirE.
           subst topo; disc_rule_conds_ex.
           intros.
 
-          (** TODO: make an Ltac [disc_InvDirME] .. *)
           move Hdme at bottom.
           red in Hdme; simpl in Hdme.
           specialize (Hdme _ _ H4).
@@ -1405,7 +1403,7 @@ Section InvDirE.
         { disc_ObjDirE; solve_mesi. }
       }
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem mesi_InvDirE_ok:

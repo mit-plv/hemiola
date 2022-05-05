@@ -300,7 +300,7 @@ Section System.
   Ltac disc_rule_custom ::= disc_msi_obj_invs.
 
   Lemma msi_RqUpRsUpOkSys: RqUpRsUpOkSys topo impl (MsiObjInvs topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     repeat
       match goal with
       | |- RqUpRsUpOkSys _ _ _ => red
@@ -474,11 +474,11 @@ Section System.
           rewrite invalidate_I; solve_msi.
         }
 
-        END_SKIP_PROOF_ON *) admit.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma msi_GoodExtRssSys: GoodExtRssSys impl.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; simpl.
     constructor; [|apply Forall_app].
     - (** the main memory *)
@@ -547,7 +547,7 @@ Section System.
       repeat constructor.
       all: try (red; simpl; disc_rule_conds_ex; solve_GoodExtRssSys; fail).
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma msi_GoodRqRsInterfSys: GoodRqRsInterfSys topo impl (MsiObjInvs topo).

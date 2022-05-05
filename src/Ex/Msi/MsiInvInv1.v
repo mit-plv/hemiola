@@ -404,7 +404,7 @@ Section InvDirM.
 
   Lemma msi_InvDirM_step:
     Invariant.InvStep impl step_m (InvDirM topo).
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
     pose proof (footprints_ok
                   (msi_GoodORqsInit Htr)
@@ -504,7 +504,6 @@ Section InvDirM.
         { disc_rule_conds_ex; disc.
           { solve_valid.
 
-            (* TODO: automate *)
             red in H28; red; simpl in *.
             intros; apply H28.
             rewrite H20 in *.
@@ -536,7 +535,6 @@ Section InvDirM.
 
         { disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
           { split; [solve_NoRsSI_by_silent|].
-            (* TODO: automate *)
             red in H26; red; simpl in *; mred.
           }
           { solve_by_silent. }
@@ -560,7 +558,6 @@ Section InvDirM.
 
         { disc_rule_conds_ex; simpl_InvDirM_msgs; disc.
           { split; [solve_NoRsSI_by_silent|].
-            (* TODO: automate *)
             red in H26; red; simpl in *; mred.
           }
           { solve_by_silent. }
@@ -747,8 +744,7 @@ Section InvDirM.
           { solve_MsgsP.
             solve_NoRsSI_by_rsDown oidx.
           }
-          { (* TODO: automate *)
-            red; simpl; intros.
+          { red; simpl; intros.
             destruct H37; [solve_msi|].
             dest; mred.
           }
@@ -888,7 +884,6 @@ Section InvDirM.
           specialize (H0 (downTo oidx, rmsg) (FirstMP_InMP H20)).
           move H0 at bottom.
 
-          (* TODO: fix [solve_by_NoRsSI_false] *)
           red in H0; unfold map in H0.
           rewrite caseDec_head_neq in H0.
           2: {
@@ -1029,7 +1024,6 @@ Section InvDirM.
           specialize (H0 (downTo oidx, rmsg) (FirstMP_InMP H20)).
           move H0 at bottom.
 
-          (* TODO: fix [solve_by_NoRsSI_false] *)
           red in H0; unfold map in H0.
           rewrite caseDec_head_neq in H0.
           2: {
@@ -1044,7 +1038,7 @@ Section InvDirM.
         { disc_ObjDirM; solve_msi. }
       }
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem msi_InvDirM_ok:

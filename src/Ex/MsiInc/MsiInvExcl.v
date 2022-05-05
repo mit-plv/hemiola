@@ -2268,7 +2268,7 @@ Section InvExcl.
           InvExclMsgOutPred
           ins st1 [RlblInt oidx ridx ins outs] outs st2 /\
         InvExcl topo cifc st2.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
 
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
@@ -2559,7 +2559,7 @@ Section InvExcl.
       Unshelve.
       all: assumption.
 
-      END_SKIP_PROOF_ON *) admit.
+      (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Ltac disc_AtomicMsgOutsInv oidx :=
@@ -2835,7 +2835,7 @@ Section InvExcl.
               AtomicInv InvExclMsgOutPred inits ist1 (RlblInt oidx ridx rins routs :: hst)
                         (removeL (id_dec msg_dec) eouts rins ++ routs) ist2 /\
               InvExcl topo cifc ist2.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -3150,8 +3150,7 @@ Section InvExcl.
       }
 
       { assert (msiS <= cost#[status]).
-        { (** TODO: bring [disc_InvWB] to here? *)
-          move Hwb at bottom.
+        { move Hwb at bottom.
           specialize (Hwb _ _ H7); simpl in Hwb.
           disc_rule_conds_ex.
           apply Hwb.
@@ -3220,7 +3219,7 @@ Section InvExcl.
       }
     }
 
-    END_SKIP_PROOF_ON *) admit.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma msi_InvExcl_InvTrs_li:
@@ -3247,7 +3246,7 @@ Section InvExcl.
               AtomicInv InvExclMsgOutPred inits ist1 (RlblInt oidx ridx rins routs :: hst)
                         (removeL (id_dec msg_dec) eouts rins ++ routs) ist2 /\
               InvExcl topo cifc ist2.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -4202,8 +4201,7 @@ Section InvExcl.
         }
 
         { assert (msiS <= cost#[status]).
-          { (** TODO: bring [disc_InvWB] to here? *)
-            move Hwb at bottom.
+          { move Hwb at bottom.
             specialize (Hwb _ _ H13); simpl in Hwb.
             disc_rule_conds_ex.
             apply Hwb.
@@ -4691,7 +4689,6 @@ Section InvExcl.
 
       split.
       { solve_AtomicInv_rsDown.
-        (** TODO: Ltac? *)
         apply Forall_forall; intros.
         apply in_map_iff in H1; dest; subst.
         repeat constructor; try (red; simpl; intros; intuition discriminate).
@@ -6539,7 +6536,7 @@ Section InvExcl.
     Unshelve.
     all: assumption.
 
-    END_SKIP_PROOF_ON *) admit.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma msi_InvExcl_InvTrs_l1:
@@ -6566,7 +6563,7 @@ Section InvExcl.
               AtomicInv InvExclMsgOutPred inits ist1 (RlblInt oidx ridx rins routs :: hst)
                         (removeL (id_dec msg_dec) eouts rins ++ routs) ist2 /\
               InvExcl topo cifc ist2.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     intros.
     pose proof (tree2Topo_TreeTopoNode tr 0) as Htn.
     pose proof (footprints_ok
@@ -6956,7 +6953,7 @@ Section InvExcl.
       }
     }
 
-    END_SKIP_PROOF_ON *) admit.
+    (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Lemma msi_InvExcl_InvTrs: InvTrs impl (InvExcl topo cifc).

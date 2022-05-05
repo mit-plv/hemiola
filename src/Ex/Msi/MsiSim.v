@@ -488,7 +488,7 @@ Section Sim.
 
   Theorem msi_sim_ok:
     InvSim step_m step_m (MsiInvOk.InvForSim tr) SimMSI impl spec.
-  Proof. (* SKIP_PROOF_ON
+  Proof. (* SKIP_PROOF_OFF *)
     red; intros.
 
     pose proof (footprints_ok
@@ -1210,7 +1210,7 @@ Section Sim.
         Unshelve.
         all: eassumption.
 
-        END_SKIP_PROOF_ON *) admit.
+        (* END_SKIP_PROOF_OFF *)
   Qed.
 
   Theorem msi_ok:
