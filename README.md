@@ -106,7 +106,7 @@ Here also simple various `make`s will build executables compiled by the Bluespec
    - For ex:sh=1:1: `make build_ex_sh_1`
    - For ex:sh=4:1: `make build_ex_sh_2`
    - The first `make` builds the executable from nothing, taking around 3 minutes.
-     Later `make`s will be much faster, around a couple of minutes.
+     Later `make`s will be much faster, around a minute.
 
 3. With a successful build, we should have `hemiola/syn/integration/sim/Top`; running it will show the result:
    `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn/integration/sim$ ./Top`
@@ -115,6 +115,32 @@ Here also simple various `make`s will build executables compiled by the Bluespec
    (Type Ctrl+C to quit)
 
 You may want to repeat the steps 1 and 2 repeatedly (for each instance/benchmark) to confirm that the numbers match the ones in the paper.
+
+#### (Optional) Simulation of the comparison target
+
+This artifact is also able to replicate the simulation results of the comparison target (shown as RiscyOO in Figure 8 of the paper).
+
+1. Go to the Riscy cache-coherence protocol project directory.
+   `hemiola@hemiola-VirtualBox:~$ cd Artifact/riscy-cc/sim-hemiola`
+   `hemiola@hemiola-VirtualBox:~/Artifact/riscy-cc/sim-hemiola$`
+
+2. Build the executable by doing the following `make`s.
+   Different `make` is required for each benchmark shown in Figure 8 of the paper.
+   - For all-shared: `make build_all_shared`
+   - For pair-shared: `make build_pair_shared`
+   - For ex:sh=1:1: `make build_ex_sh_1`
+   - For ex:sh=4:1: `make build_ex_sh_2`
+   - The first `make` builds the executable from nothing, taking around 10 minutes.
+     Later `make`s will be much faster, around a minute.
+
+3. With a successful build, we should have `riscy-cc/sim-hemiola/Top`; running it will show the result:
+   (Since the Riscy protocol prints verbose logs in simulation, we will want to ignore such logs like below)
+   `hemiola@hemiola-VirtualBox:~/Artifact/riscy-cc/sim-hemiola$ ./Top >/dev/null`
+   (After around a minute)
+   `Test done, #trs/cycle: xxxxxx / 500000`
+   (Type Ctrl+C to quit)
+
+You may want to repeat the step 2 repeatedly (for each benchmark) to confirm that the numbers match the ones in the paper.
 
 Appendix: tools installed in VM
 -------------------------------
