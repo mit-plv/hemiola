@@ -20,6 +20,8 @@ BSC = bsc \
 	-D RQ_BADDR_SEED=$(RQ_BADDR_SEED) \
 	-p +:../
 
+.PHONY: set_cc_mesi_l2 set_cc_mesi_l3 clean
+
 default: build_all_shared
 
 build_all_shared: $(TARGET).bsv
@@ -47,6 +49,12 @@ build_ex_sh_2: $(TARGET).bsv
 	mkdir -p $(BUILD_DIR)
 	$(BSC) -D TB_EX_SH=1 -D LG_EX_SH_RATIO=2 -sim -u $(TARGET).bsv
 	$(BSC) -D TB_EX_SH=1 -D LG_EX_SH_RATIO=2 -sim -e mkTop -o $(TARGET)
+
+set_cc_mesi_l2:
+	cd ..; rm HCC.bsv; ln -s CC_L1LL4.bsv HCC.bsv
+
+set_cc_mesi_l3:
+	cd ..; rm HCC.bsv; ln -s CC_L1L2LL.bsv HCC.bsv
 
 clean:
 	rm -rf $(BUILD_DIR)
