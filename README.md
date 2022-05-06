@@ -59,9 +59,9 @@ That said, we still claim the reusability of this artifact, since 1) the framewo
 You can simply do `make` (in `hemiola/src`) to check all the framework code and proofs.
 It is already done in VM, thus you may want to do `make clean` first.
 
-(Run Xfce Terminal)
-`hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/src`
-`hemiola@hemiola-VirtualBox:~/Artifact/hemiola/src$ make clean; make`
+0. (Run Xfce Terminal)
+1. `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/src`
+2. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/src$ make clean; make`
 
 It should finish without any errors, indicating that all the proofs are valid.
 Using the default VM resource setting (4GB RAM and two cores), it takes around 2.5 hours.
@@ -75,18 +75,18 @@ They are already provided in VM: `hemiola/syn/integration/CC_L1LL4.bsv` (Hemiola
 
 For replication check, you can do `make` to compile/generate those files.
 
-(Assuming `hemiola/src` is fully compiled by `make`)
-`hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/syn`
-`hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$ make mesi_l2_bsv` (for Hemiola2)
-(Do `make mesi_l3_bsv` for Hemiola3)
+0. (Assuming `hemiola/src` is fully compiled by `make`)
+1. `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/syn`
+2. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$ make mesi_l2_bsv` (for Hemiola2)
+3. (Do `make mesi_l3_bsv` for Hemiola3)
 
 Without any errors, it should generate `hemiola/syn/CC.bsv` for each `make`, taking around 10 minutes.
 You may want to do `diff` between the newly generated Bluespec implementation and the one already provided, for example:
 
-(After doing `make mesi_l2_bsv`)
-`hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$ diff CC.bsv ./integration/CC_L1LL4.bsv`
-`hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$`
-(No output means the two files are same)
+0. (After doing `make mesi_l2_bsv`)
+1. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$ diff CC.bsv ./integration/CC_L1LL4.bsv`
+2. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$`
+3. (No output means the two files are same)
 
 #### Simulation of the instances
 
@@ -94,10 +94,10 @@ Now we are ready to replicate the simulation results.
 Here also simple various `make`s will build executables compiled by the Bluespec compiler.
 
 1. First of all, we need to set the instance to generate the simulation results.
-   `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/syn/integration/sim`
-   `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn/integration/sim$ make set_cc_mesi_l2` (for Hemiola2)
-   (Do `make set_cc_mesi_l3` for Hemiola3)
-   The `make` above will simply change the symbolic link `hemiola/syn/integration/HCC.bsv` accordingly.
+   1. `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/syn/integration/sim`
+   2. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn/integration/sim$ make set_cc_mesi_l2` (for Hemiola2)
+   3. (Do `make set_cc_mesi_l3` for Hemiola3)
+   4. The `make` above will simply change the symbolic link `hemiola/syn/integration/HCC.bsv` accordingly.
 
 2. Now build the executable by doing the following `make`s.
    Different `make` is required for each benchmark shown in Figure 8 of the paper.
@@ -109,10 +109,10 @@ Here also simple various `make`s will build executables compiled by the Bluespec
      Later `make`s will be much faster, around a minute.
 
 3. With a successful build, we should have `hemiola/syn/integration/sim/Top`; running it will show the result:
-   `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn/integration/sim$ ./Top`
-   (After around a minute)
-   `Test done, #trs/cycle: xxxxxx / 500000`
-   (Type Ctrl+C to quit)
+   1. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn/integration/sim$ ./Top`
+   2. (After around a minute)
+   3. `Test done, #trs/cycle: xxxxxx / 500000`
+   4. (Type Ctrl+C to quit)
 
 You may want to repeat the steps 1 and 2 repeatedly (for each instance/benchmark) to confirm that the numbers match the ones in the paper.
 
@@ -121,8 +121,8 @@ You may want to repeat the steps 1 and 2 repeatedly (for each instance/benchmark
 This artifact is also able to replicate the simulation results of the comparison target (shown as RiscyOO in Figure 8 of the paper).
 
 1. Go to the Riscy cache-coherence protocol project directory.
-   `hemiola@hemiola-VirtualBox:~$ cd Artifact/riscy-cc/sim-hemiola`
-   `hemiola@hemiola-VirtualBox:~/Artifact/riscy-cc/sim-hemiola$`
+   1. `hemiola@hemiola-VirtualBox:~$ cd Artifact/riscy-cc/sim-hemiola`
+   2. `hemiola@hemiola-VirtualBox:~/Artifact/riscy-cc/sim-hemiola$`
 
 2. Build the executable by doing the following `make`s.
    Different `make` is required for each benchmark shown in Figure 8 of the paper.
@@ -134,11 +134,11 @@ This artifact is also able to replicate the simulation results of the comparison
      Later `make`s will be much faster, around a minute.
 
 3. With a successful build, we should have `riscy-cc/sim-hemiola/Top`; running it will show the result:
-   (Since the Riscy protocol prints verbose logs in simulation, we will want to ignore such logs like below)
-   `hemiola@hemiola-VirtualBox:~/Artifact/riscy-cc/sim-hemiola$ ./Top >/dev/null`
-   (After around a minute)
-   `Test done, #trs/cycle: xxxxxx / 500000`
-   (Type Ctrl+C to quit)
+   1. (Since the Riscy protocol prints verbose logs in simulation, we will want to ignore such logs like below)
+   2. `hemiola@hemiola-VirtualBox:~/Artifact/riscy-cc/sim-hemiola$ ./Top >/dev/null`
+   3. (After around a minute)
+   4. `Test done, #trs/cycle: xxxxxx / 500000`
+   5. (Type Ctrl+C to quit)
 
 You may want to repeat the step 2 repeatedly (for each benchmark) to confirm that the numbers match the ones in the paper.
 
