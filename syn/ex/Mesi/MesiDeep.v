@@ -253,104 +253,76 @@ Ltac renote_OPrec_dir :=
   end.
 Ltac renote_OPrec_ext ::= renote_OPrec_dir.
 
-Section Deep.
-  Variable (tr: tree).
-  Hypothesis (Htr: tr <> Node nil).
+Definition hl1: forall oidx: IdxT, HObject (Mesi.l1 oidx).
+Proof.
+  intros.
+  refine {| hobj_rules_ok := _ |}.
+  cbv [l1 obj_rules].
+  repeat match goal with
+         | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+         | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+         end.
+  all: instantiate (1:= existT _ _ _); reflexivity.
+  Unshelve.
+  all: cbv beta.
+  all: ⇑rule.
+  all: idtac "Reifying the L1 cache..".
+Time Defined. (* takes ~30 seconds *)
 
-  Section Object.
-    Variable (oidx: IdxT).
+Definition hli: forall (tr: tree) (oidx: IdxT), HObject (MesiImp.li tr oidx).
+Proof.
+  intros.
+  refine {| hobj_rules_ok := _ |}.
+  cbv [MesiImp.li obj_rules].
+  repeat match goal with
+         | |- map _ _ = (_ ++ _)%list =>
+             instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
+         | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+         | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+         end.
 
-    Definition hl1: HObject (Mesi.l1 oidx).
-    Proof.
-      refine {| hobj_rules_ok := _ |}.
-      cbv [l1 obj_rules].
-      repeat match goal with
-             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
-             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
-             end.
-      all: instantiate (1:= existT _ _ _); reflexivity.
-      Unshelve.
-      all: cbv beta.
-      all: ⇑rule.
-      all: idtac "Reifying the L1 cache..".
-    Time Defined. (* takes ~30 seconds *)
+  1: {
+    cbv [liRulesFromChildren].
+    instantiate (1:= concat _).
+    rewrite concat_map, map_map; do 2 f_equal.
+    apply functional_extensionality; intros cidx.
+    instantiate (1:= fun cidx => _); simpl.
 
-    Definition hli: HObject (MesiImp.li tr oidx).
-    Proof.
-      refine {| hobj_rules_ok := _ |}.
-      cbv [MesiImp.li obj_rules].
-      repeat match goal with
-             | |- map _ _ = (_ ++ _)%list =>
-               instantiate (1:= (_ ++ _)%list); rewrite map_app; simpl; f_equal
-             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
-             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
-             end.
+    cbv [liRulesFromChild]; simpl.
+    repeat match goal with
+           | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+           | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+           end.
+    all: instantiate (1:= existT _ _ _); reflexivity.
+  }
 
-      1: {
-        cbv [liRulesFromChildren].
-        instantiate (1:= concat _).
-        rewrite concat_map, map_map; do 2 f_equal.
-        apply functional_extensionality; intros cidx.
-        instantiate (1:= fun cidx => _); simpl.
+  all: instantiate (1:= existT _ _ _); reflexivity.
 
-        cbv [liRulesFromChild]; simpl.
-        repeat match goal with
-               | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
-               | |- map _ _ = nil => instantiate (1:= nil); reflexivity
-               end.
-        all: instantiate (1:= existT _ _ _); reflexivity.
-      }
+  Unshelve.
+  all: cbv beta; try (⇑rule; fail).
+  all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+  all: idtac "Reifying the Li cache..".
+Time Defined. (* takes ~4 minutes *)
 
-      all: instantiate (1:= existT _ _ _); reflexivity.
+Definition hmem: forall (tr: tree) (oidx: IdxT), HObject (Mesi.mem tr oidx).
+Proof.
+  intros.
+  refine {| hobj_rules_ok := _ |}.
+  cbv [Mesi.mem obj_rules memRulesFromChildren].
+  instantiate (1:= concat _).
+  rewrite concat_map, map_map; do 2 f_equal.
+  apply functional_extensionality; intros cidx.
+  instantiate (1:= fun cidx => _); simpl.
 
-      Unshelve.
-      all: cbv beta; try (⇑rule; fail).
-      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
-      all: idtac "Reifying the Li cache..".
-    Time Defined. (* takes ~4 minutes *)
+  cbv [memRulesFromChild]; simpl.
+  repeat match goal with
+         | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
+         | |- map _ _ = nil => instantiate (1:= nil); reflexivity
+         end.
+  all: instantiate (1:= existT _ _ _); reflexivity.
 
-    Definition hmem: HObject (Mesi.mem tr oidx).
-    Proof.
-      refine {| hobj_rules_ok := _ |}.
-      cbv [Mesi.mem obj_rules memRulesFromChildren].
-      instantiate (1:= concat _).
-      rewrite concat_map, map_map; do 2 f_equal.
-      apply functional_extensionality; intros cidx.
-      instantiate (1:= fun cidx => _); simpl.
-
-      cbv [memRulesFromChild]; simpl.
-      repeat match goal with
-             | |- map _ _ = (_ :: _)%list => instantiate (1:= (_ :: _)%list); simpl; f_equal
-             | |- map _ _ = nil => instantiate (1:= nil); reflexivity
-             end.
-      all: instantiate (1:= existT _ _ _); reflexivity.
-
-      Unshelve.
-      all: cbv beta; try (⇑rule; fail).
-      all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
-      all: idtac "Reifying the main memory..".
-    Time Defined. (* takes ~15 seconds *)
-
-  End Object.
-
-  Definition himpl: HSystem (MesiImp.impl Htr).
-  Proof.
-    refine {| hsys_objs_ok := _ |}.
-    cbv [MesiImp.impl sys_objs].
-    instantiate (1:= (_ ++ _)%list); rewrite map_app; f_equal.
-
-    - instantiate (1:= (_ :: _)%list); simpl; f_equal.
-      + instantiate (1:= existT _ _ (hmem _)); reflexivity.
-      + instantiate (1:= map (fun i => existT _ _ (hli i))
-                             (tl (c_li_indices (snd (tree2Topo tr 0))))).
-        rewrite map_map.
-        reflexivity.
-
-    - instantiate (1:= map (fun i => existT _ _ (hl1 i))
-                           (c_l1_indices (snd (tree2Topo tr 0)))).
-      rewrite map_map.
-      reflexivity.
-  Defined.
-
-  Goal True. idtac "Trying to get out of the section..". auto. Qed.
-Time End Deep.
+  Unshelve.
+  all: cbv beta; try (⇑rule; fail).
+  all: try (⇑rule; instantiate (1:= HBConst _ _); simpl; renote_const; fail).
+  all: idtac "Reifying the main memory..".
+Time Defined. (* takes ~15 seconds *)

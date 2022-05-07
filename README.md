@@ -21,10 +21,21 @@ This artifact specifically contains the following items:
 
 All the code and tools have already been git-cloned and built for faster evaluation, but it is totally okay trying to rebuild everything for tests.
 
+### VM information
+
+- OS: Ubuntu 22.04 LTS
+- sudo account
+  + ID: hemiola
+  + password: cav22artifact
+- Resource setting
+  + 2 processor cores
+  + 8GB RAM
+  + 20GB HDD
+
 Directory content
 -----------------
 
-- hemiola: **the current directory** containing the framework, case studies, and protocol compiler
+- hemiola: the current directory containing the framework, case studies, and protocol compiler
   + src: framework code
     * Dsl: the Hemiola DSL
     * Ex: case studies
@@ -59,12 +70,12 @@ That said, we still claim the reusability of this artifact, since 1) the framewo
 You can simply do `make` (in `hemiola/src`) to check all the framework code and proofs.
 It is already done in VM, thus you may want to do `make clean` first.
 
-0. (Run Xfce Terminal)
+0. (Run Terminal)
 1. `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/src`
 2. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/src$ make clean; make`
 
 It should finish without any errors, indicating that all the proofs are valid.
-Using the default VM resource setting (4GB RAM and two cores), it takes around 2.5 hours.
+Using the default VM resource setting (8GB RAM and two cores), it takes around 1.5 hours.
 
 ### Replication of the simulation results
 
@@ -73,12 +84,14 @@ Using the default VM resource setting (4GB RAM and two cores), it takes around 2
 In order to replicate the simulation results (provided in Figure 8 of the paper), we first need to compile the MESI case-study protocol and generate two Bluespec implementation instances (shown as Hemiola2 and Hemiola3 in Figure 8).
 They are already provided in VM: `hemiola/syn/integration/CC_L1LL4.bsv` (Hemiola2) and `hemiola/syn/integration/CC_L1L2LL.bsv` (Hemiola3).
 
-For replication check, you can do `make` to compile/generate those files.
+For replication check, you can various `make`s to compile/generate those files.
 
-0. (Assuming `hemiola/src` is fully compiled by `make`)
-1. `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/syn`
-2. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$ make mesi_l2_bsv` (for Hemiola2)
-3. (Do `make mesi_l3_bsv` for Hemiola3)
+0. Compile `kami`, simply by doing `make`, which takes around 5 minutes.
+   `hemiola@hemiola-VirtualBox:~/Artifact/kami$ make`
+1. It is assumed that `hemiola/src` is already fully compiled by `make` (supposed to be done in "Checking the proofs" section)
+2. `hemiola@hemiola-VirtualBox:~$ cd Artifact/hemiola/syn`
+3. `hemiola@hemiola-VirtualBox:~/Artifact/hemiola/syn$ make mesi_l2_bsv` (for Hemiola2)
+4. (Do `make mesi_l3_bsv` for Hemiola3)
 
 Without any errors, it should generate `hemiola/syn/CC.bsv` for each `make`, taking around 10 minutes.
 You may want to do `diff` between the newly generated Bluespec implementation and the one already provided, for example:
@@ -147,6 +160,6 @@ Appendix: tools installed in VM
 
 - OPAM (OCaml Package Manaager, https://opam.ocaml.org/)
   + coq 8.14.1
-  + ocaml 4.14.0
+  + ocaml 4.13.1
   + ocamlbuild 0.14.1
 - Bluespec Compiler, version 2022.01

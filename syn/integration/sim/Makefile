@@ -51,10 +51,10 @@ build_ex_sh_2: $(TARGET).bsv
 	$(BSC) -D TB_EX_SH=1 -D LG_EX_SH_RATIO=2 -sim -e mkTop -o $(TARGET)
 
 set_cc_mesi_l2:
-	cd ..; rm HCC.bsv; ln -s CC_L1LL4.bsv HCC.bsv
+	cd ..; rm HCC.bsv; ln -s CC_L1LL4.bsv HCC.bsv; touch HCC.bsv
 
 set_cc_mesi_l3:
-	cd ..; rm HCC.bsv; ln -s CC_L1L2LL.bsv HCC.bsv
+	cd ..; rm HCC.bsv; ln -s CC_L1L2LL.bsv HCC.bsv; touch HCC.bsv
 
 clean:
 	rm -rf $(BUILD_DIR)
